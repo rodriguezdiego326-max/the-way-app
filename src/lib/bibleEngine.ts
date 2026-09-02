@@ -415,6 +415,27 @@ export async function deleteKeyword(id: string): Promise<boolean> {
   return true;
 }
 
+export async function updateKeyword(
+  id: string,
+  name: string,
+  colorKey: HighlightColor,
+  markStyle: MarkStyle,
+  symbol: string | null,
+  description: string | null,
+): Promise<BibleKeyword | null> {
+  const { data, error } = await supabase
+    .from('bible_keywords')
+    .update({ name, color_key: colorKey, mark_style: markStyle, symbol, description, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) {
+    console.error('[Bible] updateKeyword error:', error);
+    return null;
+  }
+  return data as BibleKeyword;
+}
+
 // ============================================================
 // Keyword Marks
 // ============================================================

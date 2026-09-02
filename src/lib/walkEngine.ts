@@ -245,7 +245,7 @@ function pickByDate<T>(arr: T[], date = new Date()): T {
   return arr[dayOfYear % arr.length];
 }
 
-function pickByContext(text: string, availableTime: number): WalkRecommendation | null {
+function pickByContext(text: string, availableTime: number, mood?: string | null): WalkRecommendation | null {
   const lower = text.toLowerCase();
   const themes: { keywords: string[]; passage: string; objective: string; prompt: string; question: string; reason: string }[] = [
     { keywords: ['anxious', 'anxiety', 'worried', 'worry', 'fear', 'afraid', 'nervous', 'stress', 'stressed', 'overwhelmed'],
@@ -298,9 +298,31 @@ function pickByContext(text: string, availableTime: number): WalkRecommendation 
       reason: 'This passage addresses relational conflict and forgiveness.' },
   ];
 
+  const moodPassageMap: Record<string, string> = {
+    anxious: 'Philippians 4:6–7',
+    grieving: 'Psalm 34:18',
+    angry: 'Ephesians 4:26–27',
+    weary: 'Matthew 11:28–30',
+    heavy: '2 Corinthians 12:9–10',
+    joyful: 'Psalm 103:1–5',
+    steady: 'Psalm 23',
+    unsure: 'Proverbs 3:5–6',
+  };
+
+  const moodReasonMap: Record<string, string> = {
+    anxious: 'A passage for when you feel anxious — God\'s peace guards the heart.',
+    grieving: 'The Lord is near to the brokenhearted.',
+    angry: 'Be angry and do not sin — a passage for processing anger.',
+    weary: 'Jesus invites the weary to find rest in Him.',
+    heavy: 'God\'s grace is sufficient in weakness.',
+    joyful: 'A passage to bless the Lord and remember His benefits.',
+    steady: 'The Lord is your shepherd — a steady passage for a steady day.',
+    unsure: 'Trust in the Lord with all your heart for direction.',
+  };
+
   for (const theme of themes) {
     if (theme.keywords.some((kw) => lower.includes(kw))) {
-      return {
+      const baseRec: WalkRecommendation = {
         passage_reference: theme.passage,
         reading_objective: theme.objective,
         observation_prompt: theme.prompt,
@@ -308,8 +330,25 @@ function pickByContext(text: string, availableTime: number): WalkRecommendation 
         estimated_minutes: Math.min(availableTime, 7),
         reason: theme.reason,
       };
+      if (mood && moodPassageMap[mood] && mood !== 'steady') {
+        baseRec.passage_reference = moodPassageMap[mood];
+        baseRec.reason = moodReasonMap[mood] || theme.reason;
+      }
+      return baseRec;
     }
   }
+
+  if (mood && moodPassageMap[mood]) {
+    return {
+      passage_reference: moodPassageMap[mood],
+      reading_objective: 'Read slowly. Let this passage speak to where you are today.',
+      observation_prompt: 'What stands out to you in this passage?',
+      reflection_question: 'How does this passage meet you in your current mood?',
+      estimated_minutes: Math.min(availableTime, 7),
+      reason: moodReasonMap[mood] || 'A passage selected for your mood today.',
+    };
+  }
+
   return null;
 }
 
@@ -322,13 +361,20 @@ export async function recommendWalk(
   recentWalks?: Walk[],
   date = new Date(),
   contextText?: string | null,
+  mood?: string | null,
 ): Promise<WalkRecommendation> {
   const availableTime = profile?.available_time_minutes ?? 7;
 
   // If user provided context text, try to find contextually relevant scripture
   if (contextText && contextText.trim().length > 3) {
-    const contextualPick = pickByContext(contextText.trim(), availableTime);
+    const contextualPick = pickByContext(contextText.trim(), availableTime, mood);
     if (contextualPick) return contextualPick;
+  }
+
+  // If no context but mood is set, use mood-based selection
+  if (mood && mood !== 'steady') {
+    const moodPick = pickByContext(mood, availableTime, mood);
+    if (moodPick) return moodPick;
   }
 
   // Check for current study with continuity

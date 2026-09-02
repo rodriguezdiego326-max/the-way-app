@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Sparkles, BookOpen, Clock, ChevronRight, Info, Lock, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { recommendWalk, walkToInsert } from '@/lib/walkEngine';
+import { fetchVerses } from '@/lib/bibleEngine';
 import type { Walk, Profile, DailyCheckin } from '@/lib/types';
 import { vibrate } from '@/lib/utils';
 
@@ -14,8 +15,12 @@ interface TodayScreenProps {
 const moods = [
   { id: 'joyful', label: 'Joyful', icon: '☀' },
   { id: 'steady', label: 'Steady', icon: '◐' },
+  { id: 'anxious', label: 'Anxious', icon: '◈' },
   { id: 'weary', label: 'Weary', icon: '◌' },
   { id: 'heavy', label: 'Heavy', icon: '●' },
+  { id: 'grieving', label: 'Grieving', icon: '✕' },
+  { id: 'angry', label: 'Angry', icon: '▲' },
+  { id: 'unsure', label: 'Unsure', icon: '?' },
 ];
 
 function getGreeting() {
@@ -30,19 +35,43 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp }: Today
   const [todayWalk, setTodayWalk] = useState<Walk | null>(null);
   const [loading, setLoading] = useState(true);
   const [walkReason, setWalkReason] = useState<string | null>(null);
+  const [scriptureText, setScriptureText] = useState<string | null>(null);
+  const [scriptureLoading, setScriptureLoading] = useState(false);
 
-  const [showContext, setShowContext] = useState(false);
   const [contextText, setContextText] = useState('');
   const [rememberContext, setRememberContext] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
   const [contextSaved, setContextSaved] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [walkError, setWalkError] = useState<string | null>(null);
+
+  const activeTranslation = typeof localStorage !== 'undefined' ? (localStorage.getItem('solapath_translation') || 'WEB') : 'WEB';
 
   useEffect(() => {
     loadOrCreateTodayWalk();
   }, [profile?.id]);
 
-  const [walkError, setWalkError] = useState<string | null>(null);
+  async function loadScriptureText(ref: string) {
+    setScriptureLoading(true);
+    setScriptureText(null);
+    try {
+      const parts = ref.match(/^(.+?)\s+(\d+):(\d+)(?:[–-](\d+))?/);
+      if (parts) {
+        const book = parts[1];
+        const chapter = parseInt(parts[2]);
+        const verseStart = parseInt(parts[3]);
+        const verseEnd = parts[4] ? parseInt(parts[4]) : verseStart;
+        const result = await fetchVerses(book, chapter, verseStart, verseEnd, activeTranslation);
+        setScriptureText(result.verses.map((v) => v.text).join(' '));
+      }
+    } catch { /* non-critical */ }
+    setScriptureLoading(false);
+  }
+
+  useEffect(() => {
+    if (todayWalk?.passage_reference) {
+      loadScriptureText(todayWalk.passage_reference);
+    }
+  }, [todayWalk?.passage_reference]);
 
   async function loadOrCreateTodayWalk() {
     setLoading(true);
@@ -78,7 +107,7 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp }: Today
       .order('created_at', { ascending: false })
       .limit(10);
 
-    const rec = await recommendWalk(profile, (recentWalks as Walk[]) || [], new Date(), contextText || null);
+    const rec = await recommendWalk(profile, (recentWalks as Walk[]) || [], new Date(), contextText || null, selectedMood);
     setWalkReason(rec.reason);
 
     const { data: created, error: createErr } = await supabase
@@ -99,19 +128,8 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp }: Today
     setLoading(false);
   }
 
-  async function regenerateWalkWithContext(mood: string, context: string) {
+  async function updateWalkRecommendation(mood: string, context: string) {
     setRegenerating(true);
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    await supabase
-      .from('walks')
-      .delete()
-      .gte('created_at', today.toISOString())
-      .lt('created_at', tomorrow.toISOString());
 
     const { data: recentWalks } = await supabase
       .from('walks')
@@ -119,23 +137,38 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp }: Today
       .order('created_at', { ascending: false })
       .limit(10);
 
-    const rec = await recommendWalk(profile, (recentWalks as Walk[]) || [], new Date(), context || null);
+    const rec = await recommendWalk(profile, (recentWalks as Walk[]) || [], new Date(), context || null, mood);
     setWalkReason(rec.reason);
 
-    const { data: created, error: createErr } = await supabase
-      .from('walks')
-      .insert(walkToInsert(rec))
-      .select('*')
-      .single();
+    if (todayWalk) {
+      const { data: updated, error: updateErr } = await supabase
+        .from('walks')
+        .update({
+          passage_reference: rec.passage_reference,
+          reading_objective: rec.reading_objective,
+          observation_prompt: rec.observation_prompt,
+          estimated_minutes: rec.estimated_minutes,
+        })
+        .eq('id', todayWalk.id)
+        .select('*')
+        .single();
 
-    if (createErr) {
-      setWalkError('We couldn\'t create your walk for today. Please try again.');
-      setRegenerating(false);
-      return;
-    }
+      if (updateErr) {
+        setWalkError('We couldn\'t update your walk. Please try again.');
+        setRegenerating(false);
+        return;
+      }
 
-    if (created) {
-      setTodayWalk(created as Walk);
+      if (updated) {
+        setTodayWalk(updated as Walk);
+      }
+    } else {
+      const { data: created } = await supabase
+        .from('walks')
+        .insert(walkToInsert(rec))
+        .select('*')
+        .single();
+      if (created) setTodayWalk(created as Walk);
     }
     setRegenerating(false);
   }
@@ -164,11 +197,9 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp }: Today
     }
 
     setContextSaved(true);
-    setTimeout(() => setShowContext(false), 800);
+    setTimeout(() => setContextSaved(false), 1500);
 
-    if (contextText.trim()) {
-      await regenerateWalkWithContext(selectedMood, contextText.trim());
-    }
+    await updateWalkRecommendation(selectedMood, contextText.trim());
   }
 
   function handleStartWalk() {
@@ -178,6 +209,12 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp }: Today
   }
 
   function handleReadInApp() {
+    if (!todayWalk) return;
+    vibrate(10);
+    onReadInApp(todayWalk);
+  }
+
+  function handleDiveDeeper() {
     if (!todayWalk) return;
     vibrate(10);
     onReadInApp(todayWalk);
@@ -224,7 +261,7 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp }: Today
           ))}
         </div>
 
-        {selectedMood && !showContext && !contextSaved && (
+        {selectedMood && !contextSaved && (
           <div className="mt-4 animate-fade-in-up">
             <textarea
               autoFocus
@@ -258,7 +295,7 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp }: Today
               <div className="flex-1" />
               <button
                 onClick={saveCheckin}
-                disabled={!contextText.trim() || regenerating}
+                disabled={regenerating}
                 className="btn-secondary px-4 py-2.5 text-sm disabled:opacity-40"
               >
                 {regenerating ? (
@@ -314,6 +351,20 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp }: Today
                 {todayWalk.reading_objective}
               </p>
 
+              {scriptureLoading ? (
+                <div className="flex items-center gap-2 mb-4 px-3 py-3 rounded-xl bg-ink-900/40 border border-ink-700/30">
+                  <Loader2 size={14} className="text-gold-400/60 animate-spin" />
+                  <p className="text-ivory-500 text-xs italic">Loading Scripture...</p>
+                </div>
+              ) : scriptureText ? (
+                <div className="mb-4 px-3 py-3 rounded-xl bg-ink-900/40 border border-gold-500/15">
+                  <p className="font-serif text-[15px] leading-[1.75] text-ivory-200 italic">
+                    {scriptureText}
+                  </p>
+                  <p className="text-gold-400/60 text-[10px] uppercase tracking-wider mt-2">{activeTranslation}</p>
+                </div>
+              ) : null}
+
               {walkReason && (
                 <div className="flex items-start gap-2 mb-4 px-3 py-2 rounded-xl bg-ink-800/40 border border-ink-700/30">
                   <Info size={12} className="text-gold-400/60 shrink-0 mt-0.5" />
@@ -326,8 +377,8 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp }: Today
                   <BookOpen size={18} />
                   I'm Opening My Bible
                 </button>
-                <button onClick={handleReadInApp} className="btn-secondary w-full">
-                  Read In App
+                <button onClick={handleDiveDeeper} className="btn-secondary w-full">
+                  Dive Deeper in Bible
                   <ChevronRight size={16} />
                 </button>
               </div>

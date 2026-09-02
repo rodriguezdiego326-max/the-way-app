@@ -95,6 +95,7 @@ import {
   getKeywords,
   saveKeyword,
   deleteKeyword,
+  updateKeyword,
   getKeywordMarks,
   saveKeywordMark,
   removeKeywordMark,
@@ -408,12 +409,13 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
     vibrate(8);
     setHighlightSaveError(false);
 
-    if (highlightMode === 'word' && highlightWordSel !== null && highlightWordEnd !== null) {
+    if (highlightMode === 'word' && highlightWordSel !== null) {
+      const endTokRaw = highlightWordEnd !== null ? highlightWordEnd : highlightWordSel;
       const vd = verses.find((v) => v.verse === selection.verseStart);
       if (!vd) return;
       const tokens = tokenizeVerse(vd.text);
-      const startTok = Math.min(highlightWordSel, highlightWordEnd);
-      const endTok = Math.max(highlightWordSel, highlightWordEnd);
+      const startTok = Math.min(highlightWordSel, endTokRaw);
+      const endTok = Math.max(highlightWordSel, endTokRaw);
       const selText = getSelectedText(tokens, startTok, endTok);
       const existing = highlights.find(
         (h) => h.verse_start === selection.verseStart && h.token_start !== null && h.token_end !== null,
@@ -607,7 +609,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
   // ============================================================
 
   return (
-    <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28">
+    <div className={`app-container bg-ink-950 bg-parchment min-h-screen ${chapterMarkingMode ? 'pb-72' : 'pb-28'}`}>
       {/* HEADER */}
       <header className="px-6 pt-14 safe-top sticky top-0 z-20 bg-ink-950/95 backdrop-blur-md border-b border-ink-700/20">
         <div className="flex items-center justify-between">
@@ -1094,9 +1096,9 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                         </div>
                       </div>
                     )}
-                    {highlightMode === 'word' && highlightWordPhase === 'ready' && highlightWordSel !== null && highlightWordEnd !== null && (
+                    {highlightMode === 'word' && highlightWordPhase === 'ready' && highlightWordSel !== null && (
                       <div className="mb-2">
-                        <p className="text-gold-200 text-xs font-serif italic mb-1">&ldquo;{(() => { const vd = verses.find(v => v.verse === selection?.verseStart); if (!vd || highlightWordSel === null || highlightWordEnd === null) return ''; const t = tokenizeVerse(vd.text); return getSelectedText(t, Math.min(highlightWordSel, highlightWordEnd), Math.max(highlightWordSel, highlightWordEnd)).trim(); })()}&rdquo;</p>
+                        <p className="text-gold-200 text-xs font-serif italic mb-1">&ldquo;{(() => { const vd = verses.find(v => v.verse === selection?.verseStart); if (!vd || highlightWordSel === null) return ''; const t = tokenizeVerse(vd.text); const endT = highlightWordEnd !== null ? highlightWordEnd : highlightWordSel; return getSelectedText(t, Math.min(highlightWordSel, endT), Math.max(highlightWordSel, endT)).trim(); })()}&rdquo;</p>
                         <button onClick={() => { vibrate(5); setHighlightWordSel(null); setHighlightWordEnd(null); setHighlightWordPhase('idle'); }} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-ink-700/40 border border-ink-600/30 text-ivory-300 text-xs no-tap-highlight hover:border-gold-500/30 transition-all min-h-[36px]">
                           <X size={12} /> Clear Selection
                         </button>
@@ -1115,12 +1117,13 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                           vibrate(8);
                           if (highlightMode === 'verse') {
                             const existing = highlights.find(h => h.verse_start === selection.verseStart && h.verse_end === selection.verseEnd && h.token_start === null);
-                            if (existing) { removeHighlight(existing.id).then(ok => { if (ok) setHighlights(prev => prev.filter(h => h.id !== existing.id)); }); }
+                            if (existing) { removeHighlight(existing.id).then(ok => { if (ok) setHighlights(prev => prev.filter(h => h.id !== existing.id)); });
+                              setShowHighlightPicker(false); setHighlightWordSel(null); setHighlightWordEnd(null); setHighlightWordPhase('idle'); }
                           } else {
                             const existing = highlights.find(h => h.verse_start === selection.verseStart && h.token_start !== null && h.token_end !== null);
-                            if (existing) { removeHighlight(existing.id).then(ok => { if (ok) setHighlights(prev => prev.filter(h => h.id !== existing.id)); }); }
+                            if (existing) { removeHighlight(existing.id).then(ok => { if (ok) setHighlights(prev => prev.filter(h => h.id !== existing.id)); });
+                              setShowHighlightPicker(false); setHighlightWordSel(null); setHighlightWordEnd(null); setHighlightWordPhase('idle'); }
                           }
-                          setShowHighlightPicker(false); setHighlightWordSel(null); setHighlightWordEnd(null); setHighlightWordPhase('idle');
                         }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-error/30 bg-error/10 text-error text-xs font-medium no-tap-highlight transition-all min-h-[36px]">
                           <Trash2 size={12} /> Remove
                         </button>
@@ -1669,9 +1672,9 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
       {/* CHAPTER MARKING MODE — reserved layout header + sticky palette */}
       {chapterMarkingMode && view === 'reader' && (
         <>
-          {/* Reserved marking header — occupies layout space, does not float over Scripture */}
-          <div className="sticky top-0 z-[55] bg-ink-900/95 backdrop-blur-md border-b border-gold-500/20 animate-fade-in">
-            <div className="max-w-lg mx-auto px-4 py-2.5">
+          {/* Persistent marking dock — fixed above bottom nav */}
+          <div className="fixed left-0 right-0 z-[54] animate-fade-in-up" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)' }}>
+            <div className="max-w-lg mx-auto bg-ink-900/95 backdrop-blur-md border border-gold-500/20 rounded-t-2xl px-4 py-2.5 shadow-xl shadow-ink-950/50">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Sparkles size={14} className="text-gold-400" />
@@ -1690,7 +1693,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                     setUndoToast(null);
                     if (undoTimer.current) clearTimeout(undoTimer.current);
                   }}
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-gold-500/20 border border-gold-500/50 text-gold-100 text-sm font-semibold no-tap-highlight hover:bg-gold-500/30 transition-all min-h-[44px] min-w-[44px]"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gold-500/20 border border-gold-500/50 text-gold-100 text-sm font-semibold no-tap-highlight hover:bg-gold-500/30 transition-all min-h-[44px] min-w-[44px]"
                 >
                   <XCircle size={16} /> Done
                 </button>
@@ -2074,8 +2077,8 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
           )}
 
           {/* Sticky Marking Key palette */}
-          <div className="fixed left-0 right-0 z-[54] px-2 animate-fade-in-up" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 72px)' }}>
-            <div className="max-w-lg mx-auto bg-ink-900/95 backdrop-blur-md border border-ink-600/40 rounded-2xl p-2 shadow-xl shadow-ink-950/50">
+          <div className="fixed left-0 right-0 z-[54] px-2 animate-fade-in-up" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 0px)' }}>
+            <div className="max-w-lg mx-auto bg-ink-900/95 backdrop-blur-md border border-ink-600/40 rounded-t-2xl p-2 shadow-xl shadow-ink-950/50">
               <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
                 {keywords.map((kw) => {
                   const isActive = activeKeyId === kw.id;
@@ -2255,7 +2258,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
             <div className="flex items-center justify-between mb-3 sticky top-0 bg-ink-800/95 pb-2 -mx-4 px-4 border-b border-ink-700/30">
               <div>
                 <p className="text-gold-300 text-base font-medium font-serif">Cross References</p>
-                <p className="text-ivory-500 text-xs">{selection.book} {selection.chapter}:{selection.verseStart}</p>
+                <p className="text-ivory-500 text-xs">{getBookDisplayName(selection.book, translation)} {selection.chapter}:{selection.verseStart}</p>
               </div>
               <div className="flex items-center gap-2">
                 {crossRefNavStack.length > 0 && (
@@ -2306,7 +2309,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                     }}
                     className="block w-full text-left p-3 rounded-xl bg-ink-700/30 border border-ink-600/20 mb-2 hover:border-gold-500/30 transition-all no-tap-highlight"
                   >
-                    <p className="text-gold-200 text-sm font-medium mb-1">{ref.target}</p>
+                    <p className="text-gold-200 text-sm font-medium mb-1">{(() => { const p = parseReference(ref.target); return p ? `${getBookDisplayName(p.book, translation)} ${p.chapter}:${p.verse}` : ref.target; })()}</p>
                     {crossRefPreviews[ref.target] ? (
                       <p className="text-ivory-400 text-xs font-serif italic leading-relaxed">{crossRefPreviews[ref.target]}</p>
                     ) : (
@@ -2372,12 +2375,11 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
           onSearchChange={setSearchQuery}
           onSearch={handleSearch}
           onNoteTap={(n) => { 
+            setView('reader');
             loadChapter(n.book, n.chapter);
-            setNoteEditorState({ 
-              sel: { book: n.book, chapter: n.chapter, verseStart: n.verse_start, verseEnd: n.verse_end }, 
-              existing: n 
-            });
-            setView('note_editor');
+            setTimeout(() => {
+              setPassageEmphasis({ verseStart: n.verse_start, verseEnd: n.verse_end });
+            }, 350);
           }}
           onDelete={async (id) => {
             vibrate(8);
@@ -2401,13 +2403,6 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
           bookmarks={bookmarks}
           onTap={async (bm) => {
             vibrate(5);
-            if (bm.translation && bm.translation !== translation) {
-              const t = BIBLE_TRANSLATIONS.find((bt) => bt.id === bm.translation);
-              if (t && t.installed && t.selectable) {
-                setTranslation(bm.translation as BibleTranslation);
-                localStorage.setItem('solapath_translation', bm.translation);
-              }
-            }
             setView('reader');
             await loadChapter(bm.book, bm.chapter);
             setTimeout(() => {
@@ -2432,6 +2427,15 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
             const saved = await saveKeyword(name, color, style, symbol, desc);
             if (saved) {
               setKeywords((prev) => [...prev, saved]);
+              return true;
+            }
+            return false;
+          }}
+          onEdit={async (id, name, color, style, symbol, desc) => {
+            vibrate(6);
+            const updated = await updateKeyword(id, name, color, style, symbol, desc);
+            if (updated) {
+              setKeywords((prev) => prev.map((k) => k.id === id ? updated : k));
               return true;
             }
             return false;
@@ -2720,28 +2724,48 @@ function BookmarksView({
 // ============================================================
 
 function KeywordsView({
-  keywords, onSave, onDelete, onBack,
+  keywords, onSave, onDelete, onEdit, onBack,
 }: {
   keywords: BibleKeyword[];
   onSave: (name: string, color: HighlightColor, style: MarkStyle, symbol: string | null, desc: string | null) => Promise<boolean>;
   onDelete: (id: string) => void;
+  onEdit: (id: string, name: string, color: HighlightColor, style: MarkStyle, symbol: string | null, desc: string | null) => Promise<boolean>;
   onBack: () => void;
 }) {
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [color, setColor] = useState<HighlightColor>('gold');
   const [style, setStyle] = useState<MarkStyle>('highlight');
   const [symbol, setSymbol] = useState('');
   const [desc, setDesc] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  function startEdit(kw: BibleKeyword) {
+    setEditingId(kw.id);
+    setName(kw.name);
+    setColor(kw.color_key);
+    setStyle(kw.style);
+    setSymbol(kw.symbol || '');
+    setDesc(kw.description || '');
+    setShowForm(true);
+  }
+
+  function startNew() {
+    setEditingId(null);
+    setName(''); setSymbol(''); setDesc('');
+    setColor('gold'); setStyle('highlight');
+    setShowForm(true);
+  }
 
   return (
-    <div className="px-6 mt-4">
+    <div className="px-6 mt-4 pb-28">
       <div className="flex items-center gap-3 mb-5">
         <button onClick={onBack} className="btn-ghost"><ChevronLeft size={20} /></button>
         <p className="ui-label">Keywords</p>
         <div className="flex-1" />
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={startNew}
           className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gold-500/15 border border-gold-500/25 text-gold-300 text-xs font-medium no-tap-highlight"
         >
           + New
@@ -2758,17 +2782,15 @@ function KeywordsView({
             className="input-field mb-3"
           />
           <p className="text-ivory-500 text-xs mb-2">Color</p>
-          <div className="flex gap-2 mb-3">
+          <div className="grid grid-cols-4 gap-2 mb-3 overflow-x-hidden">
             {HIGHLIGHT_COLORS.map((c) => (
               <button
                 key={c.key}
                 onClick={() => setColor(c.key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-all no-tap-highlight ${
-                  color === c.key ? `${c.class} text-ivory-100` : 'bg-ink-800/30 border-ink-600/20 text-ivory-500'
-                }`}
+                className={`flex items-center gap-1 px-2 py-1.5 rounded-lg border text-xs transition-all no-tap-highlight ${color === c.key ? `${c.class} text-ivory-100` : 'bg-ink-800/30 border-ink-600/20 text-ivory-500'}`}
               >
-                <div className={`w-3 h-3 rounded-full ${c.dot}`} />
-                {c.label}
+                <div className={`w-3 h-3 rounded-full shrink-0 ${c.dot}`} />
+                <span className="truncate">{c.label}</span>
               </button>
             ))}
           </div>
@@ -2780,9 +2802,7 @@ function KeywordsView({
                 <button
                   key={s.key}
                   onClick={() => setStyle(s.key)}
-                  className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border text-xs transition-all no-tap-highlight ${
-                    style === s.key ? 'bg-gold-500/20 border-gold-500/40 text-gold-300' : 'bg-ink-800/30 border-ink-600/20 text-ivory-500'
-                  }`}
+                  className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border text-xs transition-all no-tap-highlight ${style === s.key ? 'bg-gold-500/20 border-gold-500/40 text-gold-300' : 'bg-ink-800/30 border-ink-600/20 text-ivory-500'}`}
                 >
                   <span className={`font-serif ${previewCls.className}`}>
                     Word
@@ -2807,7 +2827,6 @@ function KeywordsView({
               </div>
             </>
           )}
-          {/* Large live scripture preview */}
           <div className="rounded-xl bg-ink-900/60 border border-ink-700/30 p-3 mb-3">
             <p className="text-ivory-600 text-[10px] uppercase tracking-wider mb-2">Live Preview</p>
             <p className="font-serif text-[18px] leading-[1.7] text-ivory-100">
@@ -2827,22 +2846,39 @@ function KeywordsView({
             placeholder="Description (optional)"
             className="input-field mb-3"
           />
-          <button
-            onClick={async () => {
-              if (!name.trim()) return;
-              const sym = (style === 'symbol' || style === 'symbol_underline' || style === 'symbol_highlight')
-                ? (symbol.trim() || '★')
-                : null;
-              const ok = await onSave(name.trim().toUpperCase(), color, style, sym, desc.trim() || null);
-              if (ok) {
-                setName(''); setSymbol(''); setDesc(''); setShowForm(false);
-              }
-            }}
-            disabled={!name.trim()}
-            className="btn-primary w-full disabled:opacity-40"
-          >
-            <Check size={14} /> Save Keyword
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={async () => {
+                if (!name.trim() || saving) return;
+                setSaving(true);
+                const sym = (style === 'symbol' || style === 'symbol_underline' || style === 'symbol_highlight')
+                  ? (symbol.trim() || '★')
+                  : null;
+                const ok = editingId
+                  ? await onEdit(editingId, name.trim().toUpperCase(), color, style, sym, desc.trim() || null)
+                  : await onSave(name.trim().toUpperCase(), color, style, sym, desc.trim() || null);
+                if (ok) {
+                  setName(''); setSymbol(''); setDesc(''); setShowForm(false); setEditingId(null);
+                }
+                setSaving(false);
+              }}
+              disabled={!name.trim() || saving}
+              className="btn-primary flex-1 disabled:opacity-40"
+            >
+              {saving ? <span className="text-xs">Saving...</span> : <><Check size={14} /> {editingId ? 'Save Changes' : 'Save Keyword'}</>}
+            </button>
+            {editingId && (
+              <button
+                onClick={() => { vibrate(8); onDelete(editingId); setShowForm(false); setEditingId(null); }}
+                className="flex items-center gap-1 px-3 py-2 rounded-lg border border-error/30 bg-error/10 text-error text-xs font-medium no-tap-highlight"
+              >
+                <Trash2 size={12} /> Delete
+              </button>
+            )}
+            <button onClick={() => { setShowForm(false); setEditingId(null); }} className="btn-ghost" disabled={saving}>
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
@@ -2860,9 +2896,14 @@ function KeywordsView({
                   {kw.description && <p className="text-ivory-600 text-xs mt-0.5">{kw.description}</p>}
                 </div>
               </div>
-              <button onClick={() => onDelete(kw.id)} className="text-ivory-600 hover:text-error transition-colors">
-                <Trash2 size={14} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => startEdit(kw)} className="text-ivory-500 hover:text-gold-300 transition-colors" aria-label="Edit">
+                  <Pencil size={14} />
+                </button>
+                <button onClick={() => onDelete(kw.id)} className="text-ivory-600 hover:text-error transition-colors" aria-label="Delete">
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -2898,7 +2939,7 @@ function NoteEditor({
   }, [content]);
 
   return (
-    <div className="px-6 mt-4">
+    <div className="px-6 mt-4 pb-28">
       <div className="flex items-center gap-3 mb-5">
         <button onClick={onCancel} className="btn-ghost"><X size={20} /></button>
         <p className="ui-label">
@@ -2906,7 +2947,7 @@ function NoteEditor({
         </p>
       </div>
 
-      <p className="font-serif text-xl text-gold-300 mb-4">{formatReference(sel)}</p>
+      <p className="font-serif text-xl text-gold-300 mb-4">{formatReference(sel, undefined)}</p>
 
       <p className="text-ivory-500 text-xs mb-2">Category</p>
       <div className="flex flex-wrap gap-1.5 mb-4">
@@ -2947,11 +2988,11 @@ function NoteEditor({
         </div>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex gap-3 sticky bottom-4">
         <button onClick={onCancel} className="btn-ghost flex-1" disabled={saving}>Cancel</button>
         <button
           onClick={async () => {
-            if (!content.trim()) return;
+            if (!content.trim() || saving) return;
             setSaving(true);
             await onSave(noteType, content.trim(), title.trim() || null);
             setSaving(false);

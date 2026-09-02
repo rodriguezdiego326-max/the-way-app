@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -6,21 +6,36 @@ interface SplashScreenProps {
 
 export default function SplashScreen({ onComplete }: SplashScreenProps) {
   const [phase, setPhase] = useState<'title' | 'tagline' | 'covenant'>('title');
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase('tagline'), 5000);
-    const t2 = setTimeout(() => setPhase('covenant'), 10000);
-    const t3 = setTimeout(onComplete, 15000);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-    };
-  }, [onComplete]);
+    startPhaseTimer('title');
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
+
+  function startPhaseTimer(p: 'title' | 'tagline' | 'covenant') {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => advance(p), 3000);
+  }
+
+  function advance(current: 'title' | 'tagline' | 'covenant') {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (current === 'title') {
+      setPhase('tagline');
+      startPhaseTimer('tagline');
+    } else if (current === 'tagline') {
+      setPhase('covenant');
+      startPhaseTimer('covenant');
+    } else {
+      onComplete();
+    }
+  }
 
   return (
-    <div className="app-container flex flex-col items-center justify-center bg-ink-950 bg-parchment overflow-hidden">
-      {/* Soft light glow */}
+    <div
+      onClick={() => advance(phase)}
+      className="app-container flex flex-col items-center justify-center bg-ink-950 bg-parchment overflow-hidden cursor-pointer"
+    >
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-72 h-72 rounded-full bg-gold-500/5 blur-3xl animate-breathe" />
 
       <div className="relative z-10 flex flex-col items-center px-8 text-center">
@@ -58,7 +73,6 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
         )}
       </div>
 
-      {/* Subtle bottom fade */}
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-ink-950 to-transparent" />
     </div>
   );
