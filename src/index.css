@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-ink-950 text-ivory-100 font-sans antialiased;
+    overscroll-behavior-y: none;
+  }
+
+  ::selection {
+    @apply bg-gold-500/30 text-ivory-50;
+  }
+
+  /* Custom scrollbar — subtle */
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ink-600 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-ink-500;
+  }
+}
+
+@layer components {
+  .app-container {
+    @apply mx-auto w-full max-w-md min-h-screen relative;
+  }
+
+  .glass-card {
+    @apply bg-ink-850/80 backdrop-blur-xl border border-ink-700/50 rounded-3xl;
+  }
+
+  .premium-card {
+    @apply bg-gradient-to-b from-ink-800/60 to-ink-900/60 backdrop-blur-sm border border-ink-700/40 rounded-3xl;
+  }
+
+  .scripture-text {
+    @apply font-serif text-ivory-50 leading-relaxed tracking-wide;
+  }
+
+  .ui-label {
+    @apply text-xs uppercase tracking-[0.2em] text-ivory-500 font-medium;
+  }
+
+  .gold-divider {
+    @apply h-px w-full bg-gradient-to-r from-transparent via-gold-500/30 to-transparent;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-4 rounded-2xl
+           bg-gradient-to-b from-gold-400 to-gold-600 text-ink-950 font-medium
+           transition-all duration-300 hover:from-gold-300 hover:to-gold-500
+           active:scale-[0.98] shadow-lg shadow-black/30;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-4 rounded-2xl
+           bg-ink-700/50 text-ivory-200 font-medium border border-ink-600/50
+           transition-all duration-300 hover:bg-ink-600/50 hover:border-ink-500/50
+           active:scale-[0.98];
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
+           text-ivory-400 font-medium
+           transition-all duration-200 hover:text-ivory-200 hover:bg-ink-800/50
+           active:scale-[0.98];
+  }
+
+  .input-field {
+    @apply w-full bg-ink-800/60 border border-ink-600/40 rounded-2xl px-4 py-3.5
+           text-ivory-100 placeholder:text-ivory-600
+           focus:outline-none focus:border-gold-500/50 focus:bg-ink-800/80
+           transition-all duration-200;
+  }
+
+  .mood-chip {
+    @apply flex flex-col items-center justify-center gap-2 px-3 py-4 rounded-2xl
+           bg-ink-800/40 border border-ink-700/40
+           transition-all duration-300 hover:bg-ink-700/50 hover:border-gold-500/30
+           active:scale-95;
+  }
+
+  .nav-item {
+    @apply flex flex-col items-center justify-center gap-1 flex-1 py-2
+           transition-all duration-200;
+  }
+
+  .section-title {
+    @apply font-serif text-2xl text-ivory-50 tracking-tight;
+  }
+
+  .fade-stagger > * {
+    animation: fadeInUp 0.6s ease-out backwards;
+  }
+  .fade-stagger > *:nth-child(1) { animation-delay: 0.05s; }
+  .fade-stagger > *:nth-child(2) { animation-delay: 0.12s; }
+  .fade-stagger > *:nth-child(3) { animation-delay: 0.19s; }
+  .fade-stagger > *:nth-child(4) { animation-delay: 0.26s; }
+  .fade-stagger > *:nth-child(5) { animation-delay: 0.33s; }
+  .fade-stagger > *:nth-child(6) { animation-delay: 0.40s; }
+  .fade-stagger > *:nth-child(7) { animation-delay: 0.47s; }
+  .fade-stagger > *:nth-child(8) { animation-delay: 0.54s; }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .no-tap-highlight {
+    -webkit-tap-highlight-color: transparent;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .nav-safe-padding {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+}

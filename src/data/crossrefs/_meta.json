@@ -1,0 +1,10 @@
+{
+  "source": "OpenBible.info cross-reference dataset",
+  "license": "Creative Commons Attribution (CC-BY)",
+  "source_url": "https://www.openbible.info/labs/cross-references",
+  "generated": "2026-09-01",
+  "total_relationships": 344799,
+  "total_source_verses": 29364,
+  "book_files": 66,
+  "duplicates_removed": 0
+}

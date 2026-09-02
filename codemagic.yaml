@@ -1,0 +1,52 @@
+workflows:
+  solapath-ios-testflight:
+    name: SOLAPATH — iOS TestFlight Build
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: SOLAPATH App Store Connect
+    environment:
+      groups:
+        - solapath_client
+      vars:
+        XCODE_PROJECT: ios/App/App.xcodeproj
+        XCODE_SCHEME: App
+        BUNDLE_ID: com.rfgforge.solapath
+      node: latest
+      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.rfgforge.solapath
+    cache:
+      cache_paths:
+        - $HOME/.npm
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm ci
+      - name: Build web application
+        script: |
+          npm run build:web
+      - name: Sync Capacitor iOS
+        script: |
+          npx cap sync ios
+      - name: Verify Xcode project
+        script: |
+          xcodebuild -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME" -list
+      - name: Apply provisioning profiles
+        script: |
+          xcode-project use-profiles
+      - name: Build signed IPA
+        script: |
+          cd "$CM_BUILD_DIR/ios/App"
+          xcode-project build-ipa \
+            --project "App.xcodeproj" \
+            --scheme "App"
+    artifacts:
+      - ios/App/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
