@@ -178,10 +178,13 @@ export default function App() {
   }, []);
 
   async function handleSignOut() {
+    setProfileLoading(false);
+    setAuthLoading(false);
     await supabase.auth.signOut();
     setSession(null);
     setProfile(null);
     setOverlay({ type: 'none' });
+    setActiveTab('today');
   }
 
   async function loadProfile() {
@@ -320,16 +323,18 @@ export default function App() {
   if (!session) {
     return (
       <ErrorBoundary>
-        <div className="app-container bg-ink-950 bg-parchment min-h-screen flex flex-col items-center justify-center px-6">
-          <div className="w-full max-w-sm animate-fade-in">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 rounded-2xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center mx-auto mb-6">
-                <BookOpen size={28} className="text-gold-300" />
+        <div className="app-container bg-ink-950 bg-parchment min-h-screen overflow-y-auto safe-top">
+          <div className="min-h-screen flex flex-col items-center justify-center px-6 py-20">
+            <div className="w-full max-w-sm animate-fade-in">
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 rounded-2xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center mx-auto mb-6">
+                  <BookOpen size={28} className="text-gold-300" />
+                </div>
+                <h1 className="font-serif text-3xl text-ivory-50 tracking-tight mb-2">SOLAPATH</h1>
+                <p className="text-ivory-500 text-sm">Scripture for the road ahead</p>
               </div>
-              <h1 className="font-serif text-3xl text-ivory-50 tracking-tight mb-2">SOLAPATH</h1>
-              <p className="text-ivory-500 text-sm">Scripture for the road ahead</p>
+              <AuthForm onAuthed={() => { setShowAuth(false); loadProfile(); }} />
             </div>
-            <AuthForm onAuthed={() => { setShowAuth(false); loadProfile(); }} />
           </div>
         </div>
       </ErrorBoundary>

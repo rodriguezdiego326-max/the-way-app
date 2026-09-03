@@ -187,6 +187,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
   const [crossRefLimit, setCrossRefLimit] = useState(8);
   const [crossRefNavStack, setCrossRefNavStack] = useState<{ book: string; chapter: number; verse: number; scrollY: number }[]>([]);
   const [highlightSaveError, setHighlightSaveError] = useState(false);
+  const [highlightRemoveError, setHighlightRemoveError] = useState(false);
   const [bookmarkSaveError, setBookmarkSaveError] = useState(false);
   const [noteSaveError, setNoteSaveError] = useState(false);
   const [studySaving, setStudySaving] = useState(false);
@@ -328,8 +329,12 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
     return !!selection && v >= selection.verseStart && v <= selection.verseEnd;
   }
 
-  function getHighlightForVerse(v: number): BibleHighlight | null {
-    return highlights.find((h) => v >= h.verse_start && v <= h.verse_end) || null;
+  function getWholeVerseHighlight(v: number): BibleHighlight | null {
+    return highlights.find((h) => v >= h.verse_start && v <= h.verse_end && h.token_start === null && h.token_end === null) || null;
+  }
+
+  function getTokenHighlightsForVerse(v: number): BibleHighlight[] {
+    return highlights.filter((h) => h.verse_start === v && h.token_start !== null && h.token_end !== null);
   }
 
   function getNoteCountForVerse(v: number): number {
@@ -796,10 +801,11 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
               <div className="space-y-1">
                 {verses.map((v) => {
                   const selected = isVerseSelected(v.verse);
-                  const hl = getHighlightForVerse(v.verse);
+                  const hl = getWholeVerseHighlight(v.verse);
                   const noteCount = getNoteCountForVerse(v.verse);
                   const km = getKeywordMarkForVerse(v.verse);
                   const hlColor = hl ? HIGHLIGHT_COLORS.find((c) => c.key === hl.color_key) : null;
+                  const tokenHls = getTokenHighlightsForVerse(v.verse);
 
                   return (
                     <div
@@ -851,6 +857,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                         highlightWordMode={showHighlightPicker && highlightMode === 'word' && selection !== null && selection.verseStart === v.verse}
                         highlightWordSelToken={highlightWordSel}
                         highlightWordEndToken={highlightWordEnd}
+                        tokenHighlights={tokenHls}
                         selectionStartToken={
                           chapterMarkingMode
                             ? tokenSelStart
@@ -883,13 +890,21 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                           if (chapterMarkingMode) {
                             if (adjustMode) {
                               if (markPhase === 'awaiting_start') {
+                                setMarkingVerse(verse);
                                 setTokenSelStart(tokenIndex);
                                 setTokenSelEnd(null);
                                 setMarkPhase('awaiting_end');
                               } else if (markPhase === 'awaiting_end') {
-                                setTokenSelEnd(tokenIndex);
-                                setMarkPhase('range_selected');
-                                setAdjustMode(false);
+                                if (markingVerse !== null && verse !== markingVerse) {
+                                  setMarkingVerse(verse);
+                                  setTokenSelStart(tokenIndex);
+                                  setTokenSelEnd(null);
+                                  setMarkPhase('awaiting_end');
+                                } else {
+                                  setTokenSelEnd(tokenIndex);
+                                  setMarkPhase('range_selected');
+                                  setAdjustMode(false);
+                                }
                               }
                               return;
                             }
@@ -899,13 +914,22 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                             }
                             if (activeKey) {
                               if (tokenSelStart === null) {
+                                setMarkingVerse(verse);
                                 setTokenSelStart(tokenIndex);
                                 setTokenSelEnd(null);
                                 setMarkPhase('awaiting_end');
                               } else if (tokenSelEnd === null) {
-                                setTokenSelEnd(tokenIndex);
-                                setMarkPhase('range_selected');
+                                if (markingVerse !== null && verse !== markingVerse) {
+                                  setMarkingVerse(verse);
+                                  setTokenSelStart(tokenIndex);
+                                  setTokenSelEnd(null);
+                                  setMarkPhase('awaiting_end');
+                                } else {
+                                  setTokenSelEnd(tokenIndex);
+                                  setMarkPhase('range_selected');
+                                }
                               } else {
+                                setMarkingVerse(verse);
                                 setTokenSelStart(tokenIndex);
                                 setTokenSelEnd(null);
                                 setMarkPhase('awaiting_end');
@@ -917,24 +941,41 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                           }
                           if (adjustMode) {
                             if (markPhase === 'awaiting_start') {
+                              setMarkingVerse(verse);
                               setTokenSelStart(tokenIndex);
                               setTokenSelEnd(null);
                               setMarkPhase('awaiting_end');
                             } else if (markPhase === 'awaiting_end') {
-                              setTokenSelEnd(tokenIndex);
-                              setMarkPhase('range_selected');
-                              setAdjustMode(false);
+                              if (markingVerse !== null && verse !== markingVerse) {
+                                setMarkingVerse(verse);
+                                setTokenSelStart(tokenIndex);
+                                setTokenSelEnd(null);
+                                setMarkPhase('awaiting_end');
+                              } else {
+                                setTokenSelEnd(tokenIndex);
+                                setMarkPhase('range_selected');
+                                setAdjustMode(false);
+                              }
                             }
                             return;
                           }
                           if (tokenSelStart === null) {
+                            setMarkingVerse(verse);
                             setTokenSelStart(tokenIndex);
                             setTokenSelEnd(null);
                             setMarkPhase('awaiting_end');
                           } else if (tokenSelEnd === null) {
-                            setTokenSelEnd(tokenIndex);
-                            setMarkPhase('range_selected');
+                            if (markingVerse !== null && verse !== markingVerse) {
+                              setMarkingVerse(verse);
+                              setTokenSelStart(tokenIndex);
+                              setTokenSelEnd(null);
+                              setMarkPhase('awaiting_end');
+                            } else {
+                              setTokenSelEnd(tokenIndex);
+                              setMarkPhase('range_selected');
+                            }
                           } else {
+                            setMarkingVerse(verse);
                             setTokenSelStart(tokenIndex);
                             setTokenSelEnd(null);
                             setMarkPhase('awaiting_end');
@@ -1104,39 +1145,48 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                         </button>
                       </div>
                     )}
-                    {((highlightMode === 'word' && highlightWordPhase === 'ready') || highlightMode === 'verse') && (
+                    {((highlightMode === 'word' && highlightWordPhase === 'ready') || highlightMode === 'verse') && (() => {
+                      const existingVerseHl = highlights.find(h => h.verse_start === selection!.verseStart && h.verse_end === selection!.verseEnd && h.token_start === null);
+                      const existingTokenHl = highlights.find(h => h.verse_start === selection!.verseStart && h.token_start !== null && h.token_end !== null);
+                      const existing = highlightMode === 'verse' ? existingVerseHl : existingTokenHl;
+                      return (
                       <div className="flex items-center gap-2 flex-wrap">
                         {HIGHLIGHT_COLORS.map((c) => (
                           <button key={c.key} onClick={() => handleHighlight(c.key)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${c.class} text-xs font-medium no-tap-highlight transition-all min-h-[36px]`}>
                             <div className={`w-3 h-3 rounded-full ${c.dot}`} />
-                            {c.label}
+                            {existing && existing.color_key === c.key ? '✓ ' : ''}{c.label}
                           </button>
                         ))}
-                        <button onClick={() => {
+                        {existing && (
+                        <button onClick={async () => {
                           if (!selection) return;
                           vibrate(8);
-                          if (highlightMode === 'verse') {
-                            const existing = highlights.find(h => h.verse_start === selection.verseStart && h.verse_end === selection.verseEnd && h.token_start === null);
-                            if (existing) { removeHighlight(existing.id).then(ok => { if (ok) setHighlights(prev => prev.filter(h => h.id !== existing.id)); });
-                              setShowHighlightPicker(false); setHighlightWordSel(null); setHighlightWordEnd(null); setHighlightWordPhase('idle'); }
+                          setHighlightRemoveError(false);
+                          const ok = await removeHighlight(existing.id);
+                          if (ok) {
+                            setHighlights(prev => prev.filter(h => h.id !== existing.id));
+                            setShowHighlightPicker(false);
+                            setHighlightWordSel(null);
+                            setHighlightWordEnd(null);
+                            setHighlightWordPhase('idle');
                           } else {
-                            const existing = highlights.find(h => h.verse_start === selection.verseStart && h.token_start !== null && h.token_end !== null);
-                            if (existing) { removeHighlight(existing.id).then(ok => { if (ok) setHighlights(prev => prev.filter(h => h.id !== existing.id)); });
-                              setShowHighlightPicker(false); setHighlightWordSel(null); setHighlightWordEnd(null); setHighlightWordPhase('idle'); }
+                            setHighlightRemoveError(true);
                           }
                         }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-error/30 bg-error/10 text-error text-xs font-medium no-tap-highlight transition-all min-h-[36px]">
-                          <Trash2 size={12} /> Remove
+                          <Trash2 size={12} /> Remove Highlight
                         </button>
+                        )}
                       </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 )}
 
                 {/* Save error inline */}
-                {(highlightSaveError || bookmarkSaveError) && (
+                {(highlightSaveError || highlightRemoveError || bookmarkSaveError) && (
                   <div className="flex items-center gap-2 mt-3 px-3 py-2 rounded-lg bg-error/10 border border-error/30">
                     <AlertCircle size={14} className="text-error shrink-0" />
-                    <p className="text-error text-xs">Could not save. Please try again.</p>
+                    <p className="text-error text-xs">{highlightRemoveError ? 'Unable to remove highlight. Try Again.' : 'Could not save. Please try again.'}</p>
                   </div>
                 )}
 

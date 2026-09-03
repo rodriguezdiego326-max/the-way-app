@@ -4,7 +4,23 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { tokenizeVerse, reconstructVerse, getSelectedText, rangesOverlap, type ScriptureToken } from '@/lib/scriptureTokenizer';
-import { getMarkStyleClasses, getPhraseSafeStyle, getMarkingColor, isIconSymbol, type BibleKeywordMark, type BibleKeyword, type HighlightColor } from '@/lib/bibleTypes';
+import { getMarkStyleClasses, getPhraseSafeStyle, getMarkingColor, isIconSymbol, type BibleKeywordMark, type BibleKeyword, type HighlightColor, type BibleHighlight } from '@/lib/bibleTypes';
+
+const HIGHLIGHT_COLOR_CLASSES: Record<string, string> = {
+  gold: 'bg-gold-500/25 text-gold-100 rounded-sm',
+  amber: 'bg-amber-500/25 text-amber-100 rounded-sm',
+  orange: 'bg-orange-500/25 text-orange-100 rounded-sm',
+  coral: 'bg-coral-500/25 text-coral-100 rounded-sm',
+  red: 'bg-red-500/25 text-red-100 rounded-sm',
+  rose: 'bg-rose-500/25 text-rose-100 rounded-sm',
+  violet: 'bg-violet-500/25 text-violet-100 rounded-sm',
+  purple: 'bg-purple-500/25 text-purple-100 rounded-sm',
+  indigo: 'bg-indigo-500/25 text-indigo-100 rounded-sm',
+  blue: 'bg-blue-500/25 text-blue-100 rounded-sm',
+  teal: 'bg-teal-500/25 text-teal-100 rounded-sm',
+  green: 'bg-green-500/25 text-green-100 rounded-sm',
+  sage: 'bg-sage-500/25 text-sage-100 rounded-sm',
+};
 
 const ICON_MAP: Record<string, LucideIcon> = {
   clock: Clock,
@@ -43,6 +59,7 @@ interface ScriptureVerseTextProps {
   selectionStartToken: number | null;
   selectionEndToken: number | null;
   adjustMode: boolean;
+  tokenHighlights?: BibleHighlight[];
   onTokenTap: (verse: number, tokenIndex: number) => void;
   onMarkedTokenTap: (markId: string) => void;
 }
@@ -82,11 +99,20 @@ const ScriptureVerseText: React.FC<ScriptureVerseTextProps> = ({
   selectionStartToken,
   selectionEndToken,
   adjustMode,
+  tokenHighlights,
   onTokenTap,
   onMarkedTokenTap,
 }) => {
   const tokens = useMemo(() => tokenizeVerse(text), [text]);
   const tokenMarks = useMemo(() => buildTokenMarks(marks, keywords), [marks, keywords]);
+
+  const getTokenHl = useCallback(
+    (idx: number): BibleHighlight | undefined => {
+      if (!tokenHighlights) return undefined;
+      return tokenHighlights.find((h) => h.token_start !== null && h.token_end !== null && idx >= Math.min(h.token_start!, h.token_end!) && idx <= Math.max(h.token_start!, h.token_end!));
+    },
+    [tokenHighlights],
+  );
 
   const isTokenSelected = useCallback(
     (idx: number): boolean => {
@@ -143,6 +169,25 @@ const ScriptureVerseText: React.FC<ScriptureVerseTextProps> = ({
                     <IconComp size={10} strokeWidth={2.5} />
                   </sup>
                 )}
+              </span>
+            );
+          }
+
+          const tokenHl = getTokenHl(token.index);
+          if (tokenHl) {
+            const hlColorClass = HIGHLIGHT_COLOR_CLASSES[tokenHl.color_key as HighlightColor] || HIGHLIGHT_COLOR_CLASSES.gold;
+            return (
+              <span
+                key={token.index}
+                data-token-index={token.index}
+                data-verse={verseNumber}
+                className={`${hlColorClass} cursor-pointer`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMarkedTokenTap(tokenHl.id);
+                }}
+              >
+                {token.text}
               </span>
             );
           }
