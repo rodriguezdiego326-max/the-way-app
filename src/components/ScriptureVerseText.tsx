@@ -62,6 +62,7 @@ interface ScriptureVerseTextProps {
   tokenHighlights?: BibleHighlight[];
   onTokenTap: (verse: number, tokenIndex: number) => void;
   onMarkedTokenTap: (markId: string) => void;
+  onHighlightTokenTap: (highlightId: string) => void;
 }
 
 function buildTokenMarks(marks: BibleKeywordMark[], keywords: BibleKeyword[]): TokenMark[] {
@@ -102,6 +103,7 @@ const ScriptureVerseText: React.FC<ScriptureVerseTextProps> = ({
   tokenHighlights,
   onTokenTap,
   onMarkedTokenTap,
+  onHighlightTokenTap,
 }) => {
   const tokens = useMemo(() => tokenizeVerse(text), [text]);
   const tokenMarks = useMemo(() => buildTokenMarks(marks, keywords), [marks, keywords]);
@@ -184,7 +186,7 @@ const ScriptureVerseText: React.FC<ScriptureVerseTextProps> = ({
                 className={`${hlColorClass} cursor-pointer`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onMarkedTokenTap(tokenHl.id);
+                  onHighlightTokenTap(tokenHl.id);
                 }}
               >
                 {token.text}

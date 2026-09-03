@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Profile, Walk } from '@/lib/types';
 import type { OnboardingData } from '@/components/Onboarding';
@@ -160,46 +160,58 @@ export default function App() {
   const [askContext, setAskContext] = useState<string | null>(null);
   const [askKeyboardOpen, setAskKeyboardOpen] = useState(false);
   const [activeChurchId, setActiveChurchId] = useState<string | null>(null);
+  const authGenerationRef = useRef(0);
 
   useEffect(() => {
-    if (appState !== 'app' || profile || profileLoading) return;
+    if (appState !== 'app' || profile || profileLoading || !session) return;
     loadProfile();
-  }, [appState, profile, profileLoading]);
+  }, [appState, profile, profileLoading, session]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s as typeof session);
       setAuthLoading(false);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === 'SIGNED_OUT' || (!s && !session)) {
+        authGenerationRef.current++;
+        setSession(null);
+        setProfile(null);
+        setProfileLoading(false);
+        setAuthLoading(false);
+        setOverlay({ type: 'none' });
+        setActiveTab('today');
+        return;
+      }
       setSession(s as typeof session);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
 
   async function handleSignOut() {
+    authGenerationRef.current++;
     setProfileLoading(false);
     setAuthLoading(false);
-    await supabase.auth.signOut();
     setSession(null);
     setProfile(null);
     setOverlay({ type: 'none' });
     setActiveTab('today');
+    await supabase.auth.signOut();
   }
 
   async function loadProfile() {
     if (profileLoading) return;
+    if (!session?.user?.id) return;
+    const gen = authGenerationRef.current;
     setProfileLoading(true);
-    const userId = session?.user?.id;
-    let query = supabase
+    const userId = session.user.id;
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1);
-    if (userId) {
-      query = query.eq('id', userId);
-    }
-    const { data, error } = await query.maybeSingle();
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (gen !== authGenerationRef.current) return;
 
     if (error) {
       console.error('[App] loadProfile error', error);

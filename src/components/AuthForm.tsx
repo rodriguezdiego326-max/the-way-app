@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { vibrate } from '@/lib/utils';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 
 interface AuthFormProps {
   onAuthed: () => void;
@@ -13,20 +14,68 @@ export default function AuthForm({ onAuthed }: AuthFormProps) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [nativeKeyboardHeight, setNativeKeyboardHeight] = useState(0);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    function onViewportResize() {
-      if (document.activeElement && document.activeElement.tagName === 'INPUT') {
-        const el = document.activeElement as HTMLElement;
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (!Capacitor.isNativePlatform()) return;
+
+    let handles: Array<() => void> = [];
+
+    (async () => {
+      try {
+        const { Keyboard, KeyboardResize } = await import('@capacitor/keyboard');
+        await Keyboard.setResizeMode({ mode: KeyboardResize.None });
+
+        const willShow = await Keyboard.addListener('keyboardWillShow', (info: { keyboardHeight: number }) => {
+          setNativeKeyboardHeight(info.keyboardHeight);
+          setTimeout(() => {
+            const active = document.activeElement;
+            if (active && active.tagName === 'INPUT') {
+              (active as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 100);
+        });
+        const willHide = await Keyboard.addListener('keyboardWillHide', () => {
+          setNativeKeyboardHeight(0);
+        });
+
+        handles.push(() => willShow.remove());
+        handles.push(() => willHide.remove());
+      } catch (e) {
+        console.warn('[AuthForm] native keyboard setup failed', e);
       }
-    }
-    window.visualViewport?.addEventListener('resize', onViewportResize);
-    return () => window.visualViewport?.removeEventListener('resize', onViewportResize);
+    })();
+
+    return () => {
+      handles.forEach((h) => h());
+      (async () => {
+        try {
+          const { Keyboard, KeyboardResize } = await import('@capacitor/keyboard');
+          await Keyboard.setResizeMode({ mode: KeyboardResize.Body });
+        } catch (e) {
+          // ignore
+        }
+      })();
+      setNativeKeyboardHeight(0);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const handler = () => {
+      const active = document.activeElement;
+      if (active && active.tagName === 'INPUT') {
+        (active as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    };
+    vv.addEventListener('resize', handler);
+    return () => { vv.removeEventListener('resize', handler); };
   }, []);
 
   function focusPassword() {
@@ -59,7 +108,7 @@ export default function AuthForm({ onAuthed }: AuthFormProps) {
     <div
       ref={scrollRef}
       className="flex flex-col gap-4 overflow-y-auto"
-      style={{ maxHeight: 'calc(100vh - 200px)' }}
+      style={{ maxHeight: 'calc(100vh - 200px)', paddingBottom: nativeKeyboardHeight > 0 ? `${nativeKeyboardHeight + 24}px` : '0px' }}
     >
       <form onSubmit={(e) => { e.preventDefault(); submitForm(); }} className="flex flex-col gap-4">
         <div className="flex items-center gap-2 px-4 py-3.5 rounded-2xl bg-ink-800/60 border border-ink-600/40 focus-within:border-gold-500/50 transition-all">
