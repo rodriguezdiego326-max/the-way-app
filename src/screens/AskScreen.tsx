@@ -769,6 +769,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
                   dismissedProposals={dismissedProposals}
                   scale={scale}
                   translation={activeTranslation}
+                  t={t}
                   onDismissProposal={(pid) => {
                     vibrate(6);
                     setDismissedProposals((prev) => new Set(prev).add(pid));
@@ -1216,6 +1217,7 @@ interface AssistantMessageProps {
   dismissedProposals: Set<string>;
   scale: { body: string; section: string; user: string };
   translation: BibleTranslation;
+  t: typeof ASK_STRINGS[AskLang];
   onDismissProposal: (id: string) => void;
   onShowSources: () => void;
   onShowBiblicalBasis: () => void;
@@ -1231,6 +1233,7 @@ function AssistantMessage({
   dismissedProposals,
   scale,
   translation,
+  t,
   onDismissProposal,
   onShowSources,
   onShowBiblicalBasis,
