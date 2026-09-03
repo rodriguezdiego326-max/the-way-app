@@ -170,6 +170,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
   const [inlineKeySaving, setInlineKeySaving] = useState(false);
   const [markRemoveId, setMarkRemoveId] = useState<string | null>(null);
   const [highlightActionId, setHighlightActionId] = useState<string | null>(null);
+  const [highlightOverlapId, setHighlightOverlapId] = useState<string | null>(null);
   const [markSaveError, setMarkSaveError] = useState(false);
   const [chapterMarkingMode, setChapterMarkingMode] = useState(false);
   const [activeKeyId, setActiveKeyId] = useState<string | null>(null);
@@ -224,6 +225,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
     setInlineKeySaving(false);
     setMarkRemoveId(null);
     setHighlightActionId(null);
+    setHighlightOverlapId(null);
     setMarkSaveError(false);
     setChapterMarkingMode(false);
     setActiveKeyId(null);
@@ -424,31 +426,26 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
       const startTok = Math.min(highlightWordSel, endTokRaw);
       const endTok = Math.max(highlightWordSel, endTokRaw);
       const selText = getSelectedText(tokens, startTok, endTok);
-      const existing = highlights.find(
-        (h) => h.verse_start === selection.verseStart && h.token_start !== null && h.token_end !== null,
+      const overlapping = highlights.find(
+        (h) => h.verse_start === selection.verseStart && h.token_start !== null && h.token_end !== null &&
+          rangesOverlap(startTok, endTok, h.token_start!, h.token_end!),
       );
-      if (existing) {
-        const ok = await updateHighlightColor(existing.id, color);
-        if (ok) {
-          setHighlights((prev) => prev.map((h) => h.id === existing.id ? { ...h, color_key: color } : h));
-        } else {
-          setHighlightSaveError(true);
-          return;
-        }
+      if (overlapping) {
+        setHighlightOverlapId(overlapping.id);
+        return;
+      }
+      const saved = await saveHighlight(selection, color, translation, {
+        selectedText: selText,
+        tokenStart: startTok,
+        tokenEnd: endTok,
+        startOffset: tokens[startTok].startOffset,
+        endOffset: tokens[endTok].endOffset,
+      });
+      if (saved) {
+        setHighlights((prev) => [...prev, saved]);
       } else {
-        const saved = await saveHighlight(selection, color, translation, {
-          selectedText: selText,
-          tokenStart: startTok,
-          tokenEnd: endTok,
-          startOffset: tokens[startTok].startOffset,
-          endOffset: tokens[endTok].endOffset,
-        });
-        if (saved) {
-          setHighlights((prev) => [...prev, saved]);
-        } else {
-          setHighlightSaveError(true);
-          return;
-        }
+        setHighlightSaveError(true);
+        return;
       }
     } else {
       const existing = highlights.find(
@@ -1153,8 +1150,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                     )}
                     {((highlightMode === 'word' && highlightWordPhase === 'ready') || highlightMode === 'verse') && (() => {
                       const existingVerseHl = highlights.find(h => h.verse_start === selection!.verseStart && h.verse_end === selection!.verseEnd && h.token_start === null);
-                      const existingTokenHl = highlights.find(h => h.verse_start === selection!.verseStart && h.token_start !== null && h.token_end !== null);
-                      const existing = highlightMode === 'verse' ? existingVerseHl : existingTokenHl;
+                      const existing = existingVerseHl;
                       return (
                       <div className="flex items-center gap-2 flex-wrap">
                         {HIGHLIGHT_COLORS.map((c) => (
@@ -1686,6 +1682,55 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                 )}
 
                 {/* Token highlight action sheet (tap saved word/phrase highlight) */}
+                {highlightOverlapId && (() => {
+                  const hl = highlights.find((h) => h.id === highlightOverlapId);
+                  if (!hl) return null;
+                  return (
+                    <div className="mt-3 pt-3 border-t border-ink-700/30 animate-fade-in">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="text-ivory-500 text-[10px] uppercase tracking-wider">Already Highlighted</p>
+                          <p className="text-gold-100 text-sm font-serif italic">&ldquo;{hl.selected_text || 'text'}&rdquo;</p>
+                        </div>
+                        <button onClick={() => setHighlightOverlapId(null)} className="text-ivory-500">
+                          <X size={16} />
+                        </button>
+                      </div>
+                      <p className="text-ivory-400 text-xs mb-2">This text overlaps an existing highlight.</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          onClick={() => {
+                            vibrate(5);
+                            setHighlightOverlapId(null);
+                            setHighlightActionId(hl.id);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-medium no-tap-highlight transition-all min-h-[36px]"
+                        >
+                          <Pencil size={12} /> Edit Existing Highlight
+                        </button>
+                        <button
+                          onClick={() => {
+                            vibrate(5);
+                            setHighlightOverlapId(null);
+                            setHighlightWordSel(null);
+                            setHighlightWordEnd(null);
+                            setHighlightWordPhase('idle');
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-700/40 border border-ink-600/30 text-ivory-300 text-xs font-medium no-tap-highlight transition-all min-h-[36px]"
+                        >
+                          Choose Different Text
+                        </button>
+                        <button
+                          onClick={() => setHighlightOverlapId(null)}
+                          className="px-3 py-1.5 rounded-lg bg-ink-700/40 border border-ink-600/30 text-ivory-400 text-xs no-tap-highlight min-h-[36px]"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {highlightActionId && (() => {
                   const hl = highlights.find((h) => h.id === highlightActionId);
                   if (!hl) return null;
@@ -2525,6 +2570,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
       {view === 'bookmarks' && (
         <BookmarksView
           bookmarks={bookmarks}
+          translation={translation}
           onTap={async (bm) => {
             vibrate(5);
             setView('reader');
@@ -2804,12 +2850,13 @@ function NotesLibrary({
 // ============================================================
 
 function BookmarksView({
-  bookmarks, onTap, onDelete, onBack,
+  bookmarks, onTap, onDelete, onBack, translation,
 }: {
   bookmarks: BibleBookmark[];
   onTap: (bm: BibleBookmark) => void;
   onDelete: (id: string) => void;
   onBack: () => void;
+  translation: string;
 }) {
   return (
     <div className="px-6 mt-4">
@@ -2825,7 +2872,7 @@ function BookmarksView({
             <div key={bm.id} className="flex items-center justify-between premium-card p-4">
               <button onClick={() => onTap(bm)} className="flex-1 text-left">
                 <p className="text-gold-300 font-serif text-sm font-medium">
-                  {bm.book} {bm.chapter}:{bm.verse_start === bm.verse_end ? bm.verse_start : `${bm.verse_start}\u2013${bm.verse_end}`}
+                  {getBookDisplayName(bm.book, translation)} {bm.chapter}:{bm.verse_start === bm.verse_end ? bm.verse_start : `${bm.verse_start}\u2013${bm.verse_end}`}
                 </p>
                 {bm.label && <p className="text-ivory-400 text-xs mt-1">{bm.label}</p>}
                 <p className="text-ivory-600 text-[10px] mt-1">

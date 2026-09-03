@@ -5,6 +5,7 @@ import { recommendWalk, walkToInsert } from '@/lib/walkEngine';
 import { fetchVerses } from '@/lib/bibleEngine';
 import type { Walk, Profile, DailyCheckin } from '@/lib/types';
 import { vibrate } from '@/lib/utils';
+import { getBookDisplayName } from '@/lib/bibleTypes';
 
 interface TodayScreenProps {
   profile: Profile | null;
@@ -45,6 +46,20 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp }: Today
   const [walkError, setWalkError] = useState<string | null>(null);
 
   const activeTranslation = typeof localStorage !== 'undefined' ? (localStorage.getItem('solapath_translation') || 'WEB') : 'WEB';
+
+function localizeReference(ref: string, translation: string): string {
+  const parts = ref.match(/^(.+?)\s+(\d+):(\d+)(?:[\u2013-](\d+))?/);
+  if (!parts) return ref;
+  const book = parts[1];
+  const chapter = parts[2];
+  const verseStart = parts[3];
+  const verseEnd = parts[4];
+  const displayBook = getBookDisplayName(book, translation);
+  if (verseEnd) {
+    return `${displayBook} ${chapter}:${verseStart}\u2013${verseEnd}`;
+  }
+  return `${displayBook} ${chapter}:${verseStart}`;
+}
 
   useEffect(() => {
     loadOrCreateTodayWalk();
@@ -336,7 +351,7 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp }: Today
               </div>
 
               <h3 className="font-serif text-3xl text-ivory-50 mt-3 mb-1 tracking-tight">
-                {todayWalk.passage_reference}
+                {localizeReference(todayWalk.passage_reference, activeTranslation)}
               </h3>
 
               <div className="flex items-center gap-1.5 text-ivory-500 text-sm mb-4">
