@@ -1,4 +1,4 @@
-import { X, ShieldCheck, ShieldAlert, ExternalLink, BookOpen } from 'lucide-react';
+import { X, ShieldCheck, ShieldAlert, ExternalLink, BookOpen, Landmark, Lightbulb } from 'lucide-react';
 import type { SourceCitation } from '@/lib/intelligenceTypes';
 
 interface SourceViewerProps {
@@ -6,9 +6,27 @@ interface SourceViewerProps {
   onClose: () => void;
 }
 
+const CATEGORY_LABELS: Record<string, { label: string; icon: typeof BookOpen }> = {
+  confession: { label: 'Confessional Documents', icon: BookOpen },
+  catechism: { label: 'Confessional Documents', icon: BookOpen },
+  historic_theologian: { label: 'Historical Theologians', icon: Landmark },
+  modern_teacher: { label: 'Selected Teachers', icon: Lightbulb },
+  scripture: { label: 'Scripture Sources', icon: BookOpen },
+};
+
 export default function SourceViewer({ sources, onClose }: SourceViewerProps) {
   const verifiedSources = sources.filter((s) => s.verified);
   const unverifiedSources = sources.filter((s) => !s.verified);
+
+  const grouped = verifiedSources.reduce<Record<string, SourceCitation[]>>((acc, s) => {
+    const key = s.source_type;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(s);
+    return acc;
+  }, {});
+
+  const categoryOrder = ['confession', 'catechism', 'historic_theologian', 'modern_teacher', 'scripture'];
+  const visibleCategories = categoryOrder.filter((cat) => grouped[cat]?.length > 0);
 
   return (
     <div className="fixed inset-0 z-[80] bg-ink-950/90 backdrop-blur-sm flex items-end justify-center">
@@ -34,60 +52,69 @@ export default function SourceViewer({ sources, onClose }: SourceViewerProps) {
               </p>
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
-              {verifiedSources.length > 0 && (
-                <>
-                  <p className="ui-label mb-1">Verified Sources</p>
-                  {verifiedSources.map((source, i) => (
-                    <div key={i} className="premium-card p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-sage-500/10 border border-sage-500/20 flex items-center justify-center shrink-0">
-                          <ShieldCheck size={15} className="text-sage-400" />
-                        </div>
-                        <div className="flex-1">
-                          {source.author && (
-                            <p className="text-ivory-100 text-sm font-medium">{source.author}</p>
-                          )}
-                          {source.work && (
-                            <p className="text-ivory-300 text-xs mt-0.5 italic">{source.work}</p>
-                          )}
-                          {source.section && (
-                            <p className="text-ivory-500 text-xs mt-1">{source.section}</p>
-                          )}
-                          {source.citation && (
-                            <p className="text-ivory-600 text-xs mt-1 font-mono">{source.citation}</p>
-                          )}
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="text-[10px] uppercase tracking-wider text-sage-400 font-medium">
-                              {source.source_type.replace(/_/g, ' ')}
-                            </span>
-                            <span className="text-[10px] text-sage-400 flex items-center gap-1">
-                              <ShieldCheck size={10} /> Verified
-                            </span>
-                          </div>
-                          {source.url && (
-                            <a
-                              href={source.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-gold-300 text-xs mt-2 flex items-center gap-1 hover:text-gold-200 transition-colors"
-                            >
-                              <ExternalLink size={11} />
-                              View reference
-                            </a>
-                          )}
-                        </div>
-                      </div>
+            <div className="flex flex-col gap-5">
+              {visibleCategories.map((cat) => {
+                const meta = CATEGORY_LABELS[cat] || { label: cat.replace(/_/g, ' '), icon: BookOpen };
+                const Icon = meta.icon;
+                return (
+                  <div key={cat}>
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <Icon size={13} className="text-gold-400/70 shrink-0" />
+                      <p className="ui-label">{meta.label}</p>
                     </div>
-                  ))}
-                </>
-              )}
+                    <div className="flex flex-col gap-3">
+                      {grouped[cat].map((source, i) => (
+                        <div key={i} className="premium-card p-4">
+                          <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-sage-500/10 border border-sage-500/20 flex items-center justify-center shrink-0">
+                              <ShieldCheck size={15} className="text-sage-400" />
+                            </div>
+                            <div className="flex-1">
+                              {source.author && (
+                                <p className="text-ivory-100 text-sm font-medium">{source.author}</p>
+                              )}
+                              {source.work && (
+                                <p className="text-ivory-300 text-xs mt-0.5 italic">{source.work}</p>
+                              )}
+                              {source.section && (
+                                <p className="text-ivory-500 text-xs mt-1">{source.section}</p>
+                              )}
+                              {source.citation && (
+                                <p className="text-ivory-600 text-xs mt-1 font-mono">{source.citation}</p>
+                              )}
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className="text-[10px] uppercase tracking-wider text-sage-400 font-medium">
+                                  {source.source_type.replace(/_/g, ' ')}
+                                </span>
+                                <span className="text-[10px] text-sage-400 flex items-center gap-1">
+                                  <ShieldCheck size={10} /> Verified
+                                </span>
+                              </div>
+                              {source.url && (
+                                <a
+                                  href={source.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-gold-300 text-xs mt-2 flex items-center gap-1 hover:text-gold-200 transition-colors"
+                                >
+                                  <ExternalLink size={11} />
+                                  View reference
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
 
               {unverifiedSources.length > 0 && (
-                <>
-                  <p className="ui-label mt-4 mb-1">Pending Verification</p>
+                <div>
+                  <p className="ui-label mb-3">Pending Verification</p>
                   {unverifiedSources.map((source, i) => (
-                    <div key={i} className="premium-card p-4 opacity-60">
+                    <div key={i} className="premium-card p-4 opacity-60 mb-3">
                       <div className="flex items-start gap-3">
                         <div className="w-8 h-8 rounded-lg bg-clay-500/10 border border-clay-500/20 flex items-center justify-center shrink-0">
                           <ShieldAlert size={15} className="text-clay-400" />
@@ -106,7 +133,7 @@ export default function SourceViewer({ sources, onClose }: SourceViewerProps) {
                       </div>
                     </div>
                   ))}
-                </>
+                </div>
               )}
             </div>
           )}

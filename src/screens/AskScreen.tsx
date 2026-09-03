@@ -39,8 +39,26 @@ import MemoryProposalCard from '@/components/MemoryProposalCard';
 import { fetchIntelligenceResponse } from '@/lib/intelligenceService';
 import type { AskIntent, Profile, Walk } from '@/lib/types';
 import type { StructuredTheologicalResponse, VerificationState } from '@/lib/intelligenceTypes';
+import ScriptureBlock from '@/components/ScriptureBlock';
+import { parsePassageReference } from '@/lib/passageParser';
+import { getBookDisplayName, type BibleTranslation } from '@/lib/bibleTypes';
 
 const BOTTOM_NAV_HEIGHT = 72;
+
+function getActiveTranslation(): BibleTranslation {
+  if (typeof localStorage === 'undefined') return 'WEB';
+  return (localStorage.getItem('solapath_translation') as BibleTranslation) || 'WEB';
+}
+
+function localizeRef(ref: string, translation: BibleTranslation): string {
+  const parsed = parsePassageReference(ref);
+  if (!parsed || parsed.verseStart === null) return ref;
+  const bookName = getBookDisplayName(parsed.book, translation);
+  if (parsed.verseStart === parsed.verseEnd) {
+    return `${bookName} ${parsed.chapter}:${parsed.verseStart}`;
+  }
+  return `${bookName} ${parsed.chapter}:${parsed.verseStart}\u2013${parsed.verseEnd}`;
+}
 
 const SCRIPTURE_REF_REGEX = /((?:1|2|3|I|II|III)\s)?(?:Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalm|Psalms|Proverbs|Ecclesiastes|Song of Solomon|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation)\s+\d+:\d+(?:[–-]\d+)?(?:\s*[:–-]\s*\d+(?:[–-]\d+)?)?/g;
 
@@ -87,6 +105,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
   const [textScale, setTextScale] = useState<TextScale>('default');
   const [showTextSizeMenu, setShowTextSizeMenu] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [activeTranslation, setActiveTranslation] = useState<BibleTranslation>(getActiveTranslation());
   const scrollRef = useRef<HTMLDivElement>(null);
   const followUpRef = useRef<HTMLTextAreaElement>(null);
   const emptyTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -508,6 +527,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
                   response={item.response}
                   dismissedProposals={dismissedProposals}
                   scale={scale}
+                  translation={activeTranslation}
                   onDismissProposal={(pid) => {
                     vibrate(6);
                     setDismissedProposals((prev) => new Set(prev).add(pid));
@@ -686,6 +706,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
           passages={activeResponseForModal.biblical_basis}
           onClose={() => setShowBiblicalBasis(false)}
           onOpenBible={handleOpenBible}
+          translation={activeTranslation}
         />
       )}
     </>
@@ -696,7 +717,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
 // ScriptureText — renders text with Bible references in gold
 // ============================================================
 
-function ScriptureText({ text, className }: { text: string; className?: string }) {
+function ScriptureText({ text, className, onOpenBible }: { text: string; className?: string; onOpenBible?: (ref: string) => void }) {
   const refs = [...text.matchAll(SCRIPTURE_REF_REGEX)];
   if (refs.length === 0) return <p className={className}>{text}</p>;
 
@@ -706,11 +727,23 @@ function ScriptureText({ text, className }: { text: string; className?: string }
     if (match.index !== undefined && match.index > lastIndex) {
       result.push(text.slice(lastIndex, match.index));
     }
-    result.push(
-      <span key={i} className="text-gold-300 font-semibold">
-        {match[0]}
-      </span>,
-    );
+    if (onOpenBible) {
+      result.push(
+        <button
+          key={i}
+          onClick={() => onOpenBible(match[0])}
+          className="text-gold-300 font-semibold hover:text-gold-200 transition-colors inline"
+        >
+          {match[0]}
+        </button>,
+      );
+    } else {
+      result.push(
+        <span key={i} className="text-gold-300 font-semibold">
+          {match[0]}
+        </span>,
+      );
+    }
     if (match.index !== undefined) lastIndex = match.index + match[0].length;
   });
   if (lastIndex < text.length) {
@@ -719,11 +752,11 @@ function ScriptureText({ text, className }: { text: string; className?: string }
   return <p className={className}>{result}</p>;
 }
 
-function renderParagraphs(text: string, className: string) {
+function renderParagraphs(text: string, className: string, onOpenBible?: (ref: string) => void) {
   return text
     .split('\n\n')
     .filter((p) => p.trim())
-    .map((para, i) => <ScriptureText key={i} text={para} className={className} />);
+    .map((para, i) => <ScriptureText key={i} text={para} className={className} onOpenBible={onOpenBible} />);
 }
 
 // ============================================================
@@ -870,6 +903,7 @@ interface AssistantMessageProps {
   response: StructuredTheologicalResponse;
   dismissedProposals: Set<string>;
   scale: { body: string; section: string; user: string };
+  translation: BibleTranslation;
   onDismissProposal: (id: string) => void;
   onShowSources: () => void;
   onShowBiblicalBasis: () => void;
@@ -884,6 +918,7 @@ function AssistantMessage({
   response,
   dismissedProposals,
   scale,
+  translation,
   onDismissProposal,
   onShowSources,
   onShowBiblicalBasis,
@@ -942,7 +977,7 @@ function AssistantMessage({
             </p>
           </div>
           <h3 className="font-serif text-2xl text-gold-300 mb-1.5">
-            {response.recommended_scripture[0].reference}
+            {localizeRef(response.recommended_scripture[0].reference, translation)}
           </h3>
           <p className={`text-ivory-300 ${scale.section} mb-1`}>
             {response.recommended_scripture[0].reading_objective}
@@ -967,7 +1002,7 @@ function AssistantMessage({
         <p className="text-ivory-500 text-sm leading-relaxed mb-4">
           <BookOpen size={13} className="text-gold-400/60 inline shrink-0 mr-1 -mt-0.5" />
           Consider reading{' '}
-          <span className="text-gold-300 font-semibold">{response.recommended_scripture[0].reference}</span>
+          <span className="text-gold-300 font-semibold">{localizeRef(response.recommended_scripture[0].reference, translation)}</span>
           {' '}first. {response.recommended_scripture[0].reason}
         </p>
       )}
@@ -1013,8 +1048,18 @@ function AssistantMessage({
       <div className="space-y-5">
         {/* Answer summary — the centerpiece, large serif reading text */}
         <div className="space-y-3">
-          {renderParagraphs(response.answer_summary, `font-serif ${scale.body} text-ivory-100`)}
+          {renderParagraphs(response.answer_summary, `font-serif ${scale.body} text-ivory-100`, onOpenBible)}
         </div>
+
+        {/* Inline Scripture blocks — exact local text from active translation */}
+        {response.recommended_scripture.map((rec, i) => (
+          <ScriptureBlock
+            key={i}
+            reference={rec.reference}
+            translation={translation}
+            onOpenBible={onOpenBible}
+          />
+        ))}
 
         {/* Scripture testing flow — rendered as reading sections */}
         {response.scripture_testing_flow && (

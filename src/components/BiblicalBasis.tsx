@@ -1,13 +1,26 @@
 import { X, BookOpen, ChevronRight } from 'lucide-react';
 import type { BiblicalBasisPassage } from '@/lib/intelligenceTypes';
+import { getBookDisplayName, type BibleTranslation } from '@/lib/bibleTypes';
+import { parsePassageReference } from '@/lib/passageParser';
 
 interface BiblicalBasisProps {
   passages: BiblicalBasisPassage[];
   onClose: () => void;
   onOpenBible: (reference: string) => void;
+  translation?: BibleTranslation;
 }
 
-export default function BiblicalBasis({ passages, onClose, onOpenBible }: BiblicalBasisProps) {
+function localizeRef(ref: string, translation: BibleTranslation): string {
+  const parsed = parsePassageReference(ref);
+  if (!parsed || parsed.verseStart === null) return ref;
+  const bookName = getBookDisplayName(parsed.book, translation);
+  if (parsed.verseStart === parsed.verseEnd) {
+    return `${bookName} ${parsed.chapter}:${parsed.verseStart}`;
+  }
+  return `${bookName} ${parsed.chapter}:${parsed.verseStart}\u2013${parsed.verseEnd}`;
+}
+
+export default function BiblicalBasis({ passages, onClose, onOpenBible, translation = 'WEB' }: BiblicalBasisProps) {
   const primary = passages.filter((p) => p.is_primary);
   const supporting = passages.filter((p) => !p.is_primary);
 
@@ -41,7 +54,7 @@ export default function BiblicalBasis({ passages, onClose, onOpenBible }: Biblic
                       <div key={i} className="premium-card p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1">
-                            <h3 className="font-serif text-lg text-ivory-50 mb-1">{p.reference}</h3>
+                            <h3 className="font-serif text-lg text-ivory-50 mb-1">{localizeRef(p.reference, translation)}</h3>
                             <p className="text-ivory-300 text-xs leading-relaxed mb-2">{p.relevance}</p>
                             <div className="flex items-start gap-1.5 mt-2">
                               <BookOpen size={12} className="text-gold-400/60 shrink-0 mt-0.5" />
@@ -69,7 +82,7 @@ export default function BiblicalBasis({ passages, onClose, onOpenBible }: Biblic
                       <div key={i} className="premium-card p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1">
-                            <h3 className="font-serif text-base text-ivory-200 mb-0.5">{p.reference}</h3>
+                            <h3 className="font-serif text-base text-ivory-200 mb-0.5">{localizeRef(p.reference, translation)}</h3>
                             <p className="text-ivory-500 text-xs leading-relaxed">{p.relevance}</p>
                             <p className="text-ivory-600 text-xs italic mt-1.5">{p.contextual_note}</p>
                           </div>

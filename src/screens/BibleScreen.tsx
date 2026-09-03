@@ -1731,73 +1731,6 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                   );
                 })()}
 
-                {highlightActionId && (() => {
-                  const hl = highlights.find((h) => h.id === highlightActionId);
-                  if (!hl) return null;
-                  const hlColor = HIGHLIGHT_COLORS.find((c) => c.key === hl.color_key);
-                  return (
-                    <div className="mt-3 pt-3 border-t border-ink-700/30 animate-fade-in">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="text-ivory-500 text-[10px] uppercase tracking-wider">Highlighted</p>
-                          <p className="text-gold-100 text-sm font-serif italic">
-                            &ldquo;{hl.selected_text || 'word'}&rdquo;
-                          </p>
-                        </div>
-                        <button onClick={() => setHighlightActionId(null)} className="text-ivory-500">
-                          <X size={16} />
-                        </button>
-                      </div>
-                      <p className="text-ivory-500 text-[10px] uppercase tracking-wider mb-1.5">Change Color</p>
-                      <div className="flex items-center gap-2 flex-wrap mb-3">
-                        {HIGHLIGHT_COLORS.map((c) => (
-                          <button
-                            key={c.key}
-                            onClick={async () => {
-                              if (c.key === hl.color_key) return;
-                              vibrate(5);
-                              setHighlightSaveError(false);
-                              const ok = await updateHighlightColor(hl.id, c.key);
-                              if (ok) {
-                                setHighlights((prev) => prev.map((h) => h.id === hl.id ? { ...h, color_key: c.key } : h));
-                                setHighlightActionId(null);
-                              } else {
-                                setHighlightSaveError(true);
-                              }
-                            }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${c.class} text-xs font-medium no-tap-highlight transition-all min-h-[36px]`}
-                          >
-                            <div className={`w-3 h-3 rounded-full ${c.dot}`} />
-                            {hl.color_key === c.key ? '✓ ' : ''}{c.label}
-                          </button>
-                        ))}
-                      </div>
-                      <button
-                        onClick={async () => {
-                          vibrate(8);
-                          setHighlightRemoveError(false);
-                          const ok = await removeHighlight(hl.id);
-                          if (ok) {
-                            setHighlights((prev) => prev.filter((h) => h.id !== hl.id));
-                            setHighlightActionId(null);
-                          } else {
-                            setHighlightRemoveError(true);
-                          }
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-error/30 bg-error/10 text-error text-xs font-medium no-tap-highlight transition-all min-h-[36px]"
-                      >
-                        <Trash2 size={12} /> Remove Highlight
-                      </button>
-                      {(highlightSaveError || highlightRemoveError) && (
-                        <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg bg-error/10 border border-error/30">
-                          <AlertCircle size={14} className="text-error shrink-0" />
-                          <p className="text-error text-xs">{highlightRemoveError ? 'Unable to remove highlight. Try Again.' : 'Unable to update highlight. Try Again.'}</p>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-
                 {/* Keyword picker (legacy verse-level) */}
                 {showKeywordPicker && !markingMode && (
                   <div className="mt-3 pt-3 border-t border-ink-700/30 animate-fade-in">
@@ -1837,6 +1770,75 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
           )}
         </div>
       )}
+
+      {/* Standalone highlight action sheet — renders on direct token tap without verse preselection */}
+      {highlightActionId && !showActions && (() => {
+        const hl = highlights.find((h) => h.id === highlightActionId);
+        if (!hl) return null;
+        return (
+          <div className="fixed left-0 right-0 z-[60] flex justify-center px-4 animate-fade-in-up" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)' }}>
+            <div className="w-full max-w-lg bg-ink-800/95 backdrop-blur-md border border-ink-600/40 rounded-2xl p-3 shadow-xl shadow-ink-950/50">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="text-ivory-500 text-[10px] uppercase tracking-wider">Highlighted</p>
+                  <p className="text-gold-100 text-sm font-serif italic">
+                    &ldquo;{hl.selected_text || 'word'}&rdquo;
+                  </p>
+                </div>
+                <button onClick={() => setHighlightActionId(null)} className="text-ivory-500">
+                  <X size={16} />
+                </button>
+              </div>
+              <p className="text-ivory-500 text-[10px] uppercase tracking-wider mb-1.5">Change Color</p>
+              <div className="flex items-center gap-2 flex-wrap mb-3">
+                {HIGHLIGHT_COLORS.map((c) => (
+                  <button
+                    key={c.key}
+                    onClick={async () => {
+                      if (c.key === hl.color_key) return;
+                      vibrate(5);
+                      setHighlightSaveError(false);
+                      const ok = await updateHighlightColor(hl.id, c.key);
+                      if (ok) {
+                        setHighlights((prev) => prev.map((h) => h.id === hl.id ? { ...h, color_key: c.key } : h));
+                        setHighlightActionId(null);
+                      } else {
+                        setHighlightSaveError(true);
+                      }
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${c.class} text-xs font-medium no-tap-highlight transition-all min-h-[36px]`}
+                  >
+                    <div className={`w-3 h-3 rounded-full ${c.dot}`} />
+                    {hl.color_key === c.key ? '✓ ' : ''}{c.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={async () => {
+                  vibrate(8);
+                  setHighlightRemoveError(false);
+                  const ok = await removeHighlight(hl.id);
+                  if (ok) {
+                    setHighlights((prev) => prev.filter((h) => h.id !== hl.id));
+                    setHighlightActionId(null);
+                  } else {
+                    setHighlightRemoveError(true);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-error/30 bg-error/10 text-error text-xs font-medium no-tap-highlight transition-all min-h-[36px]"
+              >
+                <Trash2 size={12} /> Remove Highlight
+              </button>
+              {(highlightSaveError || highlightRemoveError) && (
+                <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded-lg bg-error/10 border border-error/30">
+                  <AlertCircle size={14} className="text-error shrink-0" />
+                  <p className="text-error text-xs">{highlightRemoveError ? 'Unable to remove highlight. Try Again.' : 'Unable to update highlight. Try Again.'}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* CHAPTER MARKING MODE — reserved layout header + sticky palette */}
       {chapterMarkingMode && view === 'reader' && (
