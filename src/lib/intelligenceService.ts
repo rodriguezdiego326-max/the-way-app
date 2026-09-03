@@ -17,6 +17,7 @@ export async function fetchIntelligenceResponse(
   theologicalDepth: string,
   conversationHistory: Array<{ role: 'user' | 'assistant'; body: string }>,
   sessionId?: string,
+  responseLanguage?: string,
 ): Promise<StructuredTheologicalResponse> {
   // Retrieve relevant memories (selective, not all)
   const relevantMemories = await retrieveRelevantMemories(question, profile);
@@ -24,6 +25,7 @@ export async function fetchIntelligenceResponse(
   const request: IntelligenceRequest = {
     question,
     theological_depth: theologicalDepth,
+    response_language: responseLanguage,
     profile: profile
       ? {
           display_name: profile.display_name,

@@ -216,6 +216,7 @@ export interface IntelligenceRequest {
   question: string;
   intent_hint?: string;
   theological_depth: string;
+  response_language?: string;
   profile?: {
     display_name: string | null;
     life_stage: string | null;

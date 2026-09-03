@@ -86,6 +86,7 @@ type Overlay =
   | { type: 'none' }
   | { type: 'bible-mode'; walk: Walk; mode: 'physical' | 'in-app' }
   | { type: 'bible-reader'; walk: Walk }
+  | { type: 'bible-reference'; book: string; chapter: number; verseStart: number | null; verseEnd: number | null }
   | { type: 'family' }
   | { type: 'reach' }
   | { type: 'library_search' }
@@ -158,6 +159,7 @@ export default function App() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [askContext, setAskContext] = useState<string | null>(null);
+  const [activeAskConversationId, setActiveAskConversationId] = useState<string | null>(null);
   const [askKeyboardOpen, setAskKeyboardOpen] = useState(false);
   const [activeChurchId, setActiveChurchId] = useState<string | null>(null);
   const authGenerationRef = useRef(0);
@@ -299,6 +301,10 @@ export default function App() {
     setOverlay({ type: 'bible-reader', walk });
   }
 
+  function handleOpenBibleReference(book: string, chapter: number, verseStart: number | null, verseEnd: number | null) {
+    setOverlay({ type: 'bible-reference', book, chapter, verseStart, verseEnd });
+  }
+
   function handleExitBibleMode() {
     setOverlay({ type: 'none' });
   }
@@ -389,6 +395,24 @@ export default function App() {
             setAskContext(ref);
           }}
           initialReference={parsed}
+          onBack={() => setOverlay({ type: 'none' })}
+        />
+      </ErrorBoundary>
+    );
+  }
+
+  if (overlay.type === 'bible-reference') {
+    return (
+      <ErrorBoundary>
+        <BibleScreen
+          onStartWalk={handleStartWalk}
+          onAskScripture={(b, c, vs, ve) => {
+            const ref = vs === ve ? `${b} ${c}:${vs}` : `${b} ${c}:${vs}\u2013${ve}`;
+            setOverlay({ type: 'none' });
+            setActiveTab('ask');
+            setAskContext(ref);
+          }}
+          initialReference={{ book: overlay.book, chapter: overlay.chapter, verseStart: overlay.verseStart, verseEnd: overlay.verseEnd }}
           onBack={() => setOverlay({ type: 'none' })}
         />
       </ErrorBoundary>
@@ -741,7 +765,8 @@ export default function App() {
         setActiveTab('ask');
         setAskContext(ref);
       }} />}
-      {activeTab === 'ask' && <AskScreen theologicalDepth={profile?.theological_depth || 'simple'} profile={profile} onStartWalk={handleStartWalk} initialContext={askContext} onContextConsumed={() => setAskContext(null)} onKeyboardVisibilityChange={setAskKeyboardOpen} />}
+      {activeTab === 'ask' && <AskScreen theologicalDepth={profile?.theological_depth || 'simple'} profile={profile} onStartWalk={handleStartWalk} onOpenBibleReference={handleOpenBibleReference} initialContext={askContext} onContextConsumed={() => setAskContext(null)} onKeyboardVisibilityChange={setAskKeyboardOpen} activeConversationId={activeAskConversationId} onConversationChange={setActiveAskConversationId} />}
+
       {activeTab === 'prayer' && <PrayerScreen profile={profile} />}
       {activeTab === 'you' && <YouScreen profile={profile} onProfileUpdate={handleProfileUpdate} session={session} onSignOut={handleSignOut} onShowAuth={() => setShowAuth(true)} onOpenFamily={() => setOverlay({ type: 'family' })} onOpenReach={() => setOverlay({ type: 'reach' })} onOpenLibrarySearch={() => setOverlay({ type: 'library_search' })} onOpenAdminSources={() => setOverlay({ type: 'admin_sources' })} onOpenRetrievalDebug={() => setOverlay({ type: 'retrieval_debug' })} onOpenRAGTests={() => setOverlay({ type: 'rag_tests' })} onOpenPhase6Tests={() => setOverlay({ type: 'phase6_tests' })} onOpenQADashboard={() => setOverlay({ type: 'qa_dashboard' })} onOpenSourceBatches={() => setOverlay({ type: 'source_batches' })} onOpenReleaseGate={() => setOverlay({ type: 'release_gate' })} onOpenProductionStatus={() => setOverlay({ type: 'production_status' })} onOpenTogether={() => setOverlay({ type: 'together' })} onOpenMyChurch={() => setOverlay({ type: 'my_church' })} onOpenPhase8Tests={() => setOverlay({ type: 'phase8_tests' })} onOpenLegacy={() => setOverlay({ type: 'legacy_home' })} onOpenPhase9Tests={() => setOverlay({ type: 'phase9_tests' })} onOpenPrivacyCenter={() => setOverlay({ type: 'privacy_center' })} onOpenProductionReadiness={() => setOverlay({ type: 'production_readiness' })} onOpenPhase10Tests={() => setOverlay({ type: 'phase10_tests' })} onOpenBetaFeedback={() => setOverlay({ type: 'beta_feedback' })} />}
 

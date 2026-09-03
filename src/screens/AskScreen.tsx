@@ -42,8 +42,93 @@ import type { StructuredTheologicalResponse, VerificationState } from '@/lib/int
 import ScriptureBlock from '@/components/ScriptureBlock';
 import { parsePassageReference } from '@/lib/passageParser';
 import { getBookDisplayName, type BibleTranslation } from '@/lib/bibleTypes';
+import { MessageSquare, Archive, Trash2, Clock } from 'lucide-react';
 
 const BOTTOM_NAV_HEIGHT = 72;
+
+// ============================================================
+// Ask UI Localization — follows active Bible translation
+// ============================================================
+const ASK_STRINGS = {
+  en: {
+    askLabel: 'Ask',
+    prompt: "What's on your mind?",
+    subtext: "Bring a question, passage, struggle, decision, or something you're trying to understand.",
+    placeholder: "Write what's on your mind...",
+    scriptureAuthority: 'Scripture is the authority.',
+    send: 'Send',
+    followUpPlaceholder: 'Ask a follow-up...',
+    lookingThrough: 'Looking through Scripture...',
+    back: 'Back',
+    textSize: 'Text size',
+    settings: 'Settings',
+    newConversation: 'New Conversation',
+    newChat: 'New Chat',
+    chatHistory: 'Chat History',
+    recent: 'Recent',
+    biblicalBasis: 'Biblical Basis',
+    sources: 'Sources',
+    copy: 'Copy',
+    copied: 'Copied',
+    share: 'Share',
+    openInBible: 'Open in Bible',
+    reportConcern: 'Report Theological Concern',
+    archive: 'Archive',
+    delete: 'Delete',
+    confirmDelete: 'Delete this conversation? This cannot be undone.',
+    confirmArchive: 'Archive this conversation? You can restore it later.',
+    noConversations: 'No conversations yet.',
+    letsBegin: "Let's Begin with Scripture",
+    openingMyBible: "I'm Opening My Bible",
+    scriptureIsStandard: 'Scripture is the Standard',
+    connected: 'Connected',
+    allSourcesVerified: 'All sources verified',
+    someSourcesVerified: 'Some sources verified',
+    sourcesUnavailable: 'Verified sources not currently available',
+  },
+  es: {
+    askLabel: 'Preguntar',
+    prompt: '¿Qué tienes en mente?',
+    subtext: 'Trae una pregunta, un pasaje, una lucha, una decisión o algo que intentas entender.',
+    placeholder: 'Escribe lo que tienes en mente...',
+    scriptureAuthority: 'La Escritura es la autoridad.',
+    send: 'Enviar',
+    followUpPlaceholder: 'Haz una pregunta de seguimiento...',
+    lookingThrough: 'Buscando en la Escritura...',
+    back: 'Atrás',
+    textSize: 'Tamaño de texto',
+    settings: 'Configuración',
+    newConversation: 'Nueva conversación',
+    newChat: 'Nuevo chat',
+    chatHistory: 'Historial',
+    recent: 'Recientes',
+    biblicalBasis: 'Base bíblica',
+    sources: 'Fuentes',
+    copy: 'Copiar',
+    copied: 'Copiado',
+    share: 'Compartir',
+    openInBible: 'Abrir en la Biblia',
+    reportConcern: 'Reportar preocupación teológica',
+    archive: 'Archivar',
+    delete: 'Eliminar',
+    confirmDelete: '¿Eliminar esta conversación? Esto no se puede deshacer.',
+    confirmArchive: '¿Archivar esta conversación? Puedes restaurarla más tarde.',
+    noConversations: 'Aún no hay conversaciones.',
+    letsBegin: 'Comencemos con la Escritura',
+    openingMyBible: 'Estoy abriendo mi Biblia',
+    scriptureIsStandard: 'La Escritura es el estándar',
+    connected: 'Conectado',
+    allSourcesVerified: 'Todas las fuentes verificadas',
+    someSourcesVerified: 'Algunas fuentes verificadas',
+    sourcesUnavailable: 'Fuentes verificadas no disponibles actualmente',
+  },
+} as const;
+
+type AskLang = keyof typeof ASK_STRINGS;
+
+function getAskLang(translation: BibleTranslation): AskLang {
+  return translation === 'RV1909' ? 'es' : 'en';
+}
 
 function getActiveTranslation(): BibleTranslation {
   if (typeof localStorage === 'undefined') return 'WEB';
@@ -79,12 +164,15 @@ interface AskScreenProps {
   theologicalDepth: string;
   profile: Profile | null;
   onStartWalk: (walk: Walk) => void;
+  onOpenBibleReference: (book: string, chapter: number, verseStart: number | null, verseEnd: number | null) => void;
   initialContext?: string | null;
   onContextConsumed?: () => void;
   onKeyboardVisibilityChange?: (visible: boolean) => void;
+  activeConversationId?: string | null;
+  onConversationChange?: (id: string | null) => void;
 }
 
-export default function AskScreen({ theologicalDepth, profile, onStartWalk, initialContext, onContextConsumed, onKeyboardVisibilityChange }: AskScreenProps) {
+export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOpenBibleReference, initialContext, onContextConsumed, onKeyboardVisibilityChange, activeConversationId, onConversationChange }: AskScreenProps) {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [vvHeight, setVvHeight] = useState(typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.height : (typeof window !== 'undefined' ? window.innerHeight : 800));
   const [nativeKeyboardHeight, setNativeKeyboardHeight] = useState(0);
@@ -106,6 +194,9 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
   const [showTextSizeMenu, setShowTextSizeMenu] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [activeTranslation, setActiveTranslation] = useState<BibleTranslation>(getActiveTranslation());
+  const [showChatHistory, setShowChatHistory] = useState(false);
+  const [conversationList, setConversationList] = useState<Array<{ id: string; title: string | null; updated_at: string; language: string | null }>>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const followUpRef = useRef<HTMLTextAreaElement>(null);
   const emptyTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -113,6 +204,8 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
 
   const inConversation = conversationStarted || thread.length > 0;
   const scale = TEXT_SCALE_MAP[textScale];
+  const t = ASK_STRINGS[getAskLang(activeTranslation)];
+  const askLang = getAskLang(activeTranslation);
 
   const checkNearBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -144,7 +237,148 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
     }
   }, [thread, thinking]);
 
-  // Empty-state visualViewport listener
+  // Load active conversation on mount if we have one
+  useEffect(() => {
+    if (activeConversationId && !conversationStarted && thread.length === 0) {
+      loadConversation(activeConversationId);
+    }
+  }, []);
+
+  // Sync conversation ID to app level
+  useEffect(() => {
+    onConversationChange?.(conversationId);
+  }, [conversationId]);
+
+  async function loadConversation(convId: string) {
+    setLoadingHistory(true);
+    try {
+      const { data: messages, error } = await supabase
+        .from('ask_messages')
+        .select('*')
+        .eq('conversation_id', convId)
+        .order('created_at', { ascending: true });
+
+      if (error || !messages) {
+        setLoadingHistory(false);
+        return;
+      }
+
+      const restoredThread: ThreadItem[] = messages.map((msg) => {
+        if (msg.role === 'user') {
+          return { kind: 'user', id: msg.id, body: msg.body } as ThreadItem;
+        }
+        // Assistant message — try to restore structured payload, else build minimal response
+        const payload = msg.structured_payload as StructuredTheologicalResponse | null;
+        if (payload) {
+          return { kind: 'assistant', id: msg.id, response: payload } as ThreadItem;
+        }
+        // Fallback: reconstruct minimal response from body text
+        const minimal: StructuredTheologicalResponse = {
+          answer_summary: msg.body,
+          recommended_scripture: [],
+          biblical_basis: [],
+          confessional_sources: [],
+          historical_sources: [],
+          modern_sources: [],
+          scripture_sources: [],
+          theological_confidence: 'BROADER_CHRISTIAN_DISAGREEMENT',
+          intent: 'general',
+          stakes_level: 'LOW',
+          scripture_first_mode: 'ANSWER_WITH_SCRIPTURE_RECOMMENDATION',
+          is_demo: false,
+          is_development_mode: false,
+          has_development_content: false,
+          provider: msg.response_language || 'unknown',
+          verification_state: 'SOURCES_UNAVAILABLE',
+          source_confidence: 'none',
+          validation_passed: true,
+          validation_warnings: [],
+          query_id: msg.id,
+          memory_proposals: [],
+          other_christian_views: null,
+          reformed_understanding: null,
+          application: null,
+          prayer_guidance: null,
+          scripture_context: null,
+          scripture_testing_flow: null,
+          divine_revelation_claim_detected: false,
+          divine_revelation_response: null,
+          teacher_attribution_blocked: null,
+          human_support_recommended: false,
+          human_support_note: null,
+        } as unknown as StructuredTheologicalResponse;
+        return { kind: 'assistant', id: msg.id, response: minimal } as ThreadItem;
+      });
+
+      setThread(restoredThread);
+      setConversationId(convId);
+      setConversationStarted(true);
+    } catch (e) {
+      console.warn('[AskScreen] loadConversation failed', e);
+    }
+    setLoadingHistory(false);
+  }
+
+  async function loadConversationList() {
+    setLoadingHistory(true);
+    try {
+      const { data, error } = await supabase
+        .from('ask_conversations')
+        .select('id, title, updated_at, language')
+        .is('archived_at', null)
+        .order('updated_at', { ascending: false })
+        .limit(30);
+
+      if (!error && data) {
+        setConversationList(data);
+      }
+    } catch (e) {
+      console.warn('[AskScreen] loadConversationList failed', e);
+    }
+    setLoadingHistory(false);
+  }
+
+  async function startNewChat() {
+    vibrate(8);
+    setThread([]);
+    setConversationId(null);
+    setConversationStarted(false);
+    setDismissedProposals(new Set());
+    setError(null);
+    setShowSourceViewer(false);
+    setShowBiblicalBasis(false);
+    setActiveResponseForModal(null);
+    setShowTextSizeMenu(false);
+    setShowSettingsMenu(false);
+    setShowChatHistory(false);
+  }
+
+  async function deleteConversation(convId: string) {
+    vibrate(10);
+    try {
+      await supabase.from('ask_messages').delete().eq('conversation_id', convId);
+      await supabase.from('ask_conversations').delete().eq('id', convId);
+      if (convId === conversationId) {
+        await startNewChat();
+      }
+      loadConversationList();
+    } catch (e) {
+      console.warn('[AskScreen] deleteConversation failed', e);
+    }
+  }
+
+  async function archiveConversation(convId: string) {
+    vibrate(10);
+    try {
+      await supabase.from('ask_conversations').update({ archived_at: new Date().toISOString() }).eq('id', convId);
+      if (convId === conversationId) {
+        await startNewChat();
+      }
+      loadConversationList();
+    } catch (e) {
+      console.warn('[AskScreen] archiveConversation failed', e);
+    }
+  }
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
@@ -237,7 +471,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
 
     const { data: conv } = await supabase
       .from('ask_conversations')
-      .insert({ title: promptText, intent })
+      .insert({ title: promptText, intent, language: askLang === 'es' ? 'es' : 'en' })
       .select('*')
       .single();
 
@@ -261,6 +495,8 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
         profile,
         theologicalDepth,
         [],
+        undefined,
+        askLang === 'es' ? 'Spanish' : 'English',
       );
 
       const assistantItemId = 'assistant-' + Date.now();
@@ -270,6 +506,8 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
         conversation_id: conv.id,
         role: 'assistant',
         body: aiResponse.answer_summary,
+        structured_payload: aiResponse as unknown as Record<string, unknown>,
+        response_language: askLang === 'es' ? 'es' : 'en',
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not get a response. Please try again.');
@@ -312,6 +550,8 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
         profile,
         theologicalDepth,
         conversationHistory,
+        undefined,
+        askLang === 'es' ? 'Spanish' : 'English',
       );
 
       const assistantItemId = 'assistant-' + Date.now();
@@ -321,6 +561,8 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
         conversation_id: conversationId,
         role: 'assistant',
         body: aiResponse.answer_summary,
+        structured_payload: aiResponse as unknown as Record<string, unknown>,
+        response_language: askLang === 'es' ? 'es' : 'en',
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not get a response. Please try again.');
@@ -335,33 +577,14 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
   }
 
   function resetConversation() {
-    setThread([]);
-    setConversationId(null);
-    setConversationStarted(false);
-    setDismissedProposals(new Set());
-    setError(null);
-    setShowSourceViewer(false);
-    setShowBiblicalBasis(false);
-    setActiveResponseForModal(null);
-    setShowTextSizeMenu(false);
-    setShowSettingsMenu(false);
+    startNewChat();
   }
 
   function handleOpenBible(reference: string) {
     vibrate(12);
-    const resp = activeResponseForModal;
-    const walk: Walk = {
-      id: 'temp-bible-' + Date.now(),
-      passage_reference: reference,
-      reading_objective: resp?.recommended_scripture[0]?.reading_objective || 'Read slowly. Notice what the text actually says.',
-      observation_prompt: 'What word or phrase stands out to you?',
-      estimated_minutes: profile?.available_time_minutes || 7,
-      status: 'pending',
-      started_at: null,
-      finished_at: null,
-      created_at: new Date().toISOString(),
-    };
-    onStartWalk(walk);
+    const parsed = parsePassageReference(reference);
+    if (!parsed) return;
+    onOpenBibleReference(parsed.book, parsed.chapter, parsed.verseStart, parsed.verseEnd);
   }
 
   function handleShare(response: StructuredTheologicalResponse) {
@@ -388,17 +611,28 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
           style={{ height: `${emptyHeight}px` }}
         >
           <header className="px-6 pt-14 safe-top shrink-0">
-            <p className="ui-label animate-fade-in-down">Ask</p>
-            <h1 className="font-serif text-3xl text-ivory-50 mt-2 tracking-tight">
-              What's on your mind?
-            </h1>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="ui-label animate-fade-in-down">{t.askLabel}</p>
+                <h1 className="font-serif text-3xl text-ivory-50 mt-2 tracking-tight">
+                  {t.prompt}
+                </h1>
+              </div>
+              <button
+                onClick={() => { vibrate(6); loadConversationList(); setShowChatHistory(true); }}
+                aria-label={t.chatHistory}
+                className="w-10 h-10 rounded-full bg-ink-800/50 backdrop-blur-sm border border-ink-600/30 flex items-center justify-center text-ivory-300 hover:text-ivory-100 transition-colors no-tap-highlight"
+              >
+                <MessageSquare size={18} />
+              </button>
+            </div>
           </header>
 
           <div className="shrink-0 px-6 pt-4">
             <div className="w-full max-w-lg mx-auto animate-fade-in-up">
               {!keyboardOpen && (
                 <p className="text-ivory-500 text-sm leading-relaxed mb-4">
-                  Bring a question, passage, struggle, decision, or something you're trying to understand.
+                  {t.subtext}
                 </p>
               )}
               <div className="bg-ink-800/40 border border-ink-600/30 rounded-3xl p-5 shadow-lg shadow-ink-950/40">
@@ -407,7 +641,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
                   autoFocus
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Write what's on your mind..."
+                  placeholder={t.placeholder}
                   aria-label="Ask SOLAPATH a question"
                   className="w-full bg-transparent text-ivory-100 placeholder:text-ivory-600 text-base leading-relaxed resize-none focus:outline-none overflow-y-auto"
                   style={{ minHeight: '96px', maxHeight: '140px' }}
@@ -419,14 +653,14 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
                   }}
                 />
                 <div className="flex items-center justify-between mt-2 pt-3 border-t border-ink-700/30">
-                  <p className="text-ivory-600 text-xs">Scripture is the authority.</p>
+                  <p className="text-ivory-600 text-xs">{t.scriptureAuthority}</p>
                   <button
                     onClick={() => { if (input.trim()) startConversation('passage', input.trim()); }}
                     disabled={!input.trim()}
-                    aria-label="Send question"
+                    aria-label={t.send}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gold-500/15 border border-gold-500/25 text-gold-300 text-sm font-medium disabled:opacity-30 transition-all hover:bg-gold-500/25"
                   >
-                    Send <Send size={14} />
+                    {t.send} <Send size={14} />
                   </button>
                 </div>
               </div>
@@ -444,7 +678,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
           <header className="flex items-center justify-between px-4 pt-12 safe-top shrink-0 relative z-10">
             <button
               onClick={resetConversation}
-              aria-label="Back"
+              aria-label={t.back}
               className="w-10 h-10 rounded-full bg-ink-800/50 backdrop-blur-sm border border-ink-600/30 flex items-center justify-center text-ivory-300 hover:text-ivory-100 transition-colors no-tap-highlight"
             >
               <ChevronLeft size={20} />
@@ -452,8 +686,15 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
 
             <div className="flex items-center gap-2">
               <button
+                onClick={() => { vibrate(6); loadConversationList(); setShowChatHistory(true); }}
+                aria-label={t.chatHistory}
+                className="w-10 h-10 rounded-full bg-ink-800/50 backdrop-blur-sm border border-ink-600/30 flex items-center justify-center text-ivory-300 hover:text-ivory-100 transition-colors no-tap-highlight"
+              >
+                <MessageSquare size={18} />
+              </button>
+              <button
                 onClick={() => { setShowTextSizeMenu(!showTextSizeMenu); setShowSettingsMenu(false); }}
-                aria-label="Text size"
+                aria-label={t.textSize}
                 className={`w-10 h-10 rounded-full backdrop-blur-sm border flex items-center justify-center transition-colors no-tap-highlight ${
                   showTextSizeMenu ? 'bg-gold-500/20 border-gold-500/40 text-gold-300' : 'bg-ink-800/50 border-ink-600/30 text-ivory-300 hover:text-ivory-100'
                 }`}
@@ -462,7 +703,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
               </button>
               <button
                 onClick={() => { setShowSettingsMenu(!showSettingsMenu); setShowTextSizeMenu(false); }}
-                aria-label="Settings"
+                aria-label={t.settings}
                 className={`w-10 h-10 rounded-full backdrop-blur-sm border flex items-center justify-center transition-colors no-tap-highlight ${
                   showSettingsMenu ? 'bg-gold-500/20 border-gold-500/40 text-gold-300' : 'bg-ink-800/50 border-ink-600/30 text-ivory-300 hover:text-ivory-100'
                 }`}
@@ -499,10 +740,10 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
           {showSettingsMenu && (
             <div className="absolute right-4 top-20 z-20 bg-ink-800/95 backdrop-blur-md border border-ink-600/40 rounded-2xl p-2 shadow-xl shadow-ink-950/50 animate-fade-in min-w-[180px]">
               <button
-                onClick={resetConversation}
+                onClick={startNewChat}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm text-ivory-400 hover:text-ivory-200 transition-colors w-full text-left no-tap-highlight"
               >
-                <Plus size={14} /> New Conversation
+                <Plus size={14} /> {t.newChat}
               </button>
             </div>
           )}
@@ -560,7 +801,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
             {thinking && (
               <div className="flex items-center gap-2.5 mb-6 animate-fade-in">
                 <div className="w-1.5 h-1.5 rounded-full bg-gold-400/60 animate-breathe" />
-                <p className="text-ivory-500 text-sm italic">Looking through Scripture...</p>
+                <p className="text-ivory-500 text-sm italic">{t.lookingThrough}</p>
               </div>
             )}
 
@@ -594,8 +835,8 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
                       if (conversationId && input.trim()) sendMessage();
                     }
                   }}
-                  placeholder="Ask a follow-up..."
-                  aria-label="Ask a follow-up question"
+                  placeholder={t.followUpPlaceholder}
+                  aria-label={t.followUpPlaceholder}
                   rows={1}
                   className="flex-1 bg-transparent px-3 py-2.5 text-ivory-100 placeholder:text-ivory-600 focus:outline-none text-base leading-relaxed resize-none max-h-[120px] overflow-y-auto"
                   style={{ minHeight: '48px' }}
@@ -616,6 +857,79 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, init
                   <Send size={16} className="text-gold-300" />
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chat History Drawer */}
+      {showChatHistory && (
+        <div className="fixed inset-0 z-[85] bg-ink-950/90 backdrop-blur-sm flex items-end justify-center">
+          <div className="w-full max-w-md max-h-[80vh] overflow-y-auto bg-ink-900 border border-ink-700/50 rounded-t-3xl animate-slide-up">
+            <div className="sticky top-0 bg-ink-900/95 backdrop-blur-md px-6 py-4 border-b border-ink-700/40 flex items-center justify-between">
+              <h2 className="font-serif text-xl text-ivory-50">{t.chatHistory}</h2>
+              <button onClick={() => setShowChatHistory(false)} className="btn-ghost">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="px-6 py-4">
+              <button
+                onClick={() => startNewChat()}
+                className="w-full flex items-center gap-2.5 px-4 py-3 rounded-xl bg-gold-500/10 border border-gold-500/20 text-gold-300 text-sm font-medium hover:bg-gold-500/15 transition-all no-tap-highlight mb-4"
+              >
+                <Plus size={16} /> {t.newChat}
+              </button>
+
+              {loadingHistory ? (
+                <p className="text-ivory-600 text-sm text-center py-8">{t.lookingThrough}</p>
+              ) : conversationList.length === 0 ? (
+                <p className="text-ivory-600 text-sm text-center py-8">{t.noConversations}</p>
+              ) : (
+                <>
+                  <p className="ui-label mb-3">{t.recent}</p>
+                  <div className="flex flex-col gap-2">
+                    {conversationList.map((conv) => (
+                      <div
+                        key={conv.id}
+                        className={`premium-card p-3.5 flex items-center gap-3 group ${conv.id === conversationId ? 'border-gold-500/30' : ''}`}
+                      >
+                        <button
+                          onClick={async () => {
+                            vibrate(8);
+                            setShowChatHistory(false);
+                            await loadConversation(conv.id);
+                          }}
+                          className="flex-1 text-left min-w-0"
+                        >
+                          <p className="text-ivory-100 text-sm font-medium truncate">
+                            {conv.title || t.newChat}
+                          </p>
+                          <p className="text-ivory-600 text-xs mt-0.5 flex items-center gap-1">
+                            <Clock size={10} />
+                            {new Date(conv.updated_at).toLocaleDateString(askLang === 'es' ? 'es-ES' : 'en-US', { month: 'short', day: 'numeric' })}
+                          </p>
+                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => { if (confirm(t.confirmArchive)) archiveConversation(conv.id); }}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-ivory-600 hover:text-gold-400 transition-colors no-tap-highlight"
+                            aria-label={t.archive}
+                          >
+                            <Archive size={14} />
+                          </button>
+                          <button
+                            onClick={() => { if (confirm(t.confirmDelete)) deleteConversation(conv.id); }}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-ivory-600 hover:text-clay-400 transition-colors no-tap-highlight"
+                            aria-label={t.delete}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -790,11 +1104,9 @@ function ReadingSection({
       <div className="space-y-3">
         {renderParagraphs(content, `text-ivory-300 ${sectionClass}`)}
       </div>
-      {isDemo && (
+      {isDemo && hasDevelopmentContent && (
         <p className="text-ivory-600 text-xs mt-2.5 italic">
-          {hasDevelopmentContent
-            ? 'Development content — verified theological sources not yet connected for this section.'
-            : "Development mode — content shown is from SOLAPATH's development intelligence."}
+          Verified theological sources are not yet connected for this topic.
         </p>
       )}
     </div>
@@ -827,7 +1139,7 @@ function generateFollowUps(response: StructuredTheologicalResponse): string[] {
     suggestions.push('What Scripture should I read next?');
   }
 
-  if (response.reformed_understanding) {
+  if (response.reformed_understanding && !response.has_development_content) {
     suggestions.push('What does the Reformed tradition say about this?');
   }
 
@@ -947,21 +1259,7 @@ function AssistantMessage({
 
   return (
     <div data-msg-id={itemId} className="mb-8 animate-fade-in-up">
-      {/* Subtle development mode indicator — no large badge */}
-      {response.is_development_mode !== false && (
-        <div className="flex items-center gap-1.5 mb-3">
-          <div className="w-1.5 h-1.5 rounded-full bg-ivory-600/50" />
-          <p className="text-ivory-600 text-[10px] uppercase tracking-wider">
-            {response.provider === 'development-fallback' ? 'Dev Fallback' : 'Dev Mode'}
-          </p>
-        </div>
-      )}
-      {response.is_development_mode === false && response.provider && response.provider !== 'development' && (
-        <div className="flex items-center gap-1.5 mb-3">
-          <div className="w-1.5 h-1.5 rounded-full bg-sage-400/60" />
-          <p className="text-sage-400/70 text-[10px] uppercase tracking-wider">Connected</p>
-        </div>
-      )}
+      {/* No dev/development mode indicators in production UI */}
 
       <div className="mb-4">
         <TheologicalConfidenceLabel confidence={response.theological_confidence} />
@@ -973,7 +1271,7 @@ function AssistantMessage({
           <div className="flex items-center gap-2 mb-2">
             <BookOpen size={15} className="text-gold-300" />
             <p className="text-xs uppercase tracking-[0.2em] text-gold-400/80 font-medium">
-              Let's Begin with Scripture
+              {t.letsBegin}
             </p>
           </div>
           <h3 className="font-serif text-2xl text-gold-300 mb-1.5">
@@ -991,7 +1289,7 @@ function AssistantMessage({
               className="btn-primary w-full text-sm"
             >
               <BookOpen size={16} />
-              I'm Opening My Bible
+              {t.openingMyBible}
             </button>
           </div>
         </div>
@@ -1083,31 +1381,31 @@ function AssistantMessage({
         )}
 
         {/* Additional context sections — continuous reading */}
-        {response.scripture_context && (
+        {response.scripture_context && !response.has_development_content && (
           <div className="pt-2 border-t border-ink-700/20">
             <ReadingSection label="Scripture Context" icon={Scroll} authority="explanation" content={response.scripture_context} isDemo={response.is_demo} sectionClass={scale.section} />
           </div>
         )}
 
-        {response.reformed_understanding && (
+        {response.reformed_understanding && !response.has_development_content && (
           <div className="pt-2 border-t border-ink-700/20">
-            <ReadingSection label="Reformed Understanding" icon={Landmark} authority="historic_theology" content={response.reformed_understanding} isDemo={response.is_demo} hasDevelopmentContent={response.has_development_content} sectionClass={scale.section} />
+            <ReadingSection label="Historical Theology" icon={Landmark} authority="historic_theology" content={response.reformed_understanding} isDemo={false} sectionClass={scale.section} />
           </div>
         )}
 
-        {response.other_christian_views && (
+        {response.other_christian_views && !response.has_development_content && (
           <div className="pt-2 border-t border-ink-700/20">
             <ReadingSection label="Other Christian Views" icon={AlertCircle} authority="explanation" content={response.other_christian_views} isDemo={response.is_demo} sectionClass={scale.section} />
           </div>
         )}
 
-        {response.application && (
+        {response.application && !response.has_development_content && (
           <div className="pt-2 border-t border-ink-700/20">
             <ReadingSection label="Application" icon={Lightbulb} authority="application" content={response.application} isDemo={response.is_demo} sectionClass={scale.section} />
           </div>
         )}
 
-        {response.prayer_guidance && (
+        {response.prayer_guidance && !response.has_development_content && (
           <div className="pt-2 border-t border-ink-700/20">
             <ReadingSection label="Prayer Guidance" icon={Heart} authority="application" content={response.prayer_guidance} isDemo={response.is_demo} sectionClass={scale.section} />
           </div>
@@ -1131,19 +1429,19 @@ function AssistantMessage({
       <div className="flex items-center gap-2 mt-5 flex-wrap">
         <button onClick={onShowBiblicalBasis} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ink-800/40 border border-ink-600/30 text-ivory-300 text-xs font-medium hover:border-gold-500/30 transition-all no-tap-highlight">
           <FileText size={13} />
-          Biblical Basis
+          {t.biblicalBasis}
         </button>
         <button onClick={onShowSources} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ink-800/40 border border-ink-600/30 text-ivory-300 text-xs font-medium hover:border-gold-500/30 transition-all no-tap-highlight">
           <ShieldCheck size={13} />
-          Sources
+          {t.sources}
         </button>
         <button onClick={handleCopy} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ink-800/40 border border-ink-600/30 text-ivory-300 text-xs font-medium hover:border-gold-500/30 transition-all no-tap-highlight">
           {copied ? <Check size={13} className="text-sage-400" /> : <Copy size={13} />}
-          {copied ? 'Copied' : 'Copy'}
+          {copied ? t.copied : t.copy}
         </button>
         <button onClick={onShare} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ink-800/40 border border-ink-600/30 text-ivory-300 text-xs font-medium hover:border-gold-500/30 transition-all no-tap-highlight">
           <Share size={13} />
-          Share
+          {t.share}
         </button>
         <button
           onClick={() => handleFeedback('up')}
@@ -1176,9 +1474,9 @@ function AssistantMessage({
           if (!showBadge) return null;
           const dotColor = vState === 'ALL_SOURCES_VERIFIED' ? 'bg-sage-400' :
             vState === 'PARTIALLY_VERIFIED' ? 'bg-gold-400' : 'bg-ivory-600';
-          const label = vState === 'ALL_SOURCES_VERIFIED' ? 'All sources verified' :
-            vState === 'PARTIALLY_VERIFIED' ? 'Some sources verified' :
-            'Verified sources not currently available';
+          const label = vState === 'ALL_SOURCES_VERIFIED' ? t.allSourcesVerified :
+            vState === 'PARTIALLY_VERIFIED' ? t.someSourcesVerified :
+            t.sourcesUnavailable;
           return (
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${dotColor}`} />
@@ -1197,7 +1495,7 @@ function AssistantMessage({
           className="flex items-center gap-1.5 mt-0.5 text-ivory-600 hover:text-clay-400 transition-colors text-xs no-tap-highlight"
         >
           <Flag size={10} />
-          Report Theological Concern
+          {t.reportConcern}
         </button>
       </div>
 

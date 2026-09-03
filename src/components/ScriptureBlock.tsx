@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, ArrowUpRight } from 'lucide-react';
+import { BookOpen, ArrowUpRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { parsePassageReference } from '@/lib/passageParser';
 import { fetchVerses } from '@/lib/bibleEngine';
 import { getBookDisplayName, type BibleTranslation } from '@/lib/bibleTypes';
 import { vibrate } from '@/lib/utils';
+
+const COLLAPSE_THRESHOLD = 4;
 
 interface ScriptureBlockProps {
   reference: string;
@@ -15,6 +17,7 @@ export default function ScriptureBlock({ reference, translation, onOpenBible }: 
   const [verses, setVerses] = useState<{ verse: number; text: string }[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -26,6 +29,7 @@ export default function ScriptureBlock({ reference, translation, onOpenBible }: 
     }
 
     setLoading(true);
+    setExpanded(false);
     fetchVerses(parsed.book, parsed.chapter, parsed.verseStart, parsed.verseEnd, translation)
       .then((result) => {
         if (cancelled) return;
@@ -65,6 +69,9 @@ export default function ScriptureBlock({ reference, translation, onOpenBible }: 
     return `${bookName} ${parsed.chapter}:${parsed.verseStart}\u2013${parsed.verseEnd}`;
   })();
 
+  const shouldCollapse = verses.length > COLLAPSE_THRESHOLD;
+  const visibleVerses = shouldCollapse && !expanded ? verses.slice(0, COLLAPSE_THRESHOLD) : verses;
+
   return (
     <div className="my-3 px-4 py-3 rounded-xl bg-ink-800/30 border border-gold-500/15 border-l-2 border-l-gold-500/40">
       <button
@@ -77,17 +84,29 @@ export default function ScriptureBlock({ reference, translation, onOpenBible }: 
           <span className="text-ivory-600 text-[10px] ml-auto uppercase tracking-wider">{translation}</span>
         </div>
         <div className="space-y-1">
-          {verses.map((v) => (
+          {visibleVerses.map((v) => (
             <p key={v.verse} className="text-ivory-200 text-[15px] leading-[1.65] font-serif">
               <sup className="text-gold-400/50 text-[10px] mr-0.5">{v.verse}</sup>
               {v.text}
             </p>
           ))}
         </div>
-        <div className="flex items-center gap-1 mt-2 text-gold-400/60 text-xs">
-          <span className="font-medium">Open in Bible</span>
-          <ArrowUpRight size={12} />
-        </div>
+      </button>
+      {shouldCollapse && (
+        <button
+          onClick={(e) => { e.stopPropagation(); vibrate(4); setExpanded(!expanded); }}
+          className="flex items-center gap-1 mt-2 text-gold-400/60 text-xs hover:text-gold-300 transition-colors no-tap-highlight"
+        >
+          {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          {expanded ? 'Show less' : `Show full passage (${verses.length} verses)`}
+        </button>
+      )}
+      <button
+        onClick={() => { vibrate(8); onOpenBible(reference); }}
+        className="flex items-center gap-1 mt-2 text-gold-400/60 text-xs hover:text-gold-300 transition-colors no-tap-highlight"
+      >
+        <span className="font-medium">Open in Bible</span>
+        <ArrowUpRight size={12} />
       </button>
     </div>
   );
