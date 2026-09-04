@@ -251,7 +251,15 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
   }, []);
 
   // Sync conversation ID to app level + persist to localStorage
+  // Skip syncing null on initial mount — the restore effect handles loading
+  const hasSyncedRef = useRef(false);
   useEffect(() => {
+    if (conversationId === null && !hasSyncedRef.current) {
+      // Initial mount with null — don't overwrite parent state;
+      // the restore effect will load the stored conversation
+      return;
+    }
+    hasSyncedRef.current = true;
     onConversationChange?.(conversationId);
     if (conversationId && typeof localStorage !== 'undefined') {
       localStorage.setItem('solapath_active_ask_conv', conversationId);
@@ -508,7 +516,12 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
     });
 
     try {
-      const memoryEvidence = await retrieveStudyMemoryEvidence(promptText, profile);
+      let memoryEvidence: StudyMemoryEvidence[] = [];
+      try {
+        memoryEvidence = await retrieveStudyMemoryEvidence(promptText, profile);
+      } catch (memErr) {
+        console.warn('[AskScreen] study memory retrieval failed, continuing without:', memErr);
+      }
 
       const aiResponse = await fetchIntelligenceResponse(
         promptText,
@@ -565,6 +578,9 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
     }
     setThinking(true);
     setError(null);
+    setShowSourceViewer(false);
+    setShowBiblicalBasis(false);
+    setActiveResponseForModal(null);
 
     const requestId = crypto.randomUUID();
     activeRequestIdRef.current = requestId;
@@ -586,7 +602,12 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
           : { role: 'assistant' as const, body: item.response.answer_summary }
       );
 
-      const memoryEvidence = await retrieveStudyMemoryEvidence(text, profile);
+      let memoryEvidence: StudyMemoryEvidence[] = [];
+      try {
+        memoryEvidence = await retrieveStudyMemoryEvidence(text, profile);
+      } catch (memErr) {
+        console.warn('[AskScreen] study memory retrieval failed, continuing without:', memErr);
+      }
 
       const aiResponse = await fetchIntelligenceResponse(
         text,

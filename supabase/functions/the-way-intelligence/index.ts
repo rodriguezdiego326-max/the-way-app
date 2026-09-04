@@ -466,6 +466,12 @@ async function retrieveFromLibrary(question: string): Promise<RAGRetrievalResult
     "baptism": ["ecclesiology_baptism"],
     "prayer": ["christian_life_prayer"],
     "evangelism": ["christian_life_evangelism"],
+    "adoption": ["soteriology_union"],
+    "teach": ["revelation_sufficiency"],
+    "teaching": ["revelation_sufficiency"],
+    "disciple": ["revelation_sufficiency"],
+    "forgive": ["atonement_reconciliation"],
+    "forgiveness": ["atonement_reconciliation"],
   };
 
   for (const [keyword, ids] of Object.entries(doctrineMap)) {
@@ -479,7 +485,7 @@ async function retrieveFromLibrary(question: string): Promise<RAGRetrievalResult
   let rejectedSourceIds: string[] = [];
 
   try {
-    const srcRes = await fetch(`${supabaseUrl}/rest/v1/library_sources?content_status=eq.verified&verified=eq.true&select=id,title,source_type,authority_level,author_id,chapter,section,verified&order=authority_level.asc&limit=50`, {
+    const srcRes = await fetch(`${supabaseUrl}/rest/v1/library_sources?content_status=eq.verified&verified=eq.true&select=id,title,source_type,authority_level,author_id,chapter,section,verified,content_status&order=authority_level.asc&limit=50`, {
       headers: { "apikey": serviceKey, "Authorization": `Bearer ${serviceKey}` },
     });
 
@@ -1239,17 +1245,24 @@ const devProvider: AIProvider = {
       if (proposal) memoryProposals.push(proposal);
     }
 
+    const recommendedScripture = sourceUnavailable ? [] : buildRecommendedScripture(question, divineRevelationDetected, isCrisis || isAbuse);
+    const biblicalBasis = sourceUnavailable ? [] : buildBiblicalBasis(question);
+    const clearedConfessionalSources = sourceUnavailable ? [] : confessionalSources;
+    const clearedHistoricalSources = sourceUnavailable ? [] : historicalSources;
+    const clearedScriptureSources = sourceUnavailable ? [] : scriptureSources;
+    const clearedScriptureContext = sourceUnavailable ? null : scriptureContext;
+
     const response: StructuredTheologicalResponse = {
       answer_summary: answerSummary,
       scripture_first_required: scriptureFirstMode === "ENCOURAGE_SCRIPTURE_FIRST",
       scripture_first_mode: scriptureFirstMode,
-      recommended_scripture: buildRecommendedScripture(question, divineRevelationDetected, isCrisis || isAbuse),
-      scripture_context: scriptureContext,
+      recommended_scripture: recommendedScripture,
+      scripture_context: clearedScriptureContext,
       reformed_understanding: reformedUnderstanding,
-      confessional_sources: confessionalSources,
-      historical_sources: historicalSources,
+      confessional_sources: clearedConfessionalSources,
+      historical_sources: clearedHistoricalSources,
       modern_sources: [],
-      scripture_sources: scriptureSources,
+      scripture_sources: clearedScriptureSources,
       other_christian_views: theologicalConfidence === "BROADER_CHRISTIAN_DISAGREEMENT"
         ? null
         : null,
@@ -1263,7 +1276,7 @@ const devProvider: AIProvider = {
       source_confidence: ragConfidence === "verified" ? "verified" : ragConfidence === "partially_supported" ? "partial" : "unavailable",
       theological_confidence: theologicalConfidence,
       not_explicitly_addressed_by_scripture: (intent === "LIFE_APPLICATION" && !question.includes("forgive") && !question.includes("pray")),
-      biblical_basis: buildBiblicalBasis(question),
+      biblical_basis: biblicalBasis,
       is_demo: true,
       divine_revelation_claim_detected: divineRevelationDetected,
       divine_revelation_response: divineRevelationDetected ? answerSummary : null,
@@ -1746,11 +1759,30 @@ function buildRecommendedScripture(question: string, isDivine: boolean, isCrisis
     refs.push({ reference: "Ephesians 1:3-14", reading_objective: "Read Paul's words slowly. Notice who is doing the choosing, redeeming, and sealing.", reason: "Directly addresses election and God's sovereign purpose." });
   } else if (lower.includes("justification")) {
     refs.push({ reference: "Romans 3:21-28", reading_objective: "Read about the righteousness of God through faith in Jesus Christ.", reason: "Directly addresses justification by faith." });
+  } else if (lower.includes("adoption")) {
+    refs.push({ reference: "Romans 8:15-17", reading_objective: "Read about the Spirit of adoption and crying 'Abba, Father.'", reason: "Directly addresses adoption as children of God." });
+  } else if (lower.includes("teach") || lower.includes("teaching") || lower.includes("disciple")) {
+    refs.push({ reference: "Matthew 28:19-20", reading_objective: "Read the Great Commission. Notice Jesus commands teaching as central to discipleship.", reason: "Christ's direct command to teach all nations." });
+  } else if (lower.includes("forgive") || lower.includes("forgiveness")) {
+    refs.push({ reference: "Ephesians 4:31-32", reading_objective: "Read Paul's instruction to forgive as God forgave us in Christ.", reason: "Directly addresses forgiveness rooted in the Gospel." });
   } else if (lower.includes("romans 8:28")) {
     refs.push({ reference: "Romans 8:28-30", reading_objective: "Read the surrounding context. Notice what 'all things' refers to.", reason: "This is the passage you're asking about." });
-  } else {
-    refs.push({ reference: "Psalm 119:33-40", reading_objective: "Read slowly. Notice the psalmist's desire for understanding.", reason: "Scripture invites us to seek understanding from God's word." });
+  } else if (lower.includes("sanctification")) {
+    refs.push({ reference: "Philippians 2:12-13", reading_objective: "Read about God working in us both to will and to work.", reason: "Directly addresses sanctification as God's work in us." });
+  } else if (lower.includes("perseverance") || lower.includes("lose salvation")) {
+    refs.push({ reference: "John 10:28-29", reading_objective: "Read Jesus' promise that no one can snatch His sheep from His hand.", reason: "Directly addresses the security of believers." });
+  } else if (lower.includes("trinity")) {
+    refs.push({ reference: "Matthew 28:19", reading_objective: "Read the baptismal formula: Father, Son, and Holy Spirit.", reason: "Directly names the three persons of the Godhead." });
+  } else if (lower.includes("atonement") || lower.includes("substitution")) {
+    refs.push({ reference: "2 Corinthians 5:21", reading_objective: "Read about the great exchange: Christ became sin for us.", reason: "Directly addresses substitutionary atonement." });
+  } else if (lower.includes("providence") || lower.includes("sovereignty")) {
+    refs.push({ reference: "Romans 8:28", reading_objective: "Read about God working all things for the good of His people.", reason: "Directly addresses God's providential care." });
+  } else if (lower.includes("assurance")) {
+    refs.push({ reference: "1 John 5:13", reading_objective: "Read John's purpose: that you may know you have eternal life.", reason: "Directly addresses assurance of salvation." });
+  } else if (lower.includes("faith")) {
+    refs.push({ reference: "Ephesians 2:8-9", reading_objective: "Read about salvation by grace through faith, not of works.", reason: "Directly addresses faith as a gift of God." });
   }
+  // No catch-all default — return empty if no topic matched
   return refs;
 }
 
@@ -1775,6 +1807,15 @@ function buildBiblicalBasis(question: string): BiblicalBasisPassage[] {
   } else if (lower.includes("justification")) {
     passages.push({ reference: "Romans 3:21-28", relevance: "Righteousness of God through faith in Jesus Christ.", contextual_note: "Paul's argument that all have sinned and are justified by grace.", is_primary: true });
     passages.push({ reference: "2 Corinthians 5:21", relevance: "Christ became sin so that we might become the righteousness of God.", contextual_note: "The great exchange of the Gospel.", is_primary: false });
+  } else if (lower.includes("adoption")) {
+    passages.push({ reference: "Romans 8:15-17", relevance: "The Spirit of adoption lets us cry 'Abba, Father.'", contextual_note: "Paul teaches that believers are adopted as children of God.", is_primary: true });
+    passages.push({ reference: "Galatians 4:4-7", relevance: "God sent His Son so we might receive adoption as sons.", contextual_note: "Adoption grants full rights and privileges of children.", is_primary: false });
+  } else if (lower.includes("teach") || lower.includes("teaching") || lower.includes("disciple")) {
+    passages.push({ reference: "Matthew 28:19-20", relevance: "The Great Commission commands teaching as central to discipleship.", contextual_note: "Jesus commands making disciples through teaching obedience to all He commanded.", is_primary: true });
+    passages.push({ reference: "Deuteronomy 6:6-7", relevance: "Teaching God's Word diligently to the next generation.", contextual_note: "Teaching begins in the home, in everyday life.", is_primary: false });
+  } else if (lower.includes("forgive") || lower.includes("forgiveness")) {
+    passages.push({ reference: "Ephesians 4:31-32", relevance: "Forgive one another as God in Christ forgave you.", contextual_note: "Paul grounds our forgiveness in God's prior forgiveness of us.", is_primary: true });
+    passages.push({ reference: "Matthew 18:21-35", relevance: "The parable of the unforgiving servant.", contextual_note: "Jesus teaches that our forgiveness of others reflects God's forgiveness of us.", is_primary: false });
   } else if (lower.includes("trinity")) {
     passages.push({ reference: "Matthew 28:19", relevance: "Baptizing in the singular name of Father, Son, and Holy Spirit.", contextual_note: "The singular 'name' with three persons is foundational.", is_primary: true });
     passages.push({ reference: "John 1:1-14", relevance: "The Word was with God and was God, and became flesh.", contextual_note: "Distinction and unity between the Word and God.", is_primary: false });
@@ -1787,9 +1828,17 @@ function buildBiblicalBasis(question: string): BiblicalBasisPassage[] {
   } else if (lower.includes("sanctification")) {
     passages.push({ reference: "1 Thessalonians 4:3", relevance: "This is the will of God, your sanctification.", contextual_note: "Paul's direct teaching on sanctification.", is_primary: true });
     passages.push({ reference: "Romans 6:6", relevance: "Old self was crucified with Christ.", contextual_note: "Union with Christ in death and resurrection.", is_primary: false });
-  } else {
-    passages.push({ reference: "2 Timothy 3:16-17", relevance: "All Scripture is breathed out by God.", contextual_note: "Paul instructs Timothy about the sufficiency of Scripture.", is_primary: true });
+  } else if (lower.includes("providence") || lower.includes("sovereignty")) {
+    passages.push({ reference: "Romans 8:28", relevance: "All things work together for good to those who love God.", contextual_note: "God's providence over all circumstances.", is_primary: true });
+    passages.push({ reference: "Psalm 103:19", relevance: "The Lord's throne is established in the heavens.", contextual_note: "God's sovereign rule over all.", is_primary: false });
+  } else if (lower.includes("assurance")) {
+    passages.push({ reference: "1 John 5:13", relevance: "That you may know you have eternal life.", contextual_note: "John's purpose is assurance, not speculation.", is_primary: true });
+    passages.push({ reference: "Romans 8:16", relevance: "The Spirit bears witness with our spirit that we are children of God.", contextual_note: "The internal witness of the Spirit.", is_primary: false });
+  } else if (lower.includes("faith")) {
+    passages.push({ reference: "Ephesians 2:8-9", relevance: "By grace you are saved through faith, not of works.", contextual_note: "Faith as the instrument, not the merit.", is_primary: true });
+    passages.push({ reference: "Romans 5:1", relevance: "Having been justified by faith, we have peace with God.", contextual_note: "Faith brings peace with God through justification.", is_primary: false });
   }
+  // No catch-all default — return empty if no topic matched
   return passages;
 }
 
