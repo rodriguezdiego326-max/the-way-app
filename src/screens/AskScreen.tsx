@@ -244,9 +244,16 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
     const storedId = typeof localStorage !== 'undefined'
       ? localStorage.getItem('solapath_active_ask_conv')
       : null;
-    const convId = activeConversationId || storedId;
+    const returnConvId = typeof localStorage !== 'undefined'
+      ? localStorage.getItem('solapath_ask_return_conv')
+      : null;
+    const convId = returnConvId || activeConversationId || storedId;
     if (convId && !conversationStarted && thread.length === 0) {
       loadConversation(convId);
+    }
+    // Clean up return marker after use
+    if (returnConvId && typeof localStorage !== 'undefined') {
+      localStorage.removeItem('solapath_ask_return_conv');
     }
   }, []);
 
@@ -663,6 +670,10 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
     vibrate(12);
     const parsed = parsePassageReference(reference);
     if (!parsed) return;
+    // Store return context so AskScreen can restore the active chat after Bible closes
+    if (conversationId && typeof localStorage !== 'undefined') {
+      localStorage.setItem('solapath_ask_return_conv', conversationId);
+    }
     onOpenBibleReference(parsed.book, parsed.chapter, parsed.verseStart, parsed.verseEnd);
   }
 
@@ -824,6 +835,30 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
               >
                 <Plus size={14} /> {t.newChat}
               </button>
+              <div className="px-4 py-1.5 mt-1 border-t border-ink-700/40">
+                <p className="text-ivory-600 text-[10px] uppercase tracking-wider mb-1.5">Translation</p>
+                <div className="flex gap-1.5">
+                  {(['WEB', 'RV1909'] as BibleTranslation[]).map((tr) => (
+                    <button
+                      key={tr}
+                      onClick={() => {
+                        vibrate(4);
+                        setActiveTranslation(tr);
+                        if (typeof localStorage !== 'undefined') {
+                          localStorage.setItem('solapath_translation', tr);
+                        }
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all no-tap-highlight ${
+                        activeTranslation === tr
+                          ? 'bg-gold-500/20 border border-gold-500/40 text-gold-300'
+                          : 'bg-ink-700/40 border border-ink-600/30 text-ivory-400 hover:text-ivory-200'
+                      }`}
+                    >
+                      {tr === 'WEB' ? 'WEB (EN)' : 'RV1909 (ES)'}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 

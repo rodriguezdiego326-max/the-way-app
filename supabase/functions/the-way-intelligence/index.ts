@@ -1129,6 +1129,59 @@ const devProvider: AIProvider = {
       .filter((c) => c.authority_level === 1)
       .map((c) => ({ source_id: c.source_id, source_type: c.source_type, author: null, work: c.display_title, section: c.chapter_section, citation: null, verified: c.verified, url: null }));
 
+    // ============================================================
+    // INTENT EXTRACTION — strip meta-language to find the real subject
+    // ============================================================
+    const META_PHRASES = [
+      /what does the bible (teach|say|tell us|tell me) about /i,
+      /what does scripture (teach|say|tell us|tell me) about /i,
+      /what does the bible (teach|say) (regarding|concerning) /i,
+      /what does scripture (teach|say) (regarding|concerning) /i,
+      /what (is|are) the biblical (teaching|view|perspective) on /i,
+      /what does (the bible|scripture) mean by /i,
+      /what does the bible say\?/i,
+      /what does scripture say\?/i,
+      /explain /i,
+      /tell me about /i,
+      /teach me about /i,
+    ];
+
+    function extractIntentSubject(q: string): string {
+      let subject = q.trim();
+      for (const pattern of META_PHRASES) {
+        const match = subject.match(pattern);
+        if (match) {
+          subject = subject.slice(match[0].length).trim();
+          break;
+        }
+      }
+      // Remove trailing punctuation
+      subject = subject.replace(/[?.!]+$/g, '').trim();
+      return subject;
+    }
+
+    // Resolve follow-up context: if the question is short/ambiguous and conversation history exists,
+    // construct a resolved query that combines prior topic with current question
+    let resolvedQuery = question;
+    let intentSubject = extractIntentSubject(question);
+    const isFollowUp = request.conversation_history && request.conversation_history.length > 0;
+    const isShortAmbiguous = question.split(/\s+/).length <= 8 || /^(how|what|why|can|should|is|are)\b/i.test(question);
+
+    if (isFollowUp && isShortAmbiguous) {
+      // Find the most recent user message to use as context
+      const recentUserMessages = request.conversation_history
+        .filter((m) => m.role === 'user')
+        .slice(-2)
+        .map((m) => m.body);
+      if (recentUserMessages.length > 0) {
+        const priorTopic = extractIntentSubject(recentUserMessages[recentUserMessages.length - 1]);
+        if (priorTopic && priorTopic.length > 2) {
+          resolvedQuery = `${priorTopic} — ${question}`;
+          intentSubject = `${priorTopic} ${question}`.replace(/[?.!]+$/g, '').trim();
+        }
+      }
+    }
+
     let answerSummary = "";
     let reformedUnderstanding: string | null = null;
     let scriptureContext: string | null = null;
@@ -1152,73 +1205,73 @@ const devProvider: AIProvider = {
         ? "Estoy teniendo problemas para generar una respuesta fundamentada en este momento. Por favor, inténtalo de nuevo."
         : "I'm having trouble generating a fully grounded answer right now. Please try again.";
 
-      if (question.includes("justification")) {
+      if (intentSubject.includes("justification") || resolvedQuery.includes("justification")) {
         answerSummary = isSpanish
           ? "La justificación es la declaración de Dios de que un pecador es justo a través de la fe en Cristo. No por nada bueno en nosotros, sino únicamente por Cristo — Su obediencia y sacrificio nos son imputados, recibidos por la fe sola. Romanos 3:24 dice: \"siendo justificados gratuitamente por su gracia, mediante la redención que es en Cristo Jesús.\" Dios declara justo al pecador, no lo hace internamente justo — esa es la diferencia clave. La fe recibe este don, no lo merece."
           : "Justification is God's declaration that a sinner is righteous through faith in Christ. It's not based on anything good in us, but solely on Christ — His obedience and suffering are imputed to us, received by faith alone. Romans 3:24 says, \"being justified freely by his grace through the redemption that is in Christ Jesus.\" God declares the sinner righteous; He doesn't make them internally righteous first — that's the key distinction. Faith receives this gift; it doesn't earn it.";
         reformedUnderstanding = "Justification is an act of God's free grace wherein He pardons all our sins and accepts us as righteous in His sight, not for anything wrought in us, but for Christ's sake alone — by imputing Christ's obedience and satisfaction to us, received by faith alone.";
         scriptureContext = "Romans 3:21-28 shows that the righteousness of God has been manifested apart from the law, through faith in Jesus Christ. Romans 5:1-11 shows that since we have been justified by faith, we have peace with God.";
-      } else if (question.includes("adoption")) {
+      } else if (intentSubject.includes("adoption") || resolvedQuery.includes("adoption")) {
         answerSummary = isSpanish
           ? "En la Escritura, la adopción significa que Dios nos recibe como Sus hijos. No es solo una metáfora — es un cambio real de estado legal y relacional. Por la fe en Cristo, somos traídos a la familia de Dios con todos los derechos y privilegios de hijos. Romanos 8:15 dice: \"no habéis recibido el espíritu de servidumbre para estar otra vez en temor, sino que habéis recibido el espíritu de adopción, por el cual clamamos: ¡Abba, Padre!\" Esto significa que puedes acercarte a Dios con la confianza de un hijo que sabe que su Padre le ama."
           : "In Scripture, adoption means God receives us as His children. It's not just a metaphor — it's a real change of legal and relational status. Through faith in Christ, we're brought into God's family with all the rights and privileges of sons. Romans 8:15 says, \"you didn't receive the spirit of bondage again to fear, but you received the Spirit of adoption, by whom we cry, 'Abba! Father!'\" This means you can approach God with the confidence of a child who knows their Father loves them.";
         reformedUnderstanding = "Adoption is an act of God's free grace whereby believers are received into the number of His children, with His name put upon them, the Spirit of His Son given to them, and access to all the liberties and privileges of the children of God.";
         scriptureContext = "Romans 8:15-17 shows that through the Spirit of adoption we cry 'Abba, Father.' Galatians 4:4-7 shows that God sent His Son to redeem those under the law, that we might receive adoption as sons.";
-      } else if (question.includes("teach") || question.includes("teaching") || question.includes("disciple")) {
+      } else if ((intentSubject.includes("teach") || intentSubject.includes("teaching") || intentSubject.includes("disciple")) && !intentSubject.includes("widow") && !intentSubject.includes("hospitality") && !intentSubject.includes("stewardship") && !intentSubject.includes("gossip") && !intentSubject.includes("laziness") && !intentSubject.includes("laziness")) {
         answerSummary = isSpanish
           ? "La Escritura nos llama a enseñar y discipular a otros como parte de la Gran Comisión. Mateo 28:19-20 dice: \"Por tanto, id, y haced discípulos a todas las naciones... enseñándoles que guarden todas las cosas que os he mandado.\" La enseñanza bíblica no es solo compartir información — es modelar la vida de Cristo para que otros la sigan. Deuteronomio 6:6-7 muestra que la enseñanza comienza en el hogar, en lo cotidiano."
           : "Scripture calls us to teach and disciple others as part of the Great Commission. Matthew 28:19-20 says, \"Go and make disciples of all nations... teaching them to observe all that I commanded you.\" Biblical teaching isn't just sharing information — it's modeling Christ's life so others can follow. Deuteronomy 6:6-7 shows that teaching starts at home, in everyday life.";
         reformedUnderstanding = "The teaching ministry is a gift of the Spirit for the equipping of the saints. Christ has appointed teachers in His church to instruct in the faith, and all believers are called to make disciples and teach the nations to observe all that Christ commanded.";
         scriptureContext = "Matthew 28:19-20 is the Great Commission's call to teach. Deuteronomy 6:6-7 shows teaching in the home. 2 Timothy 2:2 shows the chain of faithful teaching passing from generation to generation.";
-      } else if (question.includes("forgive") || question.includes("forgiveness")) {
+      } else if (intentSubject.includes("forgive") || intentSubject.includes("forgiveness") || resolvedQuery.includes("forgive")) {
         answerSummary = isSpanish
           ? "Perdonar a alguien que te ha lastimado es difícil, pero el Evangelio nos da la base para hacerlo. Efesios 4:32 dice: \"antes sed benignos unos con otros, misericordiosos, perdonándoos unos a otros, como Dios también os perdonó en Cristo.\" No perdonas porque el dolor sea pequeño, sino porque has sido perdonado mucho. Perdonar no significa que el dolor no importe o que debas confiar de inmediato. Significa entregar la justicia a Dios y liberar tu corazón del peso de la amargura."
           : "Forgiving someone who hurt you is hard, but the Gospel gives us the foundation to do it. Ephesians 4:32 says, \"Be kind to one another, tenderhearted, forgiving each other, just as God also in Christ forgave you.\" You don't forgive because the pain is small — you forgive because you've been forgiven much. Forgiveness doesn't mean the pain doesn't matter or that you should trust immediately. It means surrendering justice to God and freeing your heart from the weight of bitterness.";
         reformedUnderstanding = "Forgiveness is a duty rooted in the Gospel. As God in Christ forgave us, so we are called to forgive others — not because the offense is trivial, but because we have received grace beyond measure. Forgiveness does not negate justice but entrusts it to God.";
         scriptureContext = "Ephesians 4:31-32 calls us to forgive as God forgave us. Matthew 18:21-35 shows the parable of the unforgiving servant, grounding our forgiveness in God's prior forgiveness of us.";
-      } else if (question.includes("gay") || question.includes("homosexual") || question.includes("same-sex") || question.includes("same sex")) {
+      } else if (intentSubject.includes("gay") || intentSubject.includes("homosexual") || intentSubject.includes("same-sex") || intentSubject.includes("same sex")) {
         answerSummary = isSpanish
           ? "La Escritura enseña que el diseño de Dios para la sexualidad se expresa dentro del matrimonio entre un hombre y una mujer. Pasajes como Romanos 1:26-27, 1 Corintios 6:9-11 y Levítico 18:22 describen la práctica homosexual como contraria al diseño de Dios. Al mismo tiempo, la Escritura distingue entre la tentación y el acto — tener deseos no es lo mismo que actuar según ellos. Toda persona, sin importar sus luchas, es creada a imagen de Dios y merece dignidad y respeto. El Evangelio ofrece gracia, perdón y transformación a todos los que se arrepienten y confían en Cristo. 1 Corintios 6:11 dice: \"Y esto erais algunos vosotros; mas ya habéis sido lavados, ya habéis sido santificados, ya habéis sido justificados en el nombre del Señor Jesús.\""
           : "Scripture teaches that God's design for sexuality is expressed within marriage between a man and a woman. Passages like Romans 1:26-27, 1 Corinthians 6:9-11, and Leviticus 18:22 describe homosexual practice as contrary to God's design. At the same time, Scripture distinguishes between temptation and conduct — experiencing desires is not the same as acting on them. Every person, regardless of their struggles, is created in God's image and deserves dignity and respect. The Gospel offers grace, forgiveness, and transformation to all who repent and trust in Christ. 1 Corinthians 6:11 says, \"Such were some of you, but you were washed, but you were sanctified, but you were justified in the name of the Lord Jesus.\"";
         reformedUnderstanding = "Scripture distinguishes between personhood, desire, and conduct. All persons bear God's image and deserve dignity. Temptation is not itself sin, but acting on desires contrary to God's design is. The Gospel calls all people to repentance and offers grace and transformation through Christ.";
         scriptureContext = "Romans 1:26-27 describes the exchange of natural relations. 1 Corinthians 6:9-11 lists sins including homosexual practice but immediately offers hope in Christ. Leviticus 18:22 prohibits it in the Old Testament law.";
-      } else if (question.includes("predestination") || question.includes("election")) {
+      } else if (intentSubject.includes("predestination") || intentSubject.includes("election")) {
         answerSummary = isSpanish
           ? "La predestinación es la enseñanza bíblica de que Dios, antes de la fundación del mundo, eligió a un pueblo para Sí mismo. Efesios 1:4 dice: \"según nos escogió en él antes de la fundación del mundo, para que fuésemos santos y sin mancha delante de él.\" Esto no es arbitrario — es en Cristo y para Su gloria. Romanos 8:29-30 muestra la cadena dorada: a los que predestinó, también llamó, justificó y glorificó. La elección es para salvación, no para condenación."
           : "Predestination is the biblical teaching that God, before the foundation of the world, chose a people for Himself. Ephesians 1:4 says, \"He chose us in him before the foundation of the world, that we should be holy and without defect before him.\" This isn't arbitrary — it's in Christ and for His glory. Romans 8:29-30 shows the golden chain: those He predestined, He also called, justified, and glorified. Election is unto salvation, not unto condemnation.";
         reformedUnderstanding = "God, from all eternity, did by the most wise and holy counsel of His own will, freely and unchangeably ordain whatsoever comes to pass. Yet neither is God the author of sin, nor is violence offered to the will of the creatures.";
         scriptureContext = "Ephesians 1:3-14 shows that God chose us in Christ before the foundation of the world. Romans 8:28-39 shows that those whom God foreknew He also predestined to be conformed to the image of His Son.";
-      } else if (question.includes("sanctification")) {
+      } else if (intentSubject.includes("sanctification")) {
         answerSummary = isSpanish
           ? "La santificación es la obra progresiva de Dios en nosotros, haciéndonos más como Cristo. No es algo que logramos por esfuerzo propio — es el Espíritu Santo obrando en nosotros mientras cooperamos con la Palabra y la oración. Filipenses 2:13 dice: \"porque Dios es el que en vosotros obra así el querer como el hacer, por su buena voluntad.\" Es un proceso que dura toda la vida."
           : "Sanctification is God's progressive work in us, making us more like Christ. It's not something we achieve by self-effort — it's the Holy Spirit working in us as we cooperate with the Word and prayer. Philippians 2:13 says, \"For it is God who works in you both to will and to work, for his good pleasure.\" It's a lifelong process.";
         reformedUnderstanding = "Sanctification is a work of God's grace whereby believers, having a new heart and spirit, are renewed in their whole man after the image of God, enabled more and more to die unto sin and live unto righteousness.";
-      } else if (question.includes("perseverance") || question.includes("lose salvation")) {
+      } else if (intentSubject.includes("perseverance") || intentSubject.includes("lose salvation")) {
         answerSummary = isSpanish
           ? "La Escritura enseña que aquellos a quienes Dios ha salvado no pueden perder su salvación. Juan 10:28 dice: \"y yo les doy vida eterna, y no perecerán jamás, ni nadie las arrebatará de mi mano.\" Filipenses 1:6 dice que el que comenzó la buena obra la perfeccionará. Esto no significa que los creyentes nunca tropiecen, sino que la gracia de Dios los sostendrá hasta el final."
           : "Scripture teaches that those whom God has saved cannot lose their salvation. John 10:28 says, \"I give eternal life to them. They will never perish, and no one will snatch them out of my hand.\" Philippians 1:6 says He who began a good work will complete it. This doesn't mean believers never stumble, but that God's grace will sustain them to the end.";
         reformedUnderstanding = "Those whom God has accepted in the Beloved, effectually called and sanctified by His Spirit, can neither totally nor finally fall away from the state of grace, but shall certainly persevere therein to the end.";
-      } else if (question.includes("trinity")) {
+      } else if (intentSubject.includes("trinity")) {
         answerSummary = isSpanish
           ? "La Trinidad es la enseñanza bíblica de que hay un solo Dios en tres personas: Padre, Hijo y Espíritu Santo. Mateo 28:19 dice: \"bautizándolos en el nombre del Padre, y del Hijo, y del Espíritu Santo.\" No son tres dioses, sino un solo Dios en tres personas, cada una plenamente divina."
           : "The Trinity is the biblical teaching that there is one God in three persons: Father, Son, and Holy Spirit. Matthew 28:19 says, \"baptizing them in the name of the Father and of the Son and of the Holy Spirit.\" They are not three gods, but one God in three persons, each fully divine.";
         reformedUnderstanding = "In the unity of the Godhead there be three persons, of one substance, power, and eternity: God the Father, God the Son, and God the Holy Ghost.";
-      } else if (question.includes("atonement") || question.includes("substitution")) {
+      } else if (intentSubject.includes("atonement") || intentSubject.includes("substitution")) {
         answerSummary = isSpanish
           ? "La expiación significa que Cristo, por Su obediencia y muerte, satisfizo completamente la justicia de Dios. Él tomó el castigo que merecíamos y nos imputó Su justicia. 2 Corintios 5:21 dice: \"Al que no conoció pecado, por nosotros lo hizo pecado, para que nosotros fuésemos hechos justicia de Dios en él.\" Esto es la sustitución — Cristo en nuestro lugar."
           : "The atonement means that Christ, by His obedience and death, fully satisfied the justice of God. He took the punishment we deserved and imputed His righteousness to us. 2 Corinthians 5:21 says, \"Him who knew no sin he made to be sin on our behalf, so that in him we might become the righteousness of God.\" This is substitution — Christ in our place.";
         reformedUnderstanding = "Christ, by His obedience and death, fully satisfied the justice of His Father. He underwent the punishment due to us, and imputed His righteousness to us.";
-      } else if (question.includes("providence") || question.includes("sovereignty")) {
+      } else if (intentSubject.includes("providence") || intentSubject.includes("sovereignty")) {
         answerSummary = isSpanish
           ? "La providencia de Dios significa que Él gobierna todas las cosas para Su gloria y el bien de Su pueblo. Romanos 8:28 dice: \"Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien.\" No significa que todo sea bueno, sino que Dios obra en todas las cosas para bien."
           : "God's providence means He governs all things for His glory and the good of His people. Romans 8:28 says, \"We know that all things work together for good to those who love God.\" It doesn't mean everything is good, but that God works in all things for good.";
         reformedUnderstanding = "God, from all eternity, ordained whatsoever comes to pass. God upholds, directs, disposes, and governs all creatures, actions, and things.";
-      } else if (question.includes("assurance")) {
+      } else if (intentSubject.includes("assurance")) {
         answerSummary = isSpanish
           ? "La seguridad de la salvación es posible en esta vida. 1 Juan 5:13 dice: \"Estas cosas he escrito a vosotros que creéis en el nombre del Hijo de Dios, para que sepáis que tenéis vida eterna.\" La seguridad no viene de mirar a nosotros mismos, sino de mirar a Cristo y Sus promesas."
           : "Assurance of salvation is possible in this life. 1 John 5:13 says, \"These things I have written to you who believe in the name of the Son of God, that you may know that you have eternal life.\" Assurance comes not from looking at ourselves, but from looking to Christ and His promises.";
         reformedUnderstanding = "Those who truly believe in the Lord Jesus and love Him in sincerity, endeavoring to walk in all good conscience before Him, may in this life be certainly assured that they are in the state of grace.";
-      } else if (question.includes("faith")) {
+      } else if (intentSubject.includes("faith") && !intentSubject.includes("faithful")) {
         answerSummary = isSpanish
           ? "La fe es un don de Dios por el cual confiamos en Cristo para la salvación. Efesios 2:8-9 dice: \"Porque por gracia sois salvos por medio de la fe; y esto no de vosotros, pues es don de Dios; no por obras, para que nadie se gloríe.\" La fe no es lo que merecemos, sino el instrumento que recibe la gracia de Dios."
           : "Faith is a gift from God by which we trust in Christ for salvation. Ephesians 2:8-9 says, \"For by grace you are saved through faith, and that not of yourselves; it is the gift of God, not of works, that no one would boast.\" Faith isn't something we earn — it's the instrument that receives God's grace.";
@@ -1245,8 +1298,8 @@ const devProvider: AIProvider = {
       if (proposal) memoryProposals.push(proposal);
     }
 
-    const recommendedScripture = sourceUnavailable ? [] : buildRecommendedScripture(question, divineRevelationDetected, isCrisis || isAbuse);
-    const biblicalBasis = sourceUnavailable ? [] : buildBiblicalBasis(question);
+    const recommendedScripture = sourceUnavailable ? [] : buildRecommendedScripture(resolvedQuery, divineRevelationDetected, isCrisis || isAbuse);
+    const biblicalBasis = sourceUnavailable ? [] : buildBiblicalBasis(resolvedQuery);
     const clearedConfessionalSources = sourceUnavailable ? [] : confessionalSources;
     const clearedHistoricalSources = sourceUnavailable ? [] : historicalSources;
     const clearedScriptureSources = sourceUnavailable ? [] : scriptureSources;

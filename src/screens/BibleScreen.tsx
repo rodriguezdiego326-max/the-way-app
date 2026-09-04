@@ -299,7 +299,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
     if (verseEl) {
       verseEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-    const timer = setTimeout(() => setPassageEmphasis(null), 2000);
+    const timer = setTimeout(() => setPassageEmphasis(null), 3000);
     return () => clearTimeout(timer);
   }, [passageEmphasis, verses, loading]);
 
@@ -816,7 +816,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                       onClick={() => handleVerseTap(v.verse)}
                       className={`flex gap-2.5 rounded-lg px-2 -mx-2 py-1 cursor-pointer transition-all no-tap-highlight ${
                         selected ? 'bg-gold-500/10 ring-1 ring-gold-500/30' : ''
-                      } ${passageEmphasis && v.verse >= passageEmphasis.verseStart && v.verse <= passageEmphasis.verseEnd && !selected ? 'bg-gold-500/5 ring-1 ring-gold-500/20' : ''} ${hlColor ? hlColor.class : ''} ${!selected && !hlColor && !(passageEmphasis && v.verse >= passageEmphasis.verseStart && v.verse <= passageEmphasis.verseEnd) ? 'hover:bg-ink-800/20' : ''}`}
+                      } ${passageEmphasis && v.verse >= passageEmphasis.verseStart && v.verse <= passageEmphasis.verseEnd && !selected ? 'bg-gold-500/15 ring-2 ring-gold-400/50 shadow-sm shadow-gold-500/20' : ''} ${hlColor ? hlColor.class : ''} ${!selected && !hlColor && !(passageEmphasis && v.verse >= passageEmphasis.verseStart && v.verse <= passageEmphasis.verseEnd) ? 'hover:bg-ink-800/20' : ''}`}
                     >
                       <div className="flex flex-col items-center pt-0.5 shrink-0 w-7">
                         <span className={`text-[11px] font-medium ${selected ? 'text-gold-300' : 'text-ivory-600'}`}>
