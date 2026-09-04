@@ -3,7 +3,6 @@ import {
   Send,
   BookOpen,
   Scroll,
-  Landmark,
   Lightbulb,
   FileText,
   ShieldCheck,
@@ -32,13 +31,12 @@ import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/lib/supabase';
 import { vibrate } from '@/lib/utils';
 import AuthorityLabel, { type AuthorityLevel } from '@/components/AuthorityLabel';
-import TheologicalConfidenceLabel from '@/components/TheologicalConfidenceLabel';
 import SourceViewer from '@/components/SourceViewer';
 import BiblicalBasis from '@/components/BiblicalBasis';
 import MemoryProposalCard from '@/components/MemoryProposalCard';
-import { fetchIntelligenceResponse } from '@/lib/intelligenceService';
+import { fetchIntelligenceResponse, retrieveStudyMemoryEvidence } from '@/lib/intelligenceService';
 import type { AskIntent, Profile, Walk } from '@/lib/types';
-import type { StructuredTheologicalResponse, VerificationState } from '@/lib/intelligenceTypes';
+import type { StructuredTheologicalResponse, VerificationState, StudyMemoryEvidence } from '@/lib/intelligenceTypes';
 import ScriptureBlock from '@/components/ScriptureBlock';
 import { parsePassageReference } from '@/lib/passageParser';
 import { getBookDisplayName, type BibleTranslation } from '@/lib/bibleTypes';
@@ -202,6 +200,10 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
   const emptyTextareaRef = useRef<HTMLTextAreaElement>(null);
   const isNearBottomRef = useRef(true);
 
+  // Active conversation persistence
+  const activeRequestIdRef = useRef<string | null>(null);
+  const activeRequestConvIdRef = useRef<string | null>(null);
+
   const inConversation = conversationStarted || thread.length > 0;
   const scale = TEXT_SCALE_MAP[textScale];
   const t = ASK_STRINGS[getAskLang(activeTranslation)];
@@ -237,16 +239,23 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
     }
   }, [thread, thinking]);
 
-  // Load active conversation on mount if we have one
+  // Load active conversation on mount if we have one — try localStorage first, then prop
   useEffect(() => {
-    if (activeConversationId && !conversationStarted && thread.length === 0) {
-      loadConversation(activeConversationId);
+    const storedId = typeof localStorage !== 'undefined'
+      ? localStorage.getItem('solapath_active_ask_conv')
+      : null;
+    const convId = activeConversationId || storedId;
+    if (convId && !conversationStarted && thread.length === 0) {
+      loadConversation(convId);
     }
   }, []);
 
-  // Sync conversation ID to app level
+  // Sync conversation ID to app level + persist to localStorage
   useEffect(() => {
     onConversationChange?.(conversationId);
+    if (conversationId && typeof localStorage !== 'undefined') {
+      localStorage.setItem('solapath_active_ask_conv', conversationId);
+    }
   }, [conversationId]);
 
   async function loadConversation(convId: string) {
@@ -340,6 +349,8 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
 
   async function startNewChat() {
     vibrate(8);
+    activeRequestIdRef.current = null;
+    activeRequestConvIdRef.current = null;
     setThread([]);
     setConversationId(null);
     setConversationStarted(false);
@@ -351,6 +362,9 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
     setShowTextSizeMenu(false);
     setShowSettingsMenu(false);
     setShowChatHistory(false);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('solapath_active_ask_conv');
+    }
   }
 
   async function deleteConversation(convId: string) {
@@ -467,6 +481,9 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
     setInput('');
     setThinking(true);
 
+    const requestId = crypto.randomUUID();
+    activeRequestIdRef.current = requestId;
+
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
     const { data: conv } = await supabase
@@ -481,6 +498,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
       return;
     }
 
+    activeRequestConvIdRef.current = conv.id;
     setConversationId(conv.id);
 
     await supabase.from('ask_messages').insert({
@@ -490,6 +508,8 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
     });
 
     try {
+      const memoryEvidence = await retrieveStudyMemoryEvidence(promptText, profile);
+
       const aiResponse = await fetchIntelligenceResponse(
         promptText,
         profile,
@@ -497,7 +517,21 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
         [],
         undefined,
         askLang === 'es' ? 'Spanish' : 'English',
+        memoryEvidence,
       );
+
+      // Guard: ignore if a newer request has started or conversation changed
+      if (activeRequestIdRef.current !== requestId || activeRequestConvIdRef.current !== conv.id) {
+        // Still save the message to the correct conversation
+        await supabase.from('ask_messages').insert({
+          conversation_id: conv.id,
+          role: 'assistant',
+          body: aiResponse.answer_summary,
+          structured_payload: aiResponse as unknown as Record<string, unknown>,
+          response_language: askLang === 'es' ? 'es' : 'en',
+        });
+        return;
+      }
 
       const assistantItemId = 'assistant-' + Date.now();
       setThread((prev) => [...prev, { kind: 'assistant', id: assistantItemId, response: aiResponse }]);
@@ -510,7 +544,9 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
         response_language: askLang === 'es' ? 'es' : 'en',
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not get a response. Please try again.');
+      if (activeRequestIdRef.current === requestId) {
+        setError(err instanceof Error ? err.message : 'Could not get a response. Please try again.');
+      }
     }
 
     setThinking(false);
@@ -530,10 +566,15 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
     setThinking(true);
     setError(null);
 
+    const requestId = crypto.randomUUID();
+    activeRequestIdRef.current = requestId;
+    const currentConvId = conversationId;
+    activeRequestConvIdRef.current = currentConvId;
+
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
     await supabase.from('ask_messages').insert({
-      conversation_id: conversationId,
+      conversation_id: currentConvId,
       role: 'user',
       body: text,
     });
@@ -545,6 +586,8 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
           : { role: 'assistant' as const, body: item.response.answer_summary }
       );
 
+      const memoryEvidence = await retrieveStudyMemoryEvidence(text, profile);
+
       const aiResponse = await fetchIntelligenceResponse(
         text,
         profile,
@@ -552,20 +595,35 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
         conversationHistory,
         undefined,
         askLang === 'es' ? 'Spanish' : 'English',
+        memoryEvidence,
       );
+
+      // Guard: ignore if a newer request has started or conversation changed
+      if (activeRequestIdRef.current !== requestId || activeRequestConvIdRef.current !== currentConvId) {
+        await supabase.from('ask_messages').insert({
+          conversation_id: currentConvId,
+          role: 'assistant',
+          body: aiResponse.answer_summary,
+          structured_payload: aiResponse as unknown as Record<string, unknown>,
+          response_language: askLang === 'es' ? 'es' : 'en',
+        });
+        return;
+      }
 
       const assistantItemId = 'assistant-' + Date.now();
       setThread((prev) => [...prev, { kind: 'assistant', id: assistantItemId, response: aiResponse }]);
 
       await supabase.from('ask_messages').insert({
-        conversation_id: conversationId,
+        conversation_id: currentConvId,
         role: 'assistant',
         body: aiResponse.answer_summary,
         structured_payload: aiResponse as unknown as Record<string, unknown>,
         response_language: askLang === 'es' ? 'es' : 'en',
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not get a response. Please try again.');
+      if (activeRequestIdRef.current === requestId) {
+        setError(err instanceof Error ? err.message : 'Could not get a response. Please try again.');
+      }
     }
 
     setThinking(false);
@@ -770,6 +828,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
                   scale={scale}
                   translation={activeTranslation}
                   t={t}
+                  askLang={askLang}
                   onDismissProposal={(pid) => {
                     vibrate(6);
                     setDismissedProposals((prev) => new Set(prev).add(pid));
@@ -1118,34 +1177,30 @@ function ReadingSection({
 // FollowUpSuggestions — horizontal swipeable suggestion cards with page indicator
 // ============================================================
 
-function generateFollowUps(response: StructuredTheologicalResponse): string[] {
+function generateFollowUps(response: StructuredTheologicalResponse, lang: AskLang): string[] {
   const suggestions: string[] = [];
-  const question = response.answer_summary;
+  const isEs = lang === 'es';
 
   if (response.recommended_scripture.length > 0) {
     const ref = response.recommended_scripture[0].reference;
-    suggestions.push(`Can you explain ${ref} further?`);
+    suggestions.push(isEs ? `¿Puedes explicar ${ref} más?` : `Can you explain ${ref} further?`);
   }
 
   if (response.biblical_basis.length > 0) {
     const ref = response.biblical_basis[0].reference;
     if (!suggestions.some((s) => s.includes(ref))) {
-      suggestions.push(`What does ${ref} mean in context?`);
+      suggestions.push(isEs ? `¿Qué significa ${ref} en contexto?` : `What does ${ref} mean in context?`);
     }
   }
 
-  suggestions.push('How can I apply this today?');
+  suggestions.push(isEs ? '¿Cómo puedo aplicar esto hoy?' : 'How can I apply this today?');
 
   if (response.recommended_scripture.length === 0 && response.biblical_basis.length === 0) {
-    suggestions.push('What Scripture should I read next?');
-  }
-
-  if (response.reformed_understanding && !response.has_development_content) {
-    suggestions.push('What does the Reformed tradition say about this?');
+    suggestions.push(isEs ? '¿Qué Escritura debo leer ahora?' : 'What Scripture should I read next?');
   }
 
   if (response.other_christian_views) {
-    suggestions.push('How do other Christian traditions view this?');
+    suggestions.push(isEs ? '¿Cómo ven otras tradiciones cristianas esto?' : 'How do other Christian traditions view this?');
   }
 
   return suggestions.slice(0, 5);
@@ -1218,6 +1273,7 @@ interface AssistantMessageProps {
   scale: { body: string; section: string; user: string };
   translation: BibleTranslation;
   t: typeof ASK_STRINGS[AskLang];
+  askLang: AskLang;
   onDismissProposal: (id: string) => void;
   onShowSources: () => void;
   onShowBiblicalBasis: () => void;
@@ -1234,6 +1290,7 @@ function AssistantMessage({
   scale,
   translation,
   t,
+  askLang,
   onDismissProposal,
   onShowSources,
   onShowBiblicalBasis,
@@ -1264,9 +1321,7 @@ function AssistantMessage({
     <div data-msg-id={itemId} className="mb-8 animate-fade-in-up">
       {/* No dev/development mode indicators in production UI */}
 
-      <div className="mb-4">
-        <TheologicalConfidenceLabel confidence={response.theological_confidence} />
-      </div>
+      {/* No theological confidence label in ordinary answers */}
 
       {/* Scripture-first encouragement */}
       {response.scripture_first_mode === 'ENCOURAGE_SCRIPTURE_FIRST' && response.recommended_scripture.length > 0 && (
@@ -1390,11 +1445,7 @@ function AssistantMessage({
           </div>
         )}
 
-        {response.reformed_understanding && !response.has_development_content && (
-          <div className="pt-2 border-t border-ink-700/20">
-            <ReadingSection label="Historical Theology" icon={Landmark} authority="historic_theology" content={response.reformed_understanding} isDemo={false} sectionClass={scale.section} />
-          </div>
-        )}
+        {/* Historical theology moved to Sources panel only — not in main answer */}
 
         {response.other_christian_views && !response.has_development_content && (
           <div className="pt-2 border-t border-ink-700/20">
@@ -1503,7 +1554,7 @@ function AssistantMessage({
       </div>
 
       {/* Follow-up suggestions — horizontal carousel with page indicator */}
-      <FollowUpSuggestions suggestions={generateFollowUps(response)} onTap={onSuggestionTap} />
+      <FollowUpSuggestions suggestions={generateFollowUps(response, askLang)} onTap={onSuggestionTap} />
     </div>
   );
 }

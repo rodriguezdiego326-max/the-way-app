@@ -1,4 +1,4 @@
-import { X, ShieldCheck, ShieldAlert, ExternalLink, BookOpen, Landmark, Lightbulb } from 'lucide-react';
+import { X, ShieldCheck, ExternalLink, BookOpen, Landmark, Lightbulb } from 'lucide-react';
 import type { SourceCitation } from '@/lib/intelligenceTypes';
 
 interface SourceViewerProps {
@@ -16,7 +16,7 @@ const CATEGORY_LABELS: Record<string, { label: string; icon: typeof BookOpen }> 
 
 export default function SourceViewer({ sources, onClose }: SourceViewerProps) {
   const verifiedSources = sources.filter((s) => s.verified);
-  const unverifiedSources = sources.filter((s) => !s.verified);
+  // Unverified sources are never shown to users in Build 52+
 
   const grouped = verifiedSources.reduce<Record<string, SourceCitation[]>>((acc, s) => {
     const key = s.source_type;
@@ -110,31 +110,7 @@ export default function SourceViewer({ sources, onClose }: SourceViewerProps) {
                 );
               })}
 
-              {unverifiedSources.length > 0 && (
-                <div>
-                  <p className="ui-label mb-3">Pending Verification</p>
-                  {unverifiedSources.map((source, i) => (
-                    <div key={i} className="premium-card p-4 opacity-60 mb-3">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-clay-500/10 border border-clay-500/20 flex items-center justify-center shrink-0">
-                          <ShieldAlert size={15} className="text-clay-400" />
-                        </div>
-                        <div className="flex-1">
-                          {source.author && (
-                            <p className="text-ivory-200 text-sm">{source.author}</p>
-                          )}
-                          {source.work && (
-                            <p className="text-ivory-400 text-xs mt-0.5 italic">{source.work}</p>
-                          )}
-                          <span className="text-[10px] uppercase tracking-wider text-clay-400 font-medium mt-1 block">
-                            Pending verification
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* Unverified sources are never displayed to users */}
             </div>
           )}
         </div>

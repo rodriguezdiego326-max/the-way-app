@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import type {
   IntelligenceRequest,
   StructuredTheologicalResponse,
+  StudyMemoryEvidence,
 } from './intelligenceTypes';
 import type { Profile, Memory } from './types';
 
@@ -18,6 +19,7 @@ export async function fetchIntelligenceResponse(
   conversationHistory: Array<{ role: 'user' | 'assistant'; body: string }>,
   sessionId?: string,
   responseLanguage?: string,
+  studyMemoryEvidence?: StudyMemoryEvidence[],
 ): Promise<StructuredTheologicalResponse> {
   // Retrieve relevant memories (selective, not all)
   const relevantMemories = await retrieveRelevantMemories(question, profile);
@@ -38,6 +40,7 @@ export async function fetchIntelligenceResponse(
         }
       : undefined,
     relevant_memories: relevantMemories,
+    study_memory_evidence: studyMemoryEvidence,
     conversation_history: conversationHistory,
     session_id: sessionId,
   };
@@ -198,4 +201,105 @@ export async function saveMemoryProposal(
     user_confirmed: true,
     sensitivity: sensitivityMap[sensitivity] || 'low',
   });
+}
+
+// ============================================================
+// Study Memory Evidence Retrieval
+// Retrieves actual user-owned study records to ground
+// "Remember when..." language. Only returns real evidence.
+// ============================================================
+
+export async function retrieveStudyMemoryEvidence(
+  question: string,
+  profile: Profile | null,
+): Promise<StudyMemoryEvidence[]> {
+  if (!profile) return [];
+
+  const evidence: StudyMemoryEvidence[] = [];
+  const q = question.toLowerCase();
+
+  // Query bible_notes (limit 5 most recent)
+  try {
+    const { data: notes } = await supabase
+      .from('bible_notes')
+      .select('id, book, chapter, verse_start, verse_end, title, content, created_at')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (notes) {
+      for (const note of notes) {
+        const ref = `${note.book} ${note.chapter}:${note.verse_start}${note.verse_end && note.verse_end !== note.verse_start ? `–${note.verse_end}` : ''}`;
+        const noteText = `${note.title || ''} ${note.content || ''}`.toLowerCase();
+        const keywords = q.split(/\s+/).filter((w) => w.length > 4);
+        if (keywords.some((k) => noteText.includes(k) || ref.toLowerCase().includes(k))) {
+          evidence.push({
+            source_type: 'bible_note',
+            id: note.id,
+            reference: ref,
+            summary: (note.title || note.content || '').slice(0, 120),
+            created_at: note.created_at,
+          });
+        }
+      }
+    }
+  } catch {
+    // Table may not exist or RLS may block — skip silently
+  }
+
+  // Query bible_reading_history (limit 5 most recent)
+  try {
+    const { data: history } = await supabase
+      .from('bible_reading_history')
+      .select('id, book, chapter, updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(10);
+
+    if (history) {
+      for (const h of history) {
+        const ref = `${h.book} ${h.chapter}`;
+        const keywords = q.split(/\s+/).filter((w) => w.length > 4);
+        if (keywords.some((k) => ref.toLowerCase().includes(k))) {
+          evidence.push({
+            source_type: 'reading_history',
+            id: h.id,
+            reference: ref,
+            summary: `Read ${ref}`,
+            created_at: h.updated_at,
+          });
+        }
+      }
+    }
+  } catch {
+    // Skip silently
+  }
+
+  // Query bible_bookmarks (limit 5 most recent)
+  try {
+    const { data: bookmarks } = await supabase
+      .from('bible_bookmarks')
+      .select('id, book, chapter, verse_start, verse_end, label, created_at')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (bookmarks) {
+      for (const bm of bookmarks) {
+        const ref = `${bm.book} ${bm.chapter}:${bm.verse_start}${bm.verse_end && bm.verse_end !== bm.verse_start ? `–${bm.verse_end}` : ''}`;
+        const keywords = q.split(/\s+/).filter((w) => w.length > 4);
+        if (keywords.some((k) => ref.toLowerCase().includes(k) || (bm.label || '').toLowerCase().includes(k))) {
+          evidence.push({
+            source_type: 'bible_bookmark',
+            id: bm.id,
+            reference: ref,
+            summary: bm.label || `Bookmark at ${ref}`,
+            created_at: bm.created_at,
+          });
+        }
+      }
+    }
+  } catch {
+    // Skip silently
+  }
+
+  // Limit total evidence to 5 most relevant
+  return evidence.slice(0, 5);
 }

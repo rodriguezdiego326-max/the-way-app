@@ -230,11 +230,20 @@ export interface IntelligenceRequest {
     category: string;
     content: string;
   }>;
+  study_memory_evidence?: StudyMemoryEvidence[];
   conversation_history?: Array<{
     role: 'user' | 'assistant';
     body: string;
   }>;
   session_id?: string;
+}
+
+export interface StudyMemoryEvidence {
+  source_type: 'bible_note' | 'reading_history' | 'bible_bookmark' | 'ask_conversation';
+  id: string;
+  reference: string | null;
+  summary: string;
+  created_at: string;
 }
 
 export interface IntentClassification {
