@@ -1,0 +1,2427 @@
+const NAM = {
+  "1.1": [
+    {
+      target: "Zephaniah 2:13",
+      rank: 6
+    },
+    {
+      target: "Jonah 1:2",
+      rank: 4
+    },
+    {
+      target: "Zechariah 9:1",
+      rank: 4
+    },
+    {
+      target: "Genesis 10:11",
+      rank: 3
+    },
+    {
+      target: "Isaiah 13:1",
+      rank: 3
+    },
+    {
+      target: "Nahum 2:8",
+      rank: 3
+    },
+    {
+      target: "Jeremiah 23:33-37",
+      rank: 2
+    },
+    {
+      target: "Isaiah 21:1",
+      rank: 1
+    },
+    {
+      target: "Isaiah 14:28",
+      rank: 1
+    },
+    {
+      target: "Isaiah 23:1",
+      rank: 1
+    },
+    {
+      target: "Jonah 3:3-4",
+      rank: 1
+    },
+    {
+      target: "Isaiah 15:1",
+      rank: 1
+    },
+    {
+      target: "Isaiah 19:1",
+      rank: 0
+    },
+    {
+      target: "Isaiah 22:1",
+      rank: 0
+    }
+  ],
+  "1.2": [
+    {
+      target: "Exodus 20:5",
+      rank: 9
+    },
+    {
+      target: "Zechariah 8:2",
+      rank: 8
+    },
+    {
+      target: "Exodus 34:14",
+      rank: 7
+    },
+    {
+      target: "Psalms 94:1",
+      rank: 7
+    },
+    {
+      target: "Deuteronomy 4:24",
+      rank: 6
+    },
+    {
+      target: "Joshua 24:19",
+      rank: 6
+    },
+    {
+      target: "Deuteronomy 32:41-43",
+      rank: 5
+    },
+    {
+      target: "Isaiah 42:13",
+      rank: 5
+    },
+    {
+      target: "Hebrews 10:30",
+      rank: 5
+    },
+    {
+      target: "Ezekiel 39:25",
+      rank: 5
+    },
+    {
+      target: "Leviticus 26:28",
+      rank: 4
+    },
+    {
+      target: "Jeremiah 4:4",
+      rank: 4
+    },
+    {
+      target: "Ezekiel 38:18",
+      rank: 4
+    },
+    {
+      target: "Micah 5:15",
+      rank: 4
+    },
+    {
+      target: "Job 20:23",
+      rank: 4
+    },
+    {
+      target: "Joel 2:18",
+      rank: 4
+    },
+    {
+      target: "Ezekiel 6:12",
+      rank: 4
+    },
+    {
+      target: "Romans 12:19",
+      rank: 4
+    },
+    {
+      target: "Isaiah 51:17",
+      rank: 4
+    },
+    {
+      target: "Deuteronomy 32:34-35",
+      rank: 4
+    },
+    {
+      target: "2 Peter 2:9",
+      rank: 4
+    },
+    {
+      target: "Isaiah 51:20",
+      rank: 4
+    },
+    {
+      target: "Isaiah 66:15",
+      rank: 3
+    },
+    {
+      target: "Jeremiah 25:15",
+      rank: 3
+    },
+    {
+      target: "Micah 7:18",
+      rank: 3
+    },
+    {
+      target: "Romans 2:5-6",
+      rank: 3
+    },
+    {
+      target: "Romans 13:4",
+      rank: 3
+    },
+    {
+      target: "Zechariah 1:14",
+      rank: 3
+    },
+    {
+      target: "Isaiah 63:3-6",
+      rank: 3
+    },
+    {
+      target: "Ezekiel 5:13",
+      rank: 3
+    },
+    {
+      target: "Isaiah 59:17-18",
+      rank: 3
+    },
+    {
+      target: "Jeremiah 3:5",
+      rank: 3
+    },
+    {
+      target: "Lamentations 4:11",
+      rank: 3
+    },
+    {
+      target: "Ezekiel 8:18",
+      rank: 3
+    },
+    {
+      target: "Jeremiah 36:7",
+      rank: 3
+    },
+    {
+      target: "Ezekiel 36:6",
+      rank: 3
+    }
+  ],
+  "1.3": [
+    {
+      target: "Psalms 147:5",
+      rank: 16
+    },
+    {
+      target: "Exodus 34:6-7",
+      rank: 16
+    },
+    {
+      target: "Nehemiah 9:17",
+      rank: 9
+    },
+    {
+      target: "Psalms 104:3",
+      rank: 7
+    },
+    {
+      target: "Psalms 103:8",
+      rank: 7
+    },
+    {
+      target: "Psalms 145:8",
+      rank: 6
+    },
+    {
+      target: "James 1:19",
+      rank: 5
+    },
+    {
+      target: "Psalms 97:2-5",
+      rank: 5
+    },
+    {
+      target: "Zechariah 9:14",
+      rank: 4
+    },
+    {
+      target: "1 Kings 19:11-13",
+      rank: 4
+    },
+    {
+      target: "Job 9:4",
+      rank: 4
+    },
+    {
+      target: "Ephesians 1:19-20",
+      rank: 4
+    },
+    {
+      target: "Job 10:14",
+      rank: 4
+    },
+    {
+      target: "Isaiah 66:15",
+      rank: 4
+    },
+    {
+      target: "Psalms 66:3",
+      rank: 3
+    },
+    {
+      target: "Psalms 62:11",
+      rank: 3
+    },
+    {
+      target: "Jonah 4:2",
+      rank: 3
+    },
+    {
+      target: "Joel 2:13",
+      rank: 3
+    },
+    {
+      target: "Revelation 1:7",
+      rank: 3
+    },
+    {
+      target: "Numbers 14:18",
+      rank: 3
+    },
+    {
+      target: "Matthew 26:64",
+      rank: 3
+    },
+    {
+      target: "Deuteronomy 5:22-24",
+      rank: 3
+    },
+    {
+      target: "Isaiah 19:1",
+      rank: 3
+    },
+    {
+      target: "Job 38:1",
+      rank: 3
+    },
+    {
+      target: "Daniel 7:13",
+      rank: 3
+    },
+    {
+      target: "Psalms 50:3",
+      rank: 2
+    },
+    {
+      target: "Exodus 19:16-18",
+      rank: 2
+    },
+    {
+      target: "Psalms 18:7-15",
+      rank: 2
+    },
+    {
+      target: "Habakkuk 3:5-15",
+      rank: 1
+    }
+  ],
+  "1.4": [
+    {
+      target: "Isaiah 33:9",
+      rank: 10
+    },
+    {
+      target: "Psalms 106:9",
+      rank: 10
+    },
+    {
+      target: "Psalms 74:15",
+      rank: 5
+    },
+    {
+      target: "Psalms 114:5",
+      rank: 5
+    },
+    {
+      target: "Psalms 104:7",
+      rank: 5
+    },
+    {
+      target: "Isaiah 19:5-10",
+      rank: 5
+    },
+    {
+      target: "Joshua 3:13-15",
+      rank: 5
+    },
+    {
+      target: "Isaiah 44:27",
+      rank: 5
+    },
+    {
+      target: "Isaiah 50:2-3",
+      rank: 5
+    },
+    {
+      target: "Isaiah 51:10",
+      rank: 5
+    },
+    {
+      target: "Psalms 114:3",
+      rank: 5
+    },
+    {
+      target: "Amos 5:8",
+      rank: 4
+    },
+    {
+      target: "Matthew 8:26",
+      rank: 4
+    },
+    {
+      target: "Amos 1:2",
+      rank: 4
+    },
+    {
+      target: "Ezekiel 30:12",
+      rank: 3
+    },
+    {
+      target: "Job 38:11",
+      rank: 3
+    }
+  ],
+  "1.5": [
+    {
+      target: "Micah 1:4",
+      rank: 7
+    },
+    {
+      target: "Jeremiah 4:24",
+      rank: 5
+    },
+    {
+      target: "2 Samuel 22:8",
+      rank: 5
+    },
+    {
+      target: "Habakkuk 3:10",
+      rank: 4
+    },
+    {
+      target: "Psalms 97:4-5",
+      rank: 4
+    },
+    {
+      target: "Judges 5:5",
+      rank: 4
+    },
+    {
+      target: "Isaiah 64:1-2",
+      rank: 4
+    },
+    {
+      target: "Psalms 68:8",
+      rank: 4
+    },
+    {
+      target: "Psalms 46:6",
+      rank: 3
+    },
+    {
+      target: "Psalms 98:7",
+      rank: 3
+    },
+    {
+      target: "Psalms 114:4",
+      rank: 3
+    },
+    {
+      target: "Psalms 114:6",
+      rank: 3
+    },
+    {
+      target: "Exodus 19:18",
+      rank: 3
+    },
+    {
+      target: "Psalms 29:5-6",
+      rank: 3
+    },
+    {
+      target: "Matthew 27:51",
+      rank: 2
+    },
+    {
+      target: "Matthew 28:2",
+      rank: 2
+    },
+    {
+      target: "Revelation 20:11",
+      rank: 2
+    },
+    {
+      target: "Isaiah 2:12-14",
+      rank: 2
+    },
+    {
+      target: "2 Peter 3:7-12",
+      rank: 2
+    }
+  ],
+  "1.6": [
+    {
+      target: "Jeremiah 10:10",
+      rank: 9
+    },
+    {
+      target: "Malachi 3:2",
+      rank: 7
+    },
+    {
+      target: "Psalms 76:7",
+      rank: 4
+    },
+    {
+      target: "Deuteronomy 32:22-23",
+      rank: 4
+    },
+    {
+      target: "Nahum 1:2",
+      rank: 3
+    },
+    {
+      target: "Lamentations 2:4",
+      rank: 2
+    },
+    {
+      target: "Lamentations 4:11",
+      rank: 2
+    },
+    {
+      target: "Psalms 90:11",
+      rank: 2
+    },
+    {
+      target: "Isaiah 10:16",
+      rank: 2
+    },
+    {
+      target: "Psalms 2:12",
+      rank: 2
+    },
+    {
+      target: "Ezekiel 30:16",
+      rank: 2
+    },
+    {
+      target: "1 Kings 19:11",
+      rank: 2
+    },
+    {
+      target: "Isaiah 27:4",
+      rank: 2
+    },
+    {
+      target: "Revelation 16:8",
+      rank: 1
+    },
+    {
+      target: "Revelation 6:17",
+      rank: 1
+    },
+    {
+      target: "Revelation 16:1",
+      rank: 1
+    }
+  ],
+  "1.7": [
+    {
+      target: "John 10:27",
+      rank: 76
+    },
+    {
+      target: "2 Timothy 2:19",
+      rank: 76
+    },
+    {
+      target: "Lamentations 3:25",
+      rank: 68
+    },
+    {
+      target: "John 10:14",
+      rank: 58
+    },
+    {
+      target: "Psalms 91:1-2",
+      rank: 52
+    },
+    {
+      target: "Psalms 100:5",
+      rank: 47
+    },
+    {
+      target: "Psalms 27:5",
+      rank: 43
+    },
+    {
+      target: "Proverbs 18:10",
+      rank: 36
+    },
+    {
+      target: "Psalms 1:6",
+      rank: 33
+    },
+    {
+      target: "Galatians 4:9",
+      rank: 33
+    },
+    {
+      target: "Isaiah 25:4",
+      rank: 28
+    },
+    {
+      target: "1 Chronicles 16:34",
+      rank: 25
+    },
+    {
+      target: "Psalms 18:1-2",
+      rank: 25
+    },
+    {
+      target: "Jeremiah 17:7-8",
+      rank: 24
+    },
+    {
+      target: "Psalms 84:11-12",
+      rank: 22
+    },
+    {
+      target: "Psalms 86:7",
+      rank: 20
+    },
+    {
+      target: "Jeremiah 33:11",
+      rank: 20
+    },
+    {
+      target: "Isaiah 26:1-4",
+      rank: 18
+    },
+    {
+      target: "Isaiah 32:2",
+      rank: 18
+    },
+    {
+      target: "Psalms 25:8",
+      rank: 16
+    },
+    {
+      target: "Psalms 50:15",
+      rank: 15
+    },
+    {
+      target: "Daniel 3:28",
+      rank: 15
+    },
+    {
+      target: "Psalms 71:3",
+      rank: 14
+    },
+    {
+      target: "1 John 4:8-10",
+      rank: 13
+    },
+    {
+      target: "Psalms 91:15",
+      rank: 13
+    },
+    {
+      target: "Psalms 136:1-26",
+      rank: 12
+    },
+    {
+      target: "Psalms 62:6-8",
+      rank: 12
+    },
+    {
+      target: "Daniel 6:23",
+      rank: 12
+    },
+    {
+      target: "Psalms 59:16",
+      rank: 12
+    },
+    {
+      target: "Romans 11:22",
+      rank: 11
+    },
+    {
+      target: "2 Chronicles 32:21",
+      rank: 10
+    },
+    {
+      target: "Matthew 7:23",
+      rank: 10
+    },
+    {
+      target: "2 Chronicles 16:8-9",
+      rank: 10
+    },
+    {
+      target: "1 Chronicles 5:20",
+      rank: 9
+    },
+    {
+      target: "Matthew 27:43",
+      rank: 9
+    },
+    {
+      target: "Psalms 144:1-2",
+      rank: 8
+    },
+    {
+      target: "Isaiah 37:3-4",
+      rank: 8
+    },
+    {
+      target: "Psalms 145:6-10",
+      rank: 8
+    },
+    {
+      target: "2 Chronicles 32:11",
+      rank: 8
+    },
+    {
+      target: "2 Chronicles 32:8",
+      rank: 8
+    },
+    {
+      target: "Ezra 3:11",
+      rank: 8
+    },
+    {
+      target: "Psalms 20:1",
+      rank: 6
+    }
+  ],
+  "1.8": [
+    {
+      target: "Ezekiel 13:13",
+      rank: 7
+    },
+    {
+      target: "Isaiah 8:22",
+      rank: 6
+    },
+    {
+      target: "Isaiah 28:17",
+      rank: 6
+    },
+    {
+      target: "Amos 9:5-6",
+      rank: 4
+    },
+    {
+      target: "Zephaniah 2:13",
+      rank: 4
+    },
+    {
+      target: "Amos 8:8",
+      rank: 4
+    },
+    {
+      target: "Job 30:15",
+      rank: 4
+    },
+    {
+      target: "Matthew 7:27",
+      rank: 3
+    },
+    {
+      target: "Nahum 1:1",
+      rank: 3
+    },
+    {
+      target: "Isaiah 8:7-8",
+      rank: 3
+    },
+    {
+      target: "Proverbs 4:19",
+      rank: 3
+    },
+    {
+      target: "Nahum 2:8",
+      rank: 3
+    },
+    {
+      target: "Daniel 11:22",
+      rank: 3
+    },
+    {
+      target: "Daniel 11:40",
+      rank: 3
+    },
+    {
+      target: "Jeremiah 13:16",
+      rank: 3
+    },
+    {
+      target: "Matthew 8:12",
+      rank: 3
+    },
+    {
+      target: "2 Peter 3:6-7",
+      rank: 3
+    },
+    {
+      target: "Daniel 9:26",
+      rank: 3
+    },
+    {
+      target: "Daniel 11:10",
+      rank: 2
+    }
+  ],
+  "1.9": [
+    {
+      target: "Psalms 21:11",
+      rank: 23
+    },
+    {
+      target: "Proverbs 21:30",
+      rank: 22
+    },
+    {
+      target: "Psalms 33:10",
+      rank: 21
+    },
+    {
+      target: "2 Corinthians 10:5",
+      rank: 16
+    },
+    {
+      target: "Psalms 2:1-4",
+      rank: 14
+    },
+    {
+      target: "Nahum 1:11",
+      rank: 13
+    },
+    {
+      target: "Isaiah 8:9-10",
+      rank: 11
+    },
+    {
+      target: "Ezekiel 38:10-11",
+      rank: 11
+    },
+    {
+      target: "Acts 4:25-28",
+      rank: 9
+    },
+    {
+      target: "1 Samuel 3:12",
+      rank: 8
+    },
+    {
+      target: "1 Samuel 26:8",
+      rank: 8
+    },
+    {
+      target: "2 Samuel 20:10",
+      rank: 3
+    }
+  ],
+  "1.10": [
+    {
+      target: "Micah 7:4",
+      rank: 7
+    },
+    {
+      target: "Malachi 4:1",
+      rank: 5
+    },
+    {
+      target: "Nahum 3:11",
+      rank: 5
+    },
+    {
+      target: "Isaiah 5:24",
+      rank: 5
+    },
+    {
+      target: "Isaiah 9:18",
+      rank: 4
+    },
+    {
+      target: "2 Samuel 23:6-7",
+      rank: 4
+    },
+    {
+      target: "Jeremiah 51:57",
+      rank: 4
+    },
+    {
+      target: "Psalms 68:2",
+      rank: 3
+    },
+    {
+      target: "Isaiah 27:4",
+      rank: 3
+    },
+    {
+      target: "Isaiah 10:17-19",
+      rank: 3
+    },
+    {
+      target: "1 Thessalonians 5:2-3",
+      rank: 3
+    },
+    {
+      target: "Jeremiah 51:39",
+      rank: 3
+    },
+    {
+      target: "1 Samuel 25:36",
+      rank: 2
+    },
+    {
+      target: "2 Samuel 13:28",
+      rank: 2
+    }
+  ],
+  "1.11": [
+    {
+      target: "Nahum 1:9",
+      rank: 7
+    },
+    {
+      target: "2 Chronicles 13:7",
+      rank: 5
+    },
+    {
+      target: "2 Kings 18:13-14",
+      rank: 4
+    },
+    {
+      target: "Isaiah 10:7-15",
+      rank: 4
+    },
+    {
+      target: "2 Kings 19:22-25",
+      rank: 4
+    },
+    {
+      target: "2 Chronicles 32:15-19",
+      rank: 4
+    },
+    {
+      target: "2 Samuel 20:1",
+      rank: 4
+    },
+    {
+      target: "1 Samuel 2:12",
+      rank: 4
+    },
+    {
+      target: "2 Kings 18:30",
+      rank: 4
+    }
+  ],
+  "1.12": [
+    {
+      target: "Joel 2:19",
+      rank: 5
+    },
+    {
+      target: "Isaiah 30:19",
+      rank: 5
+    },
+    {
+      target: "Isaiah 17:14",
+      rank: 4
+    },
+    {
+      target: "Isaiah 37:36",
+      rank: 4
+    },
+    {
+      target: "Isaiah 7:20",
+      rank: 4
+    },
+    {
+      target: "Isaiah 31:8",
+      rank: 4
+    },
+    {
+      target: "Isaiah 14:24-27",
+      rank: 3
+    },
+    {
+      target: "Isaiah 10:32-34",
+      rank: 3
+    },
+    {
+      target: "Revelation 7:16",
+      rank: 3
+    },
+    {
+      target: "Nahum 1:15",
+      rank: 3
+    },
+    {
+      target: "Isaiah 51:22",
+      rank: 3
+    },
+    {
+      target: "Isaiah 8:8",
+      rank: 3
+    },
+    {
+      target: "Daniel 11:10",
+      rank: 3
+    },
+    {
+      target: "2 Kings 19:37",
+      rank: 2
+    },
+    {
+      target: "2 Kings 19:35",
+      rank: 2
+    },
+    {
+      target: "Lamentations 3:31-32",
+      rank: 2
+    },
+    {
+      target: "Exodus 12:12",
+      rank: 2
+    },
+    {
+      target: "Isaiah 60:18-20",
+      rank: 1
+    },
+    {
+      target: "Isaiah 30:28-33",
+      rank: 1
+    }
+  ],
+  "1.13": [
+    {
+      target: "Isaiah 10:27",
+      rank: 11
+    },
+    {
+      target: "Isaiah 9:4",
+      rank: 10
+    },
+    {
+      target: "Jeremiah 2:20",
+      rank: 9
+    },
+    {
+      target: "Isaiah 14:25",
+      rank: 8
+    },
+    {
+      target: "Psalms 107:14",
+      rank: 8
+    },
+    {
+      target: "Jeremiah 5:5",
+      rank: 6
+    },
+    {
+      target: "Micah 5:5-6",
+      rank: 5
+    }
+  ],
+  "1.14": [
+    {
+      target: "Psalms 109:13",
+      rank: 6
+    },
+    {
+      target: "Micah 5:13",
+      rank: 5
+    },
+    {
+      target: "Proverbs 10:7",
+      rank: 4
+    },
+    {
+      target: "Isaiah 46:1-2",
+      rank: 4
+    },
+    {
+      target: "2 Kings 19:37",
+      rank: 3
+    },
+    {
+      target: "Psalms 71:3",
+      rank: 3
+    },
+    {
+      target: "Ezekiel 32:22-23",
+      rank: 3
+    },
+    {
+      target: "1 Samuel 3:13",
+      rank: 2
+    },
+    {
+      target: "2 Chronicles 32:21",
+      rank: 2
+    },
+    {
+      target: "Daniel 11:21",
+      rank: 2
+    },
+    {
+      target: "Isaiah 14:20-22",
+      rank: 2
+    },
+    {
+      target: "Isaiah 33:13",
+      rank: 2
+    },
+    {
+      target: "Exodus 12:12",
+      rank: 2
+    },
+    {
+      target: "Isaiah 19:1",
+      rank: 2
+    },
+    {
+      target: "Nahum 3:4-6",
+      rank: 2
+    },
+    {
+      target: "Leviticus 26:30",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 50:2",
+      rank: 2
+    }
+  ],
+  "1.15": [
+    {
+      target: "Isaiah 52:7",
+      rank: 30
+    },
+    {
+      target: "Romans 10:15",
+      rank: 25
+    },
+    {
+      target: "Isaiah 40:9-10",
+      rank: 12
+    },
+    {
+      target: "Acts 10:36",
+      rank: 7
+    },
+    {
+      target: "Isaiah 29:7-8",
+      rank: 5
+    },
+    {
+      target: "Luke 2:14",
+      rank: 4
+    },
+    {
+      target: "Nahum 1:11-12",
+      rank: 4
+    },
+    {
+      target: "Luke 2:10",
+      rank: 4
+    },
+    {
+      target: "Leviticus 23:2",
+      rank: 3
+    },
+    {
+      target: "Isaiah 37:36-38",
+      rank: 3
+    },
+    {
+      target: "Psalms 107:8",
+      rank: 3
+    },
+    {
+      target: "Leviticus 23:4",
+      rank: 3
+    },
+    {
+      target: "Psalms 116:17-18",
+      rank: 3
+    },
+    {
+      target: "Psalms 107:15",
+      rank: 2
+    },
+    {
+      target: "Joel 3:17",
+      rank: 2
+    },
+    {
+      target: "Psalms 116:12-14",
+      rank: 2
+    },
+    {
+      target: "Nahum 1:14",
+      rank: 2
+    },
+    {
+      target: "Isaiah 52:1",
+      rank: 2
+    },
+    {
+      target: "Psalms 107:21-22",
+      rank: 2
+    }
+  ],
+  "2.1": [
+    {
+      target: "Joel 3:9-11",
+      rank: 9
+    },
+    {
+      target: "2 Chronicles 25:8",
+      rank: 8
+    },
+    {
+      target: "Jeremiah 51:20-23",
+      rank: 6
+    },
+    {
+      target: "Jeremiah 51:11-12",
+      rank: 5
+    },
+    {
+      target: "Jeremiah 50:23",
+      rank: 4
+    },
+    {
+      target: "Jeremiah 46:3-10",
+      rank: 3
+    },
+    {
+      target: "Isaiah 14:6",
+      rank: 2
+    },
+    {
+      target: "Nahum 3:14-15",
+      rank: 1
+    },
+    {
+      target: "Jeremiah 25:9",
+      rank: 0
+    }
+  ],
+  "2.2": [
+    {
+      target: "Ezekiel 37:23",
+      rank: 5
+    },
+    {
+      target: "Psalms 80:12-13",
+      rank: 5
+    },
+    {
+      target: "Zephaniah 3:11",
+      rank: 4
+    },
+    {
+      target: "Isaiah 60:15",
+      rank: 3
+    },
+    {
+      target: "Hosea 10:1",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 25:29",
+      rank: 2
+    },
+    {
+      target: "Isaiah 10:5-12",
+      rank: 2
+    },
+    {
+      target: "Genesis 49:22-23",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 49:9",
+      rank: 2
+    }
+  ],
+  "2.3": [
+    {
+      target: "Ezekiel 23:14-15",
+      rank: 4
+    },
+    {
+      target: "Isaiah 63:1-3",
+      rank: 3
+    },
+    {
+      target: "Zechariah 11:2",
+      rank: 2
+    },
+    {
+      target: "Zechariah 1:8",
+      rank: 2
+    },
+    {
+      target: "Isaiah 14:8",
+      rank: 2
+    },
+    {
+      target: "Zechariah 6:2",
+      rank: 2
+    },
+    {
+      target: "Revelation 12:3",
+      rank: 2
+    },
+    {
+      target: "Revelation 6:4",
+      rank: 2
+    }
+  ],
+  "2.4": [
+    {
+      target: "Jeremiah 4:13",
+      rank: 4
+    },
+    {
+      target: "Ezekiel 26:10",
+      rank: 3
+    },
+    {
+      target: "Nahum 3:2-3",
+      rank: 3
+    },
+    {
+      target: "Isaiah 66:15",
+      rank: 3
+    },
+    {
+      target: "Isaiah 37:24",
+      rank: 2
+    },
+    {
+      target: "Daniel 11:40",
+      rank: 2
+    }
+  ],
+  "2.5": [
+    {
+      target: "Jeremiah 46:12",
+      rank: 5
+    },
+    {
+      target: "Isaiah 5:27",
+      rank: 2
+    },
+    {
+      target: "Nahum 3:18",
+      rank: 2
+    },
+    {
+      target: "Isaiah 21:5",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 51:27-28",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 50:29",
+      rank: 2
+    },
+    {
+      target: "Nahum 3:3",
+      rank: 2
+    }
+  ],
+  "2.6": [
+    {
+      target: "Isaiah 45:1-2",
+      rank: 3
+    },
+    {
+      target: "2 Peter 3:10-11",
+      rank: 2
+    }
+  ],
+  "2.7": [
+    {
+      target: "Isaiah 59:11",
+      rank: 5
+    },
+    {
+      target: "Isaiah 38:14",
+      rank: 5
+    },
+    {
+      target: "Isaiah 32:12",
+      rank: 2
+    },
+    {
+      target: "Luke 23:27",
+      rank: 2
+    },
+    {
+      target: "Luke 23:48",
+      rank: 2
+    }
+  ],
+  "2.8": [
+    {
+      target: "Jeremiah 51:30",
+      rank: 2
+    },
+    {
+      target: "Isaiah 48:20",
+      rank: 2
+    },
+    {
+      target: "Genesis 10:11",
+      rank: 2
+    },
+    {
+      target: "Revelation 17:1",
+      rank: 2
+    },
+    {
+      target: "Isaiah 13:14",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 50:16",
+      rank: 2
+    },
+    {
+      target: "Isaiah 47:13",
+      rank: 2
+    },
+    {
+      target: "Revelation 17:15",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 51:13",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 46:5",
+      rank: 2
+    },
+    {
+      target: "Nahum 3:17",
+      rank: 2
+    }
+  ],
+  "2.9": [
+    {
+      target: "Jeremiah 25:34",
+      rank: 2
+    },
+    {
+      target: "2 Chronicles 36:10",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 51:56",
+      rank: 2
+    },
+    {
+      target: "Ezekiel 26:12",
+      rank: 2
+    },
+    {
+      target: "Isaiah 33:4",
+      rank: 2
+    },
+    {
+      target: "Nahum 2:12-13",
+      rank: 2
+    },
+    {
+      target: "Daniel 11:8",
+      rank: 2
+    },
+    {
+      target: "Isaiah 33:1",
+      rank: 1
+    }
+  ],
+  "2.10": [
+    {
+      target: "Psalms 22:14",
+      rank: 6
+    },
+    {
+      target: "Joel 2:6",
+      rank: 6
+    },
+    {
+      target: "Daniel 5:6",
+      rank: 6
+    },
+    {
+      target: "Jeremiah 30:6",
+      rank: 4
+    },
+    {
+      target: "Isaiah 13:7-8",
+      rank: 4
+    },
+    {
+      target: "Isaiah 21:3",
+      rank: 3
+    },
+    {
+      target: "Zephaniah 2:13-15",
+      rank: 3
+    },
+    {
+      target: "Isaiah 24:1",
+      rank: 3
+    },
+    {
+      target: "Nahum 3:7",
+      rank: 2
+    },
+    {
+      target: "Zephaniah 3:6",
+      rank: 2
+    },
+    {
+      target: "Isaiah 13:19-22",
+      rank: 2
+    },
+    {
+      target: "Isaiah 34:10-15",
+      rank: 2
+    },
+    {
+      target: "Joshua 2:11",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 51:62",
+      rank: 2
+    },
+    {
+      target: "Revelation 18:21-23",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 4:23-26",
+      rank: 2
+    },
+    {
+      target: "Isaiah 14:23",
+      rank: 2
+    },
+    {
+      target: "Genesis 1:2",
+      rank: 1
+    }
+  ],
+  "2.11": [
+    {
+      target: "Isaiah 5:29",
+      rank: 5
+    },
+    {
+      target: "Jeremiah 2:15",
+      rank: 3
+    },
+    {
+      target: "Jeremiah 50:44",
+      rank: 2
+    },
+    {
+      target: "Nahum 3:1",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 4:7",
+      rank: 2
+    },
+    {
+      target: "Ezekiel 19:2-8",
+      rank: 2
+    },
+    {
+      target: "Genesis 49:9",
+      rank: 2
+    },
+    {
+      target: "Zephaniah 3:3",
+      rank: 2
+    },
+    {
+      target: "Isaiah 31:4",
+      rank: 2
+    },
+    {
+      target: "Job 4:10-11",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 50:17",
+      rank: 2
+    }
+  ],
+  "2.12": [
+    {
+      target: "Jeremiah 51:34",
+      rank: 3
+    },
+    {
+      target: "Isaiah 10:6-14",
+      rank: 2
+    },
+    {
+      target: "Psalms 17:12",
+      rank: 2
+    }
+  ],
+  "2.13": [
+    {
+      target: "Psalms 46:9",
+      rank: 6
+    },
+    {
+      target: "Jeremiah 21:13",
+      rank: 6
+    },
+    {
+      target: "Nahum 3:5",
+      rank: 6
+    },
+    {
+      target: "2 Kings 19:23",
+      rank: 5
+    },
+    {
+      target: "Nahum 3:1",
+      rank: 3
+    },
+    {
+      target: "Joshua 11:9",
+      rank: 3
+    },
+    {
+      target: "Isaiah 49:24-25",
+      rank: 3
+    },
+    {
+      target: "2 Kings 19:9",
+      rank: 3
+    },
+    {
+      target: "Ezekiel 5:8",
+      rank: 3
+    },
+    {
+      target: "2 Kings 18:27-35",
+      rank: 2
+    },
+    {
+      target: "2 Kings 18:19",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 50:31",
+      rank: 2
+    },
+    {
+      target: "Ezekiel 39:1",
+      rank: 2
+    },
+    {
+      target: "Ezekiel 38:3",
+      rank: 2
+    },
+    {
+      target: "2 Kings 18:17",
+      rank: 2
+    },
+    {
+      target: "Ezekiel 28:22",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 51:25",
+      rank: 2
+    },
+    {
+      target: "Ezekiel 29:10",
+      rank: 2
+    },
+    {
+      target: "Isaiah 37:36-38",
+      rank: 2
+    },
+    {
+      target: "Isaiah 33:1-4",
+      rank: 2
+    },
+    {
+      target: "2 Chronicles 32:19",
+      rank: 2
+    },
+    {
+      target: "Ezekiel 29:3",
+      rank: 2
+    },
+    {
+      target: "2 Chronicles 32:9-16",
+      rank: 2
+    },
+    {
+      target: "Ezekiel 26:3",
+      rank: 2
+    },
+    {
+      target: "Ezekiel 35:3",
+      rank: 2
+    },
+    {
+      target: "Nahum 3:12",
+      rank: 2
+    },
+    {
+      target: "Isaiah 31:8-9",
+      rank: 2
+    }
+  ],
+  "3.1": [
+    {
+      target: "Habakkuk 2:12",
+      rank: 6
+    },
+    {
+      target: "Zephaniah 3:1-3",
+      rank: 6
+    },
+    {
+      target: "Ezekiel 24:6-9",
+      rank: 5
+    },
+    {
+      target: "Ezekiel 22:2-3",
+      rank: 5
+    },
+    {
+      target: "Hosea 4:2",
+      rank: 5
+    },
+    {
+      target: "Nahum 2:12",
+      rank: 4
+    },
+    {
+      target: "Isaiah 17:14",
+      rank: 2
+    },
+    {
+      target: "Isaiah 42:24",
+      rank: 2
+    },
+    {
+      target: "Isaiah 24:9",
+      rank: 1
+    }
+  ],
+  "3.2": [
+    {
+      target: "Jeremiah 47:3",
+      rank: 5
+    },
+    {
+      target: "Nahum 2:3-4",
+      rank: 4
+    },
+    {
+      target: "Judges 5:22",
+      rank: 3
+    },
+    {
+      target: "Job 39:22-25",
+      rank: 3
+    },
+    {
+      target: "Isaiah 9:5",
+      rank: 2
+    }
+  ],
+  "3.3": [
+    {
+      target: "Ezekiel 39:4",
+      rank: 5
+    },
+    {
+      target: "Habakkuk 3:11",
+      rank: 5
+    },
+    {
+      target: "Isaiah 37:36",
+      rank: 4
+    },
+    {
+      target: "Isaiah 34:3",
+      rank: 4
+    },
+    {
+      target: "Genesis 3:24",
+      rank: 3
+    },
+    {
+      target: "Ezekiel 31:3-13",
+      rank: 2
+    },
+    {
+      target: "2 Kings 19:35",
+      rank: 2
+    },
+    {
+      target: "Nahum 2:4",
+      rank: 2
+    }
+  ],
+  "3.4": [
+    {
+      target: "Isaiah 47:9",
+      rank: 7
+    },
+    {
+      target: "Isaiah 47:12-13",
+      rank: 5
+    },
+    {
+      target: "Ezekiel 16:25-29",
+      rank: 3
+    },
+    {
+      target: "Revelation 18:23",
+      rank: 3
+    },
+    {
+      target: "Revelation 17:1-5",
+      rank: 3
+    },
+    {
+      target: "Revelation 18:9",
+      rank: 3
+    },
+    {
+      target: "Revelation 18:2-3",
+      rank: 3
+    },
+    {
+      target: "Isaiah 23:15-17",
+      rank: 2
+    }
+  ],
+  "3.5": [
+    {
+      target: "Jeremiah 13:26",
+      rank: 8
+    },
+    {
+      target: "Ezekiel 23:29",
+      rank: 6
+    },
+    {
+      target: "Jeremiah 13:22",
+      rank: 6
+    },
+    {
+      target: "Ezekiel 16:37",
+      rank: 5
+    },
+    {
+      target: "Isaiah 47:2-3",
+      rank: 5
+    },
+    {
+      target: "Nahum 2:13",
+      rank: 5
+    },
+    {
+      target: "Habakkuk 2:16",
+      rank: 4
+    },
+    {
+      target: "Micah 1:11",
+      rank: 2
+    },
+    {
+      target: "Ezekiel 23:25",
+      rank: 2
+    }
+  ],
+  "3.6": [
+    {
+      target: "Malachi 2:9",
+      rank: 5
+    },
+    {
+      target: "Jeremiah 51:37",
+      rank: 4
+    },
+    {
+      target: "Psalms 38:5-7",
+      rank: 4
+    },
+    {
+      target: "Job 9:31",
+      rank: 4
+    },
+    {
+      target: "Job 30:8",
+      rank: 3
+    },
+    {
+      target: "Nahum 1:14",
+      rank: 3
+    },
+    {
+      target: "Hebrews 10:33",
+      rank: 3
+    },
+    {
+      target: "1 Corinthians 4:9",
+      rank: 3
+    },
+    {
+      target: "Job 30:19",
+      rank: 2
+    },
+    {
+      target: "Malachi 2:2",
+      rank: 2
+    },
+    {
+      target: "1 Corinthians 4:13",
+      rank: 2
+    },
+    {
+      target: "Lamentations 3:16",
+      rank: 2
+    },
+    {
+      target: "1 Kings 9:7-8",
+      rank: 2
+    },
+    {
+      target: "Jude 1:7",
+      rank: 2
+    },
+    {
+      target: "Zephaniah 2:15",
+      rank: 2
+    },
+    {
+      target: "Isaiah 14:16-19",
+      rank: 2
+    }
+  ],
+  "3.7": [
+    {
+      target: "Jeremiah 15:5",
+      rank: 6
+    },
+    {
+      target: "Isaiah 51:19",
+      rank: 6
+    },
+    {
+      target: "Revelation 18:10",
+      rank: 4
+    },
+    {
+      target: "Lamentations 2:13",
+      rank: 3
+    },
+    {
+      target: "Numbers 16:34",
+      rank: 3
+    },
+    {
+      target: "Jeremiah 51:9",
+      rank: 3
+    },
+    {
+      target: "Nahum 2:9-10",
+      rank: 2
+    },
+    {
+      target: "Nahum 1:1",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 51:41-43",
+      rank: 1
+    },
+    {
+      target: "Revelation 18:16-19",
+      rank: 1
+    }
+  ],
+  "3.8": [
+    {
+      target: "Amos 6:2",
+      rank: 4
+    },
+    {
+      target: "Ezekiel 30:14-16",
+      rank: 3
+    },
+    {
+      target: "Jeremiah 46:25-26",
+      rank: 2
+    },
+    {
+      target: "Ezekiel 31:2-3",
+      rank: 2
+    },
+    {
+      target: "Isaiah 19:5-10",
+      rank: 2
+    }
+  ],
+  "3.9": [
+    {
+      target: "Ezekiel 30:5",
+      rank: 4
+    },
+    {
+      target: "Ezekiel 27:10",
+      rank: 4
+    },
+    {
+      target: "Ezekiel 38:5",
+      rank: 3
+    },
+    {
+      target: "Genesis 10:6",
+      rank: 3
+    },
+    {
+      target: "Isaiah 20:5",
+      rank: 3
+    },
+    {
+      target: "2 Chronicles 12:3",
+      rank: 3
+    },
+    {
+      target: "Jeremiah 46:9",
+      rank: 3
+    },
+    {
+      target: "1 Chronicles 1:8",
+      rank: 2
+    }
+  ],
+  "3.10": [
+    {
+      target: "Isaiah 20:4",
+      rank: 5
+    },
+    {
+      target: "Joel 3:3",
+      rank: 4
+    },
+    {
+      target: "Hosea 13:16",
+      rank: 4
+    },
+    {
+      target: "Obadiah 1:11",
+      rank: 4
+    },
+    {
+      target: "Isaiah 13:16",
+      rank: 3
+    },
+    {
+      target: "Lamentations 2:19",
+      rank: 3
+    },
+    {
+      target: "Psalms 137:8",
+      rank: 2
+    },
+    {
+      target: "Amos 1:13",
+      rank: 2
+    },
+    {
+      target: "Lamentations 4:1",
+      rank: 2
+    },
+    {
+      target: "2 Kings 8:12",
+      rank: 2
+    },
+    {
+      target: "Isaiah 13:6",
+      rank: 2
+    },
+    {
+      target: "Psalms 33:16-17",
+      rank: 2
+    }
+  ],
+  "3.11": [
+    {
+      target: "Isaiah 49:26",
+      rank: 4
+    },
+    {
+      target: "Isaiah 2:10",
+      rank: 4
+    },
+    {
+      target: "Luke 23:30",
+      rank: 4
+    },
+    {
+      target: "Psalms 75:8",
+      rank: 3
+    },
+    {
+      target: "Jeremiah 4:5",
+      rank: 3
+    },
+    {
+      target: "Revelation 6:15-17",
+      rank: 3
+    },
+    {
+      target: "Nahum 1:10",
+      rank: 3
+    },
+    {
+      target: "Hosea 10:8",
+      rank: 3
+    },
+    {
+      target: "Isaiah 2:19",
+      rank: 3
+    },
+    {
+      target: "1 Samuel 14:11",
+      rank: 2
+    },
+    {
+      target: "Nahum 2:1",
+      rank: 2
+    },
+    {
+      target: "Amos 9:3",
+      rank: 2
+    },
+    {
+      target: "1 Samuel 13:6",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 51:57",
+      rank: 2
+    },
+    {
+      target: "Isaiah 29:9",
+      rank: 2
+    },
+    {
+      target: "Micah 7:17",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 8:14",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 25:15-27",
+      rank: 2
+    },
+    {
+      target: "Isaiah 63:6",
+      rank: 2
+    }
+  ],
+  "3.12": [
+    {
+      target: "Revelation 6:13",
+      rank: 4
+    },
+    {
+      target: "Isaiah 28:4",
+      rank: 2
+    },
+    {
+      target: "Habakkuk 1:10",
+      rank: 2
+    }
+  ],
+  "3.13": [
+    {
+      target: "Jeremiah 51:30",
+      rank: 6
+    },
+    {
+      target: "Isaiah 19:16",
+      rank: 5
+    },
+    {
+      target: "Jeremiah 50:37",
+      rank: 5
+    },
+    {
+      target: "Nahum 2:6",
+      rank: 4
+    },
+    {
+      target: "Isaiah 45:1-2",
+      rank: 3
+    },
+    {
+      target: "Psalms 147:13",
+      rank: 2
+    },
+    {
+      target: "Psalms 107:16",
+      rank: 2
+    }
+  ],
+  "3.14": [
+    {
+      target: "Nahum 2:1",
+      rank: 4
+    },
+    {
+      target: "2 Chronicles 32:3-4",
+      rank: 4
+    },
+    {
+      target: "Jeremiah 46:3-4",
+      rank: 3
+    },
+    {
+      target: "Isaiah 37:25",
+      rank: 2
+    },
+    {
+      target: "Isaiah 8:9",
+      rank: 2
+    },
+    {
+      target: "Isaiah 22:9-11",
+      rank: 2
+    },
+    {
+      target: "2 Chronicles 32:11",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 46:9",
+      rank: 2
+    },
+    {
+      target: "Joel 3:9-11",
+      rank: 2
+    }
+  ],
+  "3.15": [
+    {
+      target: "Joel 1:4",
+      rank: 5
+    },
+    {
+      target: "Nahum 3:13",
+      rank: 3
+    },
+    {
+      target: "Nahum 2:13",
+      rank: 3
+    },
+    {
+      target: "Joel 2:25",
+      rank: 2
+    },
+    {
+      target: "Zephaniah 2:13",
+      rank: 2
+    },
+    {
+      target: "Exodus 10:13-15",
+      rank: 2
+    }
+  ],
+  "3.16": [
+    {
+      target: "Nehemiah 9:23",
+      rank: 2
+    },
+    {
+      target: "Genesis 15:5",
+      rank: 2
+    },
+    {
+      target: "Genesis 22:17",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 33:22",
+      rank: 2
+    }
+  ],
+  "3.17": [
+    {
+      target: "Revelation 9:7",
+      rank: 3
+    },
+    {
+      target: "Jeremiah 51:27",
+      rank: 3
+    }
+  ],
+  "3.18": [
+    {
+      target: "1 Kings 22:17",
+      rank: 5
+    },
+    {
+      target: "Psalms 76:5-6",
+      rank: 5
+    },
+    {
+      target: "Isaiah 13:14",
+      rank: 3
+    },
+    {
+      target: "Jeremiah 50:18",
+      rank: 3
+    },
+    {
+      target: "Jeremiah 51:57",
+      rank: 3
+    },
+    {
+      target: "Ezekiel 31:3-18",
+      rank: 2
+    },
+    {
+      target: "Exodus 15:16",
+      rank: 2
+    },
+    {
+      target: "Nahum 2:5-6",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 51:39",
+      rank: 2
+    },
+    {
+      target: "Isaiah 47:1",
+      rank: 2
+    },
+    {
+      target: "Isaiah 56:9-10",
+      rank: 2
+    },
+    {
+      target: "Revelation 6:15",
+      rank: 2
+    },
+    {
+      target: "Ezekiel 32:22-23",
+      rank: 2
+    }
+  ],
+  "3.19": [
+    {
+      target: "Micah 1:9",
+      rank: 6
+    },
+    {
+      target: "Lamentations 2:15",
+      rank: 5
+    },
+    {
+      target: "Isaiah 37:18",
+      rank: 4
+    },
+    {
+      target: "Job 27:23",
+      rank: 4
+    },
+    {
+      target: "Jeremiah 46:11",
+      rank: 3
+    },
+    {
+      target: "Jeremiah 30:13-15",
+      rank: 2
+    },
+    {
+      target: "Revelation 17:2",
+      rank: 2
+    },
+    {
+      target: "Revelation 18:2-3",
+      rank: 2
+    },
+    {
+      target: "Revelation 18:20",
+      rank: 2
+    },
+    {
+      target: "Ezekiel 25:6",
+      rank: 2
+    },
+    {
+      target: "Ezekiel 30:21-22",
+      rank: 2
+    },
+    {
+      target: "Isaiah 14:8-21",
+      rank: 2
+    },
+    {
+      target: "Nahum 2:11-12",
+      rank: 2
+    },
+    {
+      target: "Zephaniah 2:13-15",
+      rank: 2
+    },
+    {
+      target: "Revelation 13:7",
+      rank: 2
+    },
+    {
+      target: "Isaiah 10:6-14",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 10:22",
+      rank: 2
+    }
+  ]
+};
+export {
+  NAM as default
+};

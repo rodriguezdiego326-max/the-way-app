@@ -142,6 +142,7 @@ const VERSIONS = {
   source_library: "v7.0-batch-a",
   regression_tests: "v7.0",
   app: "v7.3.0",
+  response_schema: "57",
 };
 
 // ============================================================
@@ -324,6 +325,7 @@ interface StructuredTheologicalResponse {
   has_development_content?: boolean;
   is_development_mode?: boolean;
   grounding_level?: GroundingLevel;
+  ask_response_schema_version?: string;
   inline_references?: InlineScriptureReference[];
   last_assistant_context?: {
     topic: string;
@@ -433,9 +435,10 @@ async function retrieveFromLibrary(question: string): Promise<RAGRetrievalResult
   const detectedAuthor = detectTeacherQuestion(question);
 
   const cacheKey = question.toLowerCase().trim().slice(0, 200);
+  const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
   if (!detectedAuthor) {
     try {
-      const cacheRes = await fetch(`${supabaseUrl}/rest/v1/retrieval_cache?cache_key=eq.${encodeURIComponent(cacheKey)}&select=retrieval_result,hit_count&limit=1`, {
+      const cacheRes = await fetch(`${supabaseUrl}/rest/v1/retrieval_cache?cache_key=eq.${encodeURIComponent(cacheKey)}&select=retrieval_result,hit_count,created_at&limit=1`, {
         headers: {
           "apikey": serviceKey,
           "Authorization": `Bearer ${serviceKey}`,
@@ -445,16 +448,20 @@ async function retrieveFromLibrary(question: string): Promise<RAGRetrievalResult
       if (cacheRes.ok) {
         const cacheData = await cacheRes.json();
         if (cacheData.length > 0) {
-          await fetch(`${supabaseUrl}/rest/v1/retrieval_cache?cache_key=eq.${encodeURIComponent(cacheKey)}`, {
-            method: "PATCH",
-            headers: {
-              "apikey": serviceKey,
-              "Authorization": `Bearer ${serviceKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ hit_count: (cacheData[0].hit_count || 0) + 1 }),
-          });
-          return cacheData[0].retrieval_result as RAGRetrievalResult;
+          const cachedAt = new Date(cacheData[0].created_at).getTime();
+          const ageMs = Date.now() - cachedAt;
+          if (ageMs < CACHE_TTL_MS) {
+            await fetch(`${supabaseUrl}/rest/v1/retrieval_cache?cache_key=eq.${encodeURIComponent(cacheKey)}`, {
+              method: "PATCH",
+              headers: {
+                "apikey": serviceKey,
+                "Authorization": `Bearer ${serviceKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ hit_count: (cacheData[0].hit_count || 0) + 1 }),
+            });
+            return cacheData[0].retrieval_result as RAGRetrievalResult;
+          }
         }
       }
     } catch { /* cache miss */ }
@@ -501,6 +508,16 @@ async function retrieveFromLibrary(question: string): Promise<RAGRetrievalResult
     "gossip": ["christian_life_speech"],
     "stewardship": ["christian_life_stewardship"],
     "consistent": ["revelation_sufficiency", "christian_life_diligence"],
+    "consistency": ["revelation_sufficiency", "christian_life_diligence"],
+    "meditation": ["revelation_sufficiency", "christian_life_diligence"],
+    "meditate": ["revelation_sufficiency", "christian_life_diligence"],
+    "learning": ["revelation_sufficiency", "christian_life_diligence"],
+    "study": ["revelation_sufficiency", "revelation_authority"],
+    "reading": ["revelation_sufficiency"],
+    "word of god": ["revelation_sufficiency", "revelation_authority"],
+    "god's word": ["revelation_sufficiency", "revelation_authority"],
+    "bible study": ["revelation_sufficiency", "christian_life_diligence"],
+    "scripture reading": ["revelation_sufficiency", "christian_life_diligence"],
     "discipline": ["christian_life_diligence"],
   };
 
@@ -679,15 +696,14 @@ function validateResponse(response: StructuredTheologicalResponse): { passed: bo
     }
   }
 
-  // Only check for teacher attribution in the answer if the user explicitly asked about a teacher
+  // Check for teacher attribution — works even when RAG is empty
   const teacherName = detectTeacherQuestion(response.answer_summary);
-  if (teacherName && response.rag_citations && response.rag_citations.length > 0) {
-    // Check if the answer explicitly attributes a quote/position to this teacher
+  if (teacherName) {
     const attributionPattern = new RegExp(`(?:according to|as ${teacherName} (?:said|wrote|argued|taught)|${teacherName} (?:said|wrote|argued|taught|believes|states))`, "i");
     const hasAttribution = attributionPattern.test(response.answer_summary) ||
       attributionPattern.test(response.reformed_understanding || "");
     if (hasAttribution) {
-      const hasTeacherSource = response.rag_citations.some((c) =>
+      const hasTeacherSource = (response.rag_citations || []).some((c) =>
         c.display_author.toLowerCase().includes(teacherName.toLowerCase()),
       );
       if (!hasTeacherSource) warnings.push(`Attribution to ${teacherName} without verified source`);
@@ -1377,6 +1393,7 @@ const devProvider: AIProvider = {
           grounding_level: 'SCRIPTURE_ONLY',
           inline_references: inlineRefs,
           last_assistant_context: priorContext,
+          ask_response_schema_version: VERSIONS.response_schema,
         };
         return earlyResponse;
       }
@@ -1700,6 +1717,7 @@ const devProvider: AIProvider = {
       grounding_level: groundingLevel,
       inline_references: inlineReferences,
       last_assistant_context: lastAssistantContext,
+      ask_response_schema_version: VERSIONS.response_schema,
     };
 
     const validation = validateResponse(response);
@@ -1995,7 +2013,8 @@ function createOpenAIProvider(config: ProviderConfig): AIProvider {
             warnings: [],
             verification_state: computeVerificationState(ragCitations, confessionalSources, historicalSources, scriptureSources, sourceUnavailable, divineRevelationDetected, isCrisis),
             has_development_content: false,
-          };
+            ask_response_schema_version: VERSIONS.response_schema,
+          } as StructuredTheologicalResponse;
 
           const validation = validateResponse(response);
           response.validation_passed = validation.passed;
@@ -2196,8 +2215,10 @@ function buildRecommendedScripture(question: string, isDivine: boolean, isCrisis
     refs.push({ reference: "Ephesians 4:29", reading_objective: "Read Paul's instruction that only edifying words come from our mouths.", reason: "Directly addresses the kind of speech gossip violates." });
   } else if (lower.includes("stewardship")) {
     refs.push({ reference: "1 Peter 4:10", reading_objective: "Read about using our gifts to serve others as good stewards of God's grace.", reason: "Directly addresses stewardship of God's varied grace." });
-  } else if ((lower.includes("consistent") || lower.includes("consistency")) && (lower.includes("scripture") || lower.includes("learning") || lower.includes("study"))) {
+  } else if ((lower.includes("consistent") || lower.includes("consistency")) && (lower.includes("scripture") || lower.includes("learning") || lower.includes("study") || lower.includes("reading") || lower.includes("meditat"))) {
     refs.push({ reference: "Joshua 1:8", reading_objective: "Read God's command to meditate on His Word day and night.", reason: "Directly addresses the practice of consistent Scripture meditation." });
+    refs.push({ reference: "Psalm 1:1-3", reading_objective: "Read about the one who delights in God's law and meditates day and night.", reason: "Shows the fruit of consistent delight in Scripture." });
+    refs.push({ reference: "2 Timothy 3:14-17", reading_objective: "Read Paul's charge to continue in the sacred writings.", reason: "Directly addresses continuing in Scripture and its purpose." });
   }
   // No catch-all default — return empty if no topic matched
   return refs;
@@ -2272,9 +2293,10 @@ function buildBiblicalBasis(question: string): BiblicalBasisPassage[] {
   } else if (lower.includes("stewardship")) {
     passages.push({ reference: "1 Peter 4:10", relevance: "Use your gifts to serve one another as good stewards of God's grace.", contextual_note: "Everything we have is received from God.", is_primary: true });
     passages.push({ reference: "Matthew 25:14-30", relevance: "The parable of the talents.", contextual_note: "God expects us to use what He's given for His glory.", is_primary: false });
-  } else if ((lower.includes("consistent") || lower.includes("consistency")) && (lower.includes("scripture") || lower.includes("learning") || lower.includes("study"))) {
-    passages.push({ reference: "Joshua 1:8", relevance: "Meditate on God's Word day and night for success and obedience.", contextual_note: "Consistency in Scripture leads to transformed living.", is_primary: true });
-    passages.push({ reference: "Psalm 1:1-3", relevance: "The one who delights in God's law is like a tree planted by water.", contextual_note: "Daily meditation yields stability and fruitfulness.", is_primary: false });
+  } else if ((lower.includes("consistent") || lower.includes("consistency")) && (lower.includes("scripture") || lower.includes("learning") || lower.includes("study") || lower.includes("reading") || lower.includes("meditat"))) {
+    passages.push({ reference: "Joshua 1:8", relevance: "God commands meditating on His Word day and night for faithful obedience.", contextual_note: "Consistency in Scripture leads to transformed living.", is_primary: true });
+    passages.push({ reference: "Psalm 1:1-3", relevance: "The one who delights in God's law and meditates day and night is like a fruitful tree.", contextual_note: "Daily meditation yields stability and fruitfulness.", is_primary: false });
+    passages.push({ reference: "2 Timothy 3:14-17", relevance: "Paul charges Timothy to continue in the sacred writings, profitable for teaching and training.", contextual_note: "Scripture equips the believer for every good work.", is_primary: false });
   }
   // No catch-all default — return empty if no topic matched
   return passages;

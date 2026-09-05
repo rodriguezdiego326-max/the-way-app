@@ -1,0 +1,408 @@
+const translation = "WEB";
+const books = [
+  {
+    file: "1chronicles",
+    book: "1 Chronicles",
+    chapters: 29,
+    verses: 942
+  },
+  {
+    file: "1corinthians",
+    book: "1 Corinthians",
+    chapters: 16,
+    verses: 437
+  },
+  {
+    file: "1john",
+    book: "1 John",
+    chapters: 5,
+    verses: 105
+  },
+  {
+    file: "1kings",
+    book: "1 Kings",
+    chapters: 22,
+    verses: 816
+  },
+  {
+    file: "1peter",
+    book: "1 Peter",
+    chapters: 5,
+    verses: 105
+  },
+  {
+    file: "1samuel",
+    book: "1 Samuel",
+    chapters: 31,
+    verses: 810
+  },
+  {
+    file: "1thessalonians",
+    book: "1 Thessalonians",
+    chapters: 5,
+    verses: 89
+  },
+  {
+    file: "1timothy",
+    book: "1 Timothy",
+    chapters: 6,
+    verses: 113
+  },
+  {
+    file: "2chronicles",
+    book: "2 Chronicles",
+    chapters: 36,
+    verses: 822
+  },
+  {
+    file: "2corinthians",
+    book: "2 Corinthians",
+    chapters: 13,
+    verses: 257
+  },
+  {
+    file: "2john",
+    book: "2 John",
+    chapters: 1,
+    verses: 13
+  },
+  {
+    file: "2kings",
+    book: "2 Kings",
+    chapters: 25,
+    verses: 719
+  },
+  {
+    file: "2peter",
+    book: "2 Peter",
+    chapters: 3,
+    verses: 61
+  },
+  {
+    file: "2samuel",
+    book: "2 Samuel",
+    chapters: 24,
+    verses: 695
+  },
+  {
+    file: "2thessalonians",
+    book: "2 Thessalonians",
+    chapters: 3,
+    verses: 47
+  },
+  {
+    file: "2timothy",
+    book: "2 Timothy",
+    chapters: 4,
+    verses: 83
+  },
+  {
+    file: "3john",
+    book: "3 John",
+    chapters: 1,
+    verses: 14
+  },
+  {
+    file: "acts",
+    book: "Acts",
+    chapters: 28,
+    verses: 1004
+  },
+  {
+    file: "amos",
+    book: "Amos",
+    chapters: 9,
+    verses: 146
+  },
+  {
+    file: "colossians",
+    book: "Colossians",
+    chapters: 4,
+    verses: 95
+  },
+  {
+    file: "daniel",
+    book: "Daniel",
+    chapters: 12,
+    verses: 357
+  },
+  {
+    file: "deuteronomy",
+    book: "Deuteronomy",
+    chapters: 34,
+    verses: 959
+  },
+  {
+    file: "ecclesiastes",
+    book: "Ecclesiastes",
+    chapters: 12,
+    verses: 222
+  },
+  {
+    file: "ephesians",
+    book: "Ephesians",
+    chapters: 6,
+    verses: 155
+  },
+  {
+    file: "esther",
+    book: "Esther",
+    chapters: 10,
+    verses: 167
+  },
+  {
+    file: "exodus",
+    book: "Exodus",
+    chapters: 40,
+    verses: 1213
+  },
+  {
+    file: "ezekiel",
+    book: "Ezekiel",
+    chapters: 48,
+    verses: 1273
+  },
+  {
+    file: "ezra",
+    book: "Ezra",
+    chapters: 10,
+    verses: 280
+  },
+  {
+    file: "galatians",
+    book: "Galatians",
+    chapters: 6,
+    verses: 149
+  },
+  {
+    file: "genesis",
+    book: "Genesis",
+    chapters: 50,
+    verses: 1533
+  },
+  {
+    file: "habakkuk",
+    book: "Habakkuk",
+    chapters: 3,
+    verses: 56
+  },
+  {
+    file: "haggai",
+    book: "Haggai",
+    chapters: 2,
+    verses: 38
+  },
+  {
+    file: "hebrews",
+    book: "Hebrews",
+    chapters: 13,
+    verses: 303
+  },
+  {
+    file: "hosea",
+    book: "Hosea",
+    chapters: 14,
+    verses: 197
+  },
+  {
+    file: "isaiah",
+    book: "Isaiah",
+    chapters: 66,
+    verses: 1292
+  },
+  {
+    file: "james",
+    book: "James",
+    chapters: 5,
+    verses: 108
+  },
+  {
+    file: "jeremiah",
+    book: "Jeremiah",
+    chapters: 52,
+    verses: 1364
+  },
+  {
+    file: "job",
+    book: "Job",
+    chapters: 42,
+    verses: 1070
+  },
+  {
+    file: "joel",
+    book: "Joel",
+    chapters: 3,
+    verses: 73
+  },
+  {
+    file: "john",
+    book: "John",
+    chapters: 21,
+    verses: 879
+  },
+  {
+    file: "jonah",
+    book: "Jonah",
+    chapters: 4,
+    verses: 48
+  },
+  {
+    file: "joshua",
+    book: "Joshua",
+    chapters: 24,
+    verses: 658
+  },
+  {
+    file: "jude",
+    book: "Jude",
+    chapters: 1,
+    verses: 25
+  },
+  {
+    file: "judges",
+    book: "Judges",
+    chapters: 21,
+    verses: 618
+  },
+  {
+    file: "lamentations",
+    book: "Lamentations",
+    chapters: 5,
+    verses: 154
+  },
+  {
+    file: "leviticus",
+    book: "Leviticus",
+    chapters: 27,
+    verses: 859
+  },
+  {
+    file: "luke",
+    book: "Luke",
+    chapters: 24,
+    verses: 1150
+  },
+  {
+    file: "malachi",
+    book: "Malachi",
+    chapters: 4,
+    verses: 55
+  },
+  {
+    file: "mark",
+    book: "Mark",
+    chapters: 16,
+    verses: 678
+  },
+  {
+    file: "matthew",
+    book: "Matthew",
+    chapters: 28,
+    verses: 1071
+  },
+  {
+    file: "micah",
+    book: "Micah",
+    chapters: 7,
+    verses: 105
+  },
+  {
+    file: "nahum",
+    book: "Nahum",
+    chapters: 3,
+    verses: 47
+  },
+  {
+    file: "nehemiah",
+    book: "Nehemiah",
+    chapters: 13,
+    verses: 406
+  },
+  {
+    file: "numbers",
+    book: "Numbers",
+    chapters: 36,
+    verses: 1288
+  },
+  {
+    file: "obadiah",
+    book: "Obadiah",
+    chapters: 1,
+    verses: 21
+  },
+  {
+    file: "philemon",
+    book: "Philemon",
+    chapters: 1,
+    verses: 25
+  },
+  {
+    file: "philippians",
+    book: "Philippians",
+    chapters: 4,
+    verses: 104
+  },
+  {
+    file: "proverbs",
+    book: "Proverbs",
+    chapters: 31,
+    verses: 915
+  },
+  {
+    file: "psalms",
+    book: "Psalm",
+    chapters: 150,
+    verses: 2461
+  },
+  {
+    file: "revelation",
+    book: "Revelation",
+    chapters: 22,
+    verses: 404
+  },
+  {
+    file: "romans",
+    book: "Romans",
+    chapters: 16,
+    verses: 433
+  },
+  {
+    file: "ruth",
+    book: "Ruth",
+    chapters: 4,
+    verses: 85
+  },
+  {
+    file: "songofsolomon",
+    book: "Song of Solomon",
+    chapters: 8,
+    verses: 117
+  },
+  {
+    file: "titus",
+    book: "Titus",
+    chapters: 3,
+    verses: 46
+  },
+  {
+    file: "zechariah",
+    book: "Zechariah",
+    chapters: 14,
+    verses: 211
+  },
+  {
+    file: "zephaniah",
+    book: "Zephaniah",
+    chapters: 3,
+    verses: 53
+  }
+];
+const index = {
+  translation,
+  books
+};
+export {
+  books,
+  index as default,
+  translation
+};

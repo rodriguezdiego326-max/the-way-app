@@ -131,6 +131,7 @@ export interface StructuredTheologicalResponse {
   verification_state?: VerificationState;
   has_development_content?: boolean;
   grounding_level?: GroundingLevel;
+  ask_response_schema_version?: string;
   inline_references?: InlineScriptureReference[];
   last_assistant_context?: {
     topic: string;

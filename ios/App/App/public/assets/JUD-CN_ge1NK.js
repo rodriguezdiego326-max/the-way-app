@@ -1,0 +1,2023 @@
+const JUD = {
+  "1.1": [
+    {
+      target: "1 Peter 1:5",
+      rank: 18
+    },
+    {
+      target: "1 Thessalonians 5:23",
+      rank: 13
+    },
+    {
+      target: "1 Peter 2:9",
+      rank: 9
+    },
+    {
+      target: "John 14:22",
+      rank: 7
+    },
+    {
+      target: "John 17:15",
+      rank: 7
+    },
+    {
+      target: "Romans 1:1",
+      rank: 7
+    },
+    {
+      target: "2 Timothy 1:9",
+      rank: 7
+    },
+    {
+      target: "Hebrews 3:1",
+      rank: 6
+    },
+    {
+      target: "1 Peter 5:10",
+      rank: 6
+    },
+    {
+      target: "Romans 8:30",
+      rank: 5
+    },
+    {
+      target: "2 Timothy 4:18",
+      rank: 5
+    },
+    {
+      target: "John 15:16",
+      rank: 5
+    },
+    {
+      target: "2 Peter 1:1",
+      rank: 5
+    },
+    {
+      target: "2 Thessalonians 2:13-14",
+      rank: 4
+    },
+    {
+      target: "1 Thessalonians 2:12",
+      rank: 4
+    },
+    {
+      target: "Romans 6:22",
+      rank: 4
+    },
+    {
+      target: "Romans 9:24",
+      rank: 4
+    },
+    {
+      target: "James 1:1",
+      rank: 3
+    },
+    {
+      target: "John 10:28-30",
+      rank: 3
+    },
+    {
+      target: "Ephesians 5:26",
+      rank: 3
+    },
+    {
+      target: "1 Corinthians 6:11",
+      rank: 3
+    },
+    {
+      target: "1 Peter 1:2",
+      rank: 3
+    },
+    {
+      target: "John 17:11-12",
+      rank: 3
+    },
+    {
+      target: "1 Corinthians 1:2",
+      rank: 3
+    },
+    {
+      target: "Luke 6:16",
+      rank: 3
+    },
+    {
+      target: "John 12:26",
+      rank: 3
+    },
+    {
+      target: "John 6:39",
+      rank: 3
+    },
+    {
+      target: "Acts 27:23",
+      rank: 3
+    },
+    {
+      target: "Romans 16:18",
+      rank: 3
+    },
+    {
+      target: "Matthew 10:3",
+      rank: 2
+    },
+    {
+      target: "Acts 1:13",
+      rank: 2
+    },
+    {
+      target: "Acts 20:32",
+      rank: 2
+    },
+    {
+      target: "John 17:17",
+      rank: 2
+    },
+    {
+      target: "John 17:19",
+      rank: 2
+    },
+    {
+      target: "Mark 3:18",
+      rank: 2
+    }
+  ],
+  "1.2": [
+    {
+      target: "2 Peter 1:2",
+      rank: 16
+    },
+    {
+      target: "1 Peter 1:2",
+      rank: 10
+    },
+    {
+      target: "Revelation 1:4-6",
+      rank: 5
+    },
+    {
+      target: "Romans 1:7",
+      rank: 4
+    }
+  ],
+  "1.3": [
+    {
+      target: "1 Timothy 6:12",
+      rank: 29
+    },
+    {
+      target: "Philippians 1:27",
+      rank: 24
+    },
+    {
+      target: "Jude 1:20",
+      rank: 18
+    },
+    {
+      target: "2 Timothy 1:13",
+      rank: 13
+    },
+    {
+      target: "Titus 1:4",
+      rank: 13
+    },
+    {
+      target: "2 Timothy 4:7-8",
+      rank: 12
+    },
+    {
+      target: "Revelation 12:11",
+      rank: 12
+    },
+    {
+      target: "Revelation 2:10",
+      rank: 11
+    },
+    {
+      target: "1 Timothy 1:18",
+      rank: 10
+    },
+    {
+      target: "Galatians 2:5",
+      rank: 9
+    },
+    {
+      target: "Acts 4:12",
+      rank: 8
+    },
+    {
+      target: "Deuteronomy 9:10",
+      rank: 8
+    },
+    {
+      target: "Hebrews 13:22",
+      rank: 8
+    },
+    {
+      target: "1 Corinthians 15:3",
+      rank: 7
+    },
+    {
+      target: "Acts 18:28",
+      rank: 7
+    },
+    {
+      target: "Acts 9:22",
+      rank: 7
+    },
+    {
+      target: "Acts 13:46-47",
+      rank: 7
+    },
+    {
+      target: "Isaiah 45:22",
+      rank: 7
+    },
+    {
+      target: "1 Thessalonians 2:2",
+      rank: 6
+    },
+    {
+      target: "Romans 15:15-16",
+      rank: 6
+    },
+    {
+      target: "Acts 20:27",
+      rank: 5
+    },
+    {
+      target: "2 Peter 1:12-15",
+      rank: 5
+    },
+    {
+      target: "Acts 6:8-10",
+      rank: 5
+    },
+    {
+      target: "1 Peter 5:12",
+      rank: 5
+    },
+    {
+      target: "2 Peter 1:1",
+      rank: 5
+    },
+    {
+      target: "Acts 17:3",
+      rank: 5
+    },
+    {
+      target: "Acts 18:4-6",
+      rank: 5
+    },
+    {
+      target: "Galatians 6:11",
+      rank: 5
+    },
+    {
+      target: "Isaiah 45:17",
+      rank: 5
+    },
+    {
+      target: "Ephesians 1:1",
+      rank: 5
+    },
+    {
+      target: "2 Peter 3:1-2",
+      rank: 5
+    },
+    {
+      target: "Acts 28:28",
+      rank: 5
+    },
+    {
+      target: "Jeremiah 9:3",
+      rank: 5
+    },
+    {
+      target: "Colossians 1:2",
+      rank: 4
+    },
+    {
+      target: "Jude 1:17",
+      rank: 4
+    },
+    {
+      target: "Deuteronomy 21:9",
+      rank: 4
+    },
+    {
+      target: "Galatians 3:28",
+      rank: 4
+    },
+    {
+      target: "Philippians 1:1",
+      rank: 4
+    },
+    {
+      target: "Nehemiah 13:25",
+      rank: 4
+    }
+  ],
+  "1.4": [
+    {
+      target: "2 Peter 2:1-3",
+      rank: 35
+    },
+    {
+      target: "Galatians 2:4",
+      rank: 33
+    },
+    {
+      target: "2 Peter 2:10",
+      rank: 21
+    },
+    {
+      target: "Titus 1:15-16",
+      rank: 19
+    },
+    {
+      target: "1 Peter 2:16",
+      rank: 16
+    },
+    {
+      target: "1 John 2:22",
+      rank: 14
+    },
+    {
+      target: "2 Peter 2:18-22",
+      rank: 14
+    },
+    {
+      target: "1 Peter 2:8",
+      rank: 12
+    },
+    {
+      target: "2 Peter 2:5-6",
+      rank: 11
+    },
+    {
+      target: "2 Timothy 3:6",
+      rank: 10
+    },
+    {
+      target: "Romans 6:1-2",
+      rank: 10
+    },
+    {
+      target: "Psalms 1:1",
+      rank: 9
+    },
+    {
+      target: "Titus 2:11-12",
+      rank: 9
+    },
+    {
+      target: "Galatians 5:13",
+      rank: 9
+    },
+    {
+      target: "2 Peter 3:7",
+      rank: 8
+    },
+    {
+      target: "Ephesians 4:14",
+      rank: 7
+    },
+    {
+      target: "Hebrews 12:15-16",
+      rank: 7
+    },
+    {
+      target: "John 17:3",
+      rank: 6
+    },
+    {
+      target: "Matthew 13:25",
+      rank: 6
+    },
+    {
+      target: "Psalms 62:2",
+      rank: 6
+    },
+    {
+      target: "Acts 15:24",
+      rank: 6
+    },
+    {
+      target: "Acts 11:23",
+      rank: 6
+    },
+    {
+      target: "Jude 1:15",
+      rank: 5
+    },
+    {
+      target: "1 Peter 4:18",
+      rank: 5
+    },
+    {
+      target: "Romans 9:21-22",
+      rank: 4
+    },
+    {
+      target: "Revelation 15:4",
+      rank: 4
+    },
+    {
+      target: "1 Timothy 6:15-16",
+      rank: 2
+    },
+    {
+      target: "2 Samuel 22:5",
+      rank: 2
+    }
+  ],
+  "1.5": [
+    {
+      target: "Hebrews 3:16-4:2",
+      rank: 23
+    },
+    {
+      target: "Numbers 26:64-65",
+      rank: 23
+    },
+    {
+      target: "1 Corinthians 10:1-12",
+      rank: 21
+    },
+    {
+      target: "Psalms 106:26",
+      rank: 15
+    },
+    {
+      target: "Numbers 14:22-37",
+      rank: 14
+    },
+    {
+      target: "Deuteronomy 2:15-16",
+      rank: 11
+    },
+    {
+      target: "2 Peter 1:12-13",
+      rank: -1
+    },
+    {
+      target: "2 Peter 3:1",
+      rank: -1
+    },
+    {
+      target: "Romans 15:15",
+      rank: -1
+    }
+  ],
+  "1.6": [
+    {
+      target: "2 Peter 2:4",
+      rank: 36
+    },
+    {
+      target: "Matthew 25:41",
+      rank: 15
+    },
+    {
+      target: "Ephesians 6:12",
+      rank: 14
+    },
+    {
+      target: "Matthew 8:29",
+      rank: 13
+    },
+    {
+      target: "2 Peter 2:9",
+      rank: 10
+    },
+    {
+      target: "Hebrews 10:27",
+      rank: 7
+    },
+    {
+      target: "Revelation 20:10",
+      rank: 7
+    },
+    {
+      target: "John 8:44",
+      rank: 6
+    }
+  ],
+  "1.7": [
+    {
+      target: "Deuteronomy 29:23",
+      rank: 16
+    },
+    {
+      target: "2 Peter 2:6",
+      rank: 14
+    },
+    {
+      target: "Romans 1:26-27",
+      rank: 14
+    },
+    {
+      target: "Genesis 19:24-26",
+      rank: 12
+    },
+    {
+      target: "Genesis 18:20",
+      rank: 12
+    },
+    {
+      target: "Genesis 13:13",
+      rank: 10
+    },
+    {
+      target: "Jeremiah 50:40",
+      rank: 9
+    },
+    {
+      target: "Luke 17:29",
+      rank: 9
+    },
+    {
+      target: "1 Corinthians 6:9",
+      rank: 9
+    },
+    {
+      target: "Isaiah 1:9",
+      rank: 7
+    },
+    {
+      target: "Matthew 25:41",
+      rank: 7
+    },
+    {
+      target: "Genesis 19:5",
+      rank: 6
+    },
+    {
+      target: "Amos 4:11",
+      rank: 6
+    },
+    {
+      target: "2 Peter 3:7",
+      rank: 5
+    },
+    {
+      target: "Mark 9:43-49",
+      rank: 5
+    },
+    {
+      target: "Isaiah 13:19",
+      rank: 4
+    },
+    {
+      target: "Ezekiel 16:49-50",
+      rank: 4
+    },
+    {
+      target: "Matthew 11:24",
+      rank: 3
+    },
+    {
+      target: "Jeremiah 20:16",
+      rank: 3
+    },
+    {
+      target: "Lamentations 4:6",
+      rank: 2
+    },
+    {
+      target: "Hosea 11:8",
+      rank: 1
+    },
+    {
+      target: "Isaiah 33:14",
+      rank: 1
+    }
+  ],
+  "1.8": [
+    {
+      target: "Hebrews 13:17",
+      rank: 11
+    },
+    {
+      target: "2 Peter 2:10-12",
+      rank: 7
+    },
+    {
+      target: "Exodus 22:28",
+      rank: 6
+    },
+    {
+      target: "1 Timothy 1:10",
+      rank: 6
+    },
+    {
+      target: "1 Peter 2:17",
+      rank: 6
+    },
+    {
+      target: "Jude 1:9-10",
+      rank: 5
+    },
+    {
+      target: "Ecclesiastes 10:20",
+      rank: 5
+    },
+    {
+      target: "Numbers 16:3",
+      rank: 5
+    },
+    {
+      target: "1 Corinthians 3:17",
+      rank: 5
+    },
+    {
+      target: "Luke 19:14",
+      rank: 4
+    },
+    {
+      target: "Acts 7:39",
+      rank: 4
+    },
+    {
+      target: "Proverbs 30:11",
+      rank: 4
+    },
+    {
+      target: "Psalms 2:1-6",
+      rank: 4
+    },
+    {
+      target: "Acts 23:5",
+      rank: 4
+    },
+    {
+      target: "Psalms 12:3-4",
+      rank: 3
+    },
+    {
+      target: "Jeremiah 38:25-28",
+      rank: 3
+    },
+    {
+      target: "Proverbs 30:17",
+      rank: 3
+    },
+    {
+      target: "Acts 7:27",
+      rank: 3
+    },
+    {
+      target: "1 Thessalonians 4:8",
+      rank: 3
+    },
+    {
+      target: "Numbers 16:12-13",
+      rank: 2
+    },
+    {
+      target: "Genesis 3:5",
+      rank: 1
+    }
+  ],
+  "1.9": [
+    {
+      target: "Zechariah 3:2",
+      rank: 33
+    },
+    {
+      target: "2 Peter 2:11",
+      rank: 22
+    },
+    {
+      target: "Deuteronomy 34:6",
+      rank: 17
+    },
+    {
+      target: "Revelation 12:7",
+      rank: 16
+    },
+    {
+      target: "Daniel 12:1",
+      rank: 16
+    },
+    {
+      target: "Daniel 10:21",
+      rank: 15
+    },
+    {
+      target: "Daniel 10:13",
+      rank: 14
+    },
+    {
+      target: "1 Thessalonians 4:16",
+      rank: 12
+    },
+    {
+      target: "1 Peter 3:9",
+      rank: 11
+    },
+    {
+      target: "Luke 23:39-40",
+      rank: 8
+    },
+    {
+      target: "Exodus 22:28",
+      rank: 7
+    },
+    {
+      target: "Mark 15:29",
+      rank: 7
+    },
+    {
+      target: "Isaiah 37:10-20",
+      rank: 6
+    },
+    {
+      target: "1 Chronicles 12:17",
+      rank: 5
+    },
+    {
+      target: "Isaiah 36:13-21",
+      rank: 4
+    },
+    {
+      target: "Isaiah 37:3-4",
+      rank: 3
+    }
+  ],
+  "1.10": [
+    {
+      target: "2 Peter 2:12",
+      rank: 14
+    },
+    {
+      target: "Romans 1:21-22",
+      rank: 9
+    }
+  ],
+  "1.11": [
+    {
+      target: "2 Peter 2:15",
+      rank: 21
+    },
+    {
+      target: "1 John 3:12",
+      rank: 14
+    },
+    {
+      target: "Revelation 2:14",
+      rank: 14
+    },
+    {
+      target: "Genesis 4:3-14",
+      rank: 12
+    },
+    {
+      target: "Hebrews 11:4",
+      rank: 10
+    },
+    {
+      target: "Numbers 16:1-35",
+      rank: 9
+    },
+    {
+      target: "Numbers 26:9-10",
+      rank: 8
+    },
+    {
+      target: "Joshua 24:9-11",
+      rank: 6
+    },
+    {
+      target: "Micah 6:5",
+      rank: 6
+    },
+    {
+      target: "Deuteronomy 23:4",
+      rank: 6
+    },
+    {
+      target: "Numbers 31:16",
+      rank: 6
+    },
+    {
+      target: "Isaiah 3:9",
+      rank: 5
+    },
+    {
+      target: "Matthew 11:21",
+      rank: 5
+    },
+    {
+      target: "Matthew 23:13-16",
+      rank: 5
+    },
+    {
+      target: "Isaiah 3:11",
+      rank: 5
+    },
+    {
+      target: "Numbers 22:1-24",
+      rank: 4
+    },
+    {
+      target: "Zechariah 11:17",
+      rank: 3
+    },
+    {
+      target: "Ezekiel 13:3",
+      rank: 3
+    },
+    {
+      target: "Jeremiah 13:27",
+      rank: 3
+    },
+    {
+      target: "Luke 11:42-47",
+      rank: 2
+    }
+  ],
+  "1.12": [
+    {
+      target: "Matthew 15:13",
+      rank: 10
+    },
+    {
+      target: "2 Peter 2:17-20",
+      rank: 10
+    },
+    {
+      target: "Ezekiel 34:8",
+      rank: 9
+    },
+    {
+      target: "Proverbs 25:14",
+      rank: 8
+    },
+    {
+      target: "Philippians 3:19",
+      rank: 8
+    },
+    {
+      target: "Ephesians 4:14",
+      rank: 8
+    },
+    {
+      target: "Luke 21:34",
+      rank: 6
+    },
+    {
+      target: "2 Peter 2:13-14",
+      rank: 6
+    },
+    {
+      target: "John 15:4-6",
+      rank: 6
+    },
+    {
+      target: "1 Corinthians 11:20-22",
+      rank: 6
+    },
+    {
+      target: "Ezekiel 34:10",
+      rank: 5
+    },
+    {
+      target: "Luke 8:6",
+      rank: 5
+    },
+    {
+      target: "Ezekiel 34:2",
+      rank: 5
+    },
+    {
+      target: "Isaiah 56:10-12",
+      rank: 5
+    },
+    {
+      target: "Matthew 21:19-20",
+      rank: 4
+    },
+    {
+      target: "Hosea 6:4",
+      rank: 4
+    },
+    {
+      target: "Mark 4:6",
+      rank: 4
+    },
+    {
+      target: "1 Thessalonians 5:6-7",
+      rank: 4
+    },
+    {
+      target: "Psalms 1:3",
+      rank: 4
+    },
+    {
+      target: "1 Timothy 5:6",
+      rank: 4
+    },
+    {
+      target: "Luke 12:45",
+      rank: 4
+    },
+    {
+      target: "James 5:5",
+      rank: 4
+    },
+    {
+      target: "Matthew 13:6",
+      rank: 4
+    },
+    {
+      target: "Mark 11:20-21",
+      rank: 4
+    },
+    {
+      target: "Hebrews 6:4-8",
+      rank: 4
+    },
+    {
+      target: "Psalms 78:29-31",
+      rank: 3
+    },
+    {
+      target: "2 Chronicles 7:20",
+      rank: 3
+    },
+    {
+      target: "Luke 12:19-20",
+      rank: 3
+    },
+    {
+      target: "Ezekiel 34:18",
+      rank: 3
+    },
+    {
+      target: "Luke 16:19",
+      rank: 3
+    },
+    {
+      target: "Ezekiel 17:9",
+      rank: 3
+    },
+    {
+      target: "Psalms 37:2",
+      rank: 1
+    }
+  ],
+  "1.13": [
+    {
+      target: "2 Peter 2:17",
+      rank: 9
+    },
+    {
+      target: "Philippians 3:19",
+      rank: 8
+    },
+    {
+      target: "Isaiah 57:20",
+      rank: 7
+    },
+    {
+      target: "Psalms 65:7",
+      rank: 4
+    },
+    {
+      target: "2 Timothy 3:13",
+      rank: 3
+    },
+    {
+      target: "Revelation 14:10-11",
+      rank: 3
+    },
+    {
+      target: "Revelation 20:10",
+      rank: 3
+    },
+    {
+      target: "Psalms 93:3-4",
+      rank: 2
+    },
+    {
+      target: "Revelation 8:10-11",
+      rank: 2
+    },
+    {
+      target: "Jeremiah 5:22-23",
+      rank: 2
+    },
+    {
+      target: "Revelation 21:8",
+      rank: 1
+    }
+  ],
+  "1.14": [
+    {
+      target: "Deuteronomy 33:2",
+      rank: 17
+    },
+    {
+      target: "Psalms 50:3-5",
+      rank: 16
+    },
+    {
+      target: "Hebrews 11:5-6",
+      rank: 15
+    },
+    {
+      target: "2 Thessalonians 1:7-8",
+      rank: 15
+    },
+    {
+      target: "1 Thessalonians 3:13",
+      rank: 13
+    },
+    {
+      target: "Matthew 16:27",
+      rank: 12
+    },
+    {
+      target: "Matthew 25:31",
+      rank: 9
+    },
+    {
+      target: "Matthew 24:30-31",
+      rank: 9
+    },
+    {
+      target: "Genesis 5:18",
+      rank: 7
+    },
+    {
+      target: "Daniel 7:9-10",
+      rank: 6
+    },
+    {
+      target: "Job 19:25-27",
+      rank: 6
+    },
+    {
+      target: "1 Chronicles 1:1-3",
+      rank: 6
+    },
+    {
+      target: "Zechariah 14:5",
+      rank: 5
+    },
+    {
+      target: "Genesis 5:21-24",
+      rank: 5
+    },
+    {
+      target: "Revelation 1:7",
+      rank: 5
+    }
+  ],
+  "1.15": [
+    {
+      target: "1 Corinthians 4:5",
+      rank: 4
+    },
+    {
+      target: "1 Timothy 1:9",
+      rank: 4
+    },
+    {
+      target: "Ecclesiastes 11:9",
+      rank: 4
+    },
+    {
+      target: "Romans 14:10",
+      rank: 4
+    },
+    {
+      target: "Revelation 22:12-15",
+      rank: 4
+    },
+    {
+      target: "Romans 2:16",
+      rank: 3
+    },
+    {
+      target: "Romans 2:5",
+      rank: 3
+    },
+    {
+      target: "Acts 17:31",
+      rank: 3
+    },
+    {
+      target: "Exodus 16:8",
+      rank: 3
+    },
+    {
+      target: "John 5:27",
+      rank: 3
+    },
+    {
+      target: "Psalms 98:9",
+      rank: 3
+    },
+    {
+      target: "1 Samuel 2:3",
+      rank: 3
+    },
+    {
+      target: "Revelation 13:5-6",
+      rank: 3
+    },
+    {
+      target: "Psalms 50:1-6",
+      rank: 3
+    },
+    {
+      target: "Psalms 9:7-8",
+      rank: 3
+    },
+    {
+      target: "Matthew 12:31-37",
+      rank: 2
+    },
+    {
+      target: "Psalms 149:9",
+      rank: 2
+    },
+    {
+      target: "Malachi 3:13-15",
+      rank: 2
+    },
+    {
+      target: "1 Corinthians 5:13",
+      rank: 2
+    },
+    {
+      target: "Isaiah 37:22-36",
+      rank: 2
+    },
+    {
+      target: "Ecclesiastes 12:14",
+      rank: 2
+    },
+    {
+      target: "2 Peter 2:6-9",
+      rank: 2
+    },
+    {
+      target: "John 5:22-23",
+      rank: 2
+    },
+    {
+      target: "Psalms 37:6",
+      rank: 2
+    },
+    {
+      target: "Daniel 11:36",
+      rank: 2
+    },
+    {
+      target: "Psalms 31:18",
+      rank: 1
+    },
+    {
+      target: "Revelation 22:20",
+      rank: 1
+    },
+    {
+      target: "Psalms 73:9",
+      rank: 1
+    },
+    {
+      target: "Jude 1:16",
+      rank: 1
+    },
+    {
+      target: "Psalms 94:4",
+      rank: 1
+    },
+    {
+      target: "Romans 3:19-20",
+      rank: 1
+    },
+    {
+      target: "Daniel 7:20",
+      rank: 1
+    },
+    {
+      target: "Revelation 13:11",
+      rank: 0
+    }
+  ],
+  "1.16": [
+    {
+      target: "2 Peter 2:18",
+      rank: 14
+    },
+    {
+      target: "Philippians 2:14",
+      rank: 11
+    },
+    {
+      target: "2 Peter 2:10",
+      rank: 10
+    },
+    {
+      target: "1 Timothy 6:5",
+      rank: 9
+    },
+    {
+      target: "Jude 1:18",
+      rank: 7
+    },
+    {
+      target: "2 Peter 3:3",
+      rank: 7
+    },
+    {
+      target: "1 Peter 4:2",
+      rank: 7
+    },
+    {
+      target: "James 1:14-15",
+      rank: 7
+    },
+    {
+      target: "1 Corinthians 10:10",
+      rank: 7
+    },
+    {
+      target: "1 Peter 2:11",
+      rank: 7
+    },
+    {
+      target: "Leviticus 19:15",
+      rank: 6
+    },
+    {
+      target: "Psalms 17:10",
+      rank: 5
+    },
+    {
+      target: "1 Peter 1:14",
+      rank: 5
+    },
+    {
+      target: "Psalms 73:9-11",
+      rank: 5
+    },
+    {
+      target: "Numbers 16:11",
+      rank: 5
+    },
+    {
+      target: "Psalms 15:4",
+      rank: 5
+    },
+    {
+      target: "John 6:61",
+      rank: 5
+    },
+    {
+      target: "Jude 1:15",
+      rank: 5
+    },
+    {
+      target: "Isaiah 29:24",
+      rank: 5
+    },
+    {
+      target: "2 Peter 2:1-3",
+      rank: 5
+    },
+    {
+      target: "Galatians 5:16",
+      rank: 5
+    },
+    {
+      target: "Numbers 14:36",
+      rank: 4
+    },
+    {
+      target: "Galatians 5:24",
+      rank: 4
+    },
+    {
+      target: "Deuteronomy 1:27",
+      rank: 4
+    },
+    {
+      target: "Job 34:19",
+      rank: 4
+    },
+    {
+      target: "Luke 5:30",
+      rank: 4
+    },
+    {
+      target: "Psalms 106:25",
+      rank: 4
+    },
+    {
+      target: "John 6:41",
+      rank: 4
+    },
+    {
+      target: "Luke 19:7",
+      rank: 4
+    },
+    {
+      target: "Proverbs 28:21",
+      rank: 4
+    },
+    {
+      target: "Job 32:21",
+      rank: 4
+    },
+    {
+      target: "Job 17:4-5",
+      rank: 4
+    },
+    {
+      target: "James 2:1-9",
+      rank: 4
+    },
+    {
+      target: "2 Timothy 4:3",
+      rank: 4
+    },
+    {
+      target: "Luke 15:2",
+      rank: 4
+    },
+    {
+      target: "1 Thessalonians 4:5",
+      rank: 4
+    }
+  ],
+  "1.17": [
+    {
+      target: "2 Peter 3:2",
+      rank: 16
+    },
+    {
+      target: "1 John 4:6",
+      rank: 7
+    },
+    {
+      target: "Ephesians 4:11",
+      rank: 6
+    },
+    {
+      target: "Acts 20:35",
+      rank: 3
+    },
+    {
+      target: "Malachi 4:4",
+      rank: 2
+    },
+    {
+      target: "Ephesians 2:20",
+      rank: 1
+    }
+  ],
+  "1.18": [
+    {
+      target: "2 Peter 3:3",
+      rank: 24
+    },
+    {
+      target: "2 Timothy 4:3",
+      rank: 18
+    },
+    {
+      target: "2 Timothy 3:1-5",
+      rank: 17
+    },
+    {
+      target: "2 Timothy 3:13",
+      rank: 17
+    },
+    {
+      target: "1 Timothy 4:1-2",
+      rank: 15
+    },
+    {
+      target: "2 Peter 2:1",
+      rank: 12
+    },
+    {
+      target: "Acts 20:29",
+      rank: 11
+    },
+    {
+      target: "Jude 1:16",
+      rank: 11
+    },
+    {
+      target: "Psalms 14:1-2",
+      rank: 11
+    }
+  ],
+  "1.19": [
+    {
+      target: "1 Corinthians 2:14",
+      rank: 9
+    },
+    {
+      target: "Proverbs 18:1",
+      rank: 8
+    },
+    {
+      target: "Romans 8:9",
+      rank: 7
+    },
+    {
+      target: "James 3:15",
+      rank: 6
+    },
+    {
+      target: "Hebrews 10:25",
+      rank: 4
+    },
+    {
+      target: "John 3:5-6",
+      rank: 4
+    },
+    {
+      target: "Hosea 9:10",
+      rank: 4
+    },
+    {
+      target: "Ezekiel 14:7",
+      rank: 3
+    },
+    {
+      target: "Isaiah 65:5",
+      rank: 3
+    },
+    {
+      target: "Hosea 4:14",
+      rank: 3
+    },
+    {
+      target: "1 Corinthians 6:19",
+      rank: 2
+    }
+  ],
+  "1.20": [
+    {
+      target: "Ephesians 6:18",
+      rank: 85
+    },
+    {
+      target: "Romans 8:26-27",
+      rank: 71
+    },
+    {
+      target: "1 Corinthians 14:15",
+      rank: 48
+    },
+    {
+      target: "Colossians 2:7",
+      rank: 40
+    },
+    {
+      target: "1 Thessalonians 5:11",
+      rank: 34
+    },
+    {
+      target: "1 Corinthians 14:4-5",
+      rank: 28
+    },
+    {
+      target: "Romans 8:15",
+      rank: 20
+    },
+    {
+      target: "1 Corinthians 14:26",
+      rank: 18
+    },
+    {
+      target: "Ephesians 4:29",
+      rank: 18
+    },
+    {
+      target: "Acts 9:31",
+      rank: 18
+    },
+    {
+      target: "Galatians 4:6",
+      rank: 18
+    },
+    {
+      target: "Ephesians 4:16",
+      rank: 14
+    },
+    {
+      target: "1 John 5:4",
+      rank: 13
+    },
+    {
+      target: "James 2:22",
+      rank: 13
+    },
+    {
+      target: "Ephesians 4:12",
+      rank: 12
+    },
+    {
+      target: "Zechariah 12:10",
+      rank: 11
+    },
+    {
+      target: "Titus 1:1",
+      rank: 11
+    },
+    {
+      target: "Romans 15:2",
+      rank: 10
+    },
+    {
+      target: "Acts 26:18",
+      rank: 10
+    },
+    {
+      target: "1 Corinthians 10:23",
+      rank: 9
+    },
+    {
+      target: "Acts 15:9",
+      rank: 9
+    },
+    {
+      target: "1 Corinthians 1:8",
+      rank: 8
+    },
+    {
+      target: "Jude 1:3",
+      rank: 8
+    },
+    {
+      target: "Revelation 13:10",
+      rank: 8
+    },
+    {
+      target: "2 Timothy 1:5",
+      rank: 7
+    },
+    {
+      target: "1 Timothy 1:4",
+      rank: 7
+    },
+    {
+      target: "2 Peter 1:1",
+      rank: 7
+    }
+  ],
+  "1.21": [
+    {
+      target: "1 John 4:16",
+      rank: 27
+    },
+    {
+      target: "Hebrews 9:28",
+      rank: 19
+    },
+    {
+      target: "Lamentations 3:25-26",
+      rank: 19
+    },
+    {
+      target: "2 Peter 3:12",
+      rank: 16
+    },
+    {
+      target: "John 15:9-10",
+      rank: 16
+    },
+    {
+      target: "2 Thessalonians 3:5",
+      rank: 14
+    },
+    {
+      target: "Revelation 12:11",
+      rank: 10
+    },
+    {
+      target: "Titus 2:13-14",
+      rank: 9
+    },
+    {
+      target: "Romans 6:23",
+      rank: 9
+    },
+    {
+      target: "John 14:21",
+      rank: 9
+    },
+    {
+      target: "Romans 5:21",
+      rank: 7
+    },
+    {
+      target: "Romans 8:39",
+      rank: 7
+    },
+    {
+      target: "2 Timothy 1:2",
+      rank: 7
+    },
+    {
+      target: "1 John 3:16-17",
+      rank: 5
+    },
+    {
+      target: "Luke 12:36-40",
+      rank: 5
+    },
+    {
+      target: "2 Timothy 4:8",
+      rank: 5
+    },
+    {
+      target: "1 John 5:10-11",
+      rank: 5
+    },
+    {
+      target: "1 John 5:18",
+      rank: 5
+    },
+    {
+      target: "Jude 1:24",
+      rank: 4
+    },
+    {
+      target: "2 Timothy 1:18",
+      rank: 4
+    },
+    {
+      target: "Matthew 24:42-51",
+      rank: 4
+    },
+    {
+      target: "John 1:17",
+      rank: 4
+    },
+    {
+      target: "1 John 5:21",
+      rank: 3
+    },
+    {
+      target: "Job 14:14",
+      rank: 3
+    },
+    {
+      target: "Romans 5:5",
+      rank: 3
+    },
+    {
+      target: "Acts 11:23",
+      rank: 3
+    },
+    {
+      target: "1 Timothy 1:2",
+      rank: 2
+    },
+    {
+      target: "2 Timothy 1:16",
+      rank: 1
+    }
+  ],
+  "1.22": [
+    {
+      target: "James 5:19-20",
+      rank: 16
+    },
+    {
+      target: "Galatians 6:1",
+      rank: 10
+    },
+    {
+      target: "1 John 5:16-18",
+      rank: 8
+    },
+    {
+      target: "Hebrews 6:4-8",
+      rank: 6
+    },
+    {
+      target: "Jude 1:4-13",
+      rank: 6
+    },
+    {
+      target: "Ezekiel 34:17",
+      rank: 5
+    },
+    {
+      target: "Galatians 4:20",
+      rank: 3
+    }
+  ],
+  "1.23": [
+    {
+      target: "1 Timothy 4:16",
+      rank: 28
+    },
+    {
+      target: "1 Corinthians 15:33",
+      rank: 21
+    },
+    {
+      target: "Revelation 3:4",
+      rank: 20
+    },
+    {
+      target: "2 Corinthians 7:10-12",
+      rank: 12
+    },
+    {
+      target: "2 Thessalonians 3:14",
+      rank: 11
+    },
+    {
+      target: "Romans 11:14",
+      rank: 10
+    },
+    {
+      target: "Zechariah 3:2-5",
+      rank: 9
+    },
+    {
+      target: "Revelation 3:18",
+      rank: 8
+    },
+    {
+      target: "Isaiah 64:6",
+      rank: 7
+    },
+    {
+      target: "1 Corinthians 5:3-5",
+      rank: 6
+    },
+    {
+      target: "1 Corinthians 3:15",
+      rank: 5
+    },
+    {
+      target: "Leviticus 13:47-59",
+      rank: 4
+    },
+    {
+      target: "Lamentations 4:14",
+      rank: 4
+    },
+    {
+      target: "Amos 4:11",
+      rank: 4
+    },
+    {
+      target: "Leviticus 14:47",
+      rank: 4
+    },
+    {
+      target: "1 Corinthians 5:9-11",
+      rank: 4
+    },
+    {
+      target: "Leviticus 15:17",
+      rank: 2
+    }
+  ],
+  "1.24": [
+    {
+      target: "2 Timothy 4:18",
+      rank: 47
+    },
+    {
+      target: "Ephesians 3:20",
+      rank: 46
+    },
+    {
+      target: "Colossians 1:22",
+      rank: 42
+    },
+    {
+      target: "John 10:29-30",
+      rank: 30
+    },
+    {
+      target: "Hebrews 13:20-21",
+      rank: 27
+    },
+    {
+      target: "Ephesians 5:27",
+      rank: 22
+    },
+    {
+      target: "2 Corinthians 4:14",
+      rank: 21
+    },
+    {
+      target: "Romans 16:25-27",
+      rank: 21
+    },
+    {
+      target: "Revelation 14:5",
+      rank: 17
+    },
+    {
+      target: "Romans 8:31",
+      rank: 13
+    },
+    {
+      target: "Matthew 16:27",
+      rank: 12
+    },
+    {
+      target: "2 Corinthians 4:17",
+      rank: 12
+    },
+    {
+      target: "1 Peter 4:13",
+      rank: 11
+    },
+    {
+      target: "Psalms 21:6",
+      rank: 10
+    },
+    {
+      target: "Jude 1:21",
+      rank: 10
+    },
+    {
+      target: "Matthew 5:12",
+      rank: 9
+    },
+    {
+      target: "2 Corinthians 11:2",
+      rank: 9
+    },
+    {
+      target: "Romans 14:4",
+      rank: 9
+    },
+    {
+      target: "Colossians 1:28",
+      rank: 9
+    },
+    {
+      target: "1 Thessalonians 4:16-17",
+      rank: 9
+    },
+    {
+      target: "Psalms 43:4",
+      rank: 8
+    },
+    {
+      target: "Colossians 3:4",
+      rank: 8
+    },
+    {
+      target: "Luke 9:26",
+      rank: 8
+    },
+    {
+      target: "Matthew 25:31",
+      rank: 7
+    },
+    {
+      target: "Matthew 19:28",
+      rank: 7
+    }
+  ],
+  "1.25": [
+    {
+      target: "1 Timothy 1:17",
+      rank: 30
+    },
+    {
+      target: "Revelation 5:13-14",
+      rank: 24
+    },
+    {
+      target: "John 5:44",
+      rank: 14
+    },
+    {
+      target: "1 Peter 5:10-11",
+      rank: 13
+    },
+    {
+      target: "Revelation 4:9-11",
+      rank: 12
+    },
+    {
+      target: "Romans 11:36",
+      rank: 10
+    },
+    {
+      target: "Isaiah 12:2",
+      rank: 9
+    },
+    {
+      target: "Psalms 147:5",
+      rank: 8
+    },
+    {
+      target: "Revelation 1:6",
+      rank: 8
+    },
+    {
+      target: "Matthew 6:13",
+      rank: 8
+    },
+    {
+      target: "Hebrews 13:8",
+      rank: 8
+    },
+    {
+      target: "Titus 2:13",
+      rank: 7
+    },
+    {
+      target: "Ephesians 3:21",
+      rank: 6
+    },
+    {
+      target: "Daniel 4:37",
+      rank: 6
+    },
+    {
+      target: "Psalms 72:18-19",
+      rank: 6
+    },
+    {
+      target: "1 Chronicles 29:11",
+      rank: 6
+    },
+    {
+      target: "Romans 16:27",
+      rank: 6
+    },
+    {
+      target: "2 Peter 3:18",
+      rank: 5
+    },
+    {
+      target: "Titus 2:10",
+      rank: 5
+    },
+    {
+      target: "Titus 1:3-4",
+      rank: 5
+    },
+    {
+      target: "John 4:22",
+      rank: 5
+    },
+    {
+      target: "Isaiah 45:21",
+      rank: 5
+    },
+    {
+      target: "1 Timothy 2:3",
+      rank: 4
+    },
+    {
+      target: "Psalms 104:24",
+      rank: 4
+    },
+    {
+      target: "Ephesians 1:8",
+      rank: 4
+    },
+    {
+      target: "Psalms 78:20",
+      rank: 4
+    },
+    {
+      target: "2 Peter 1:1",
+      rank: 4
+    },
+    {
+      target: "Ephesians 3:10",
+      rank: 4
+    },
+    {
+      target: "Titus 3:4",
+      rank: 4
+    },
+    {
+      target: "1 Peter 4:11",
+      rank: 4
+    },
+    {
+      target: "Romans 11:33",
+      rank: 3
+    }
+  ]
+};
+export {
+  JUD as default
+};
