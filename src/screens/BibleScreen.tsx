@@ -125,14 +125,24 @@ interface BibleScreenProps {
   onAskScripture?: (book: string, chapter: number, verseStart: number, verseEnd: number) => void;
   initialReference?: { book: string; chapter: number; verseStart: number | null; verseEnd: number | null } | null;
   onBack?: () => void;
+  translation?: BibleTranslation;
+  onTranslationChange?: (tr: BibleTranslation) => void;
 }
 
-export default function BibleScreen({ onStartWalk, onAskScripture, initialReference, onBack }: BibleScreenProps) {
+export default function BibleScreen({ onStartWalk, onAskScripture, initialReference, onBack, translation: propTranslation, onTranslationChange }: BibleScreenProps) {
   const [view, setView] = useState<View>('reader');
-  const [translation, setTranslation] = useState<BibleTranslation>(() => {
+  const [localTranslation, setLocalTranslation] = useState<BibleTranslation>(() => {
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('solapath_translation') : null;
     return (saved as BibleTranslation) || 'WEB';
   });
+  const translation = propTranslation || localTranslation;
+  const setTranslation = (tr: BibleTranslation) => {
+    if (onTranslationChange) onTranslationChange(tr);
+    else setLocalTranslation(tr);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('solapath_translation', tr);
+    }
+  };
   const [highlightMode, setHighlightMode] = useState<'word' | 'verse'>('word');
   const [highlightWordSel, setHighlightWordSel] = useState<number | null>(null);
   const [highlightWordEnd, setHighlightWordEnd] = useState<number | null>(null);
@@ -2387,7 +2397,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                   if (t.id !== translation) {
                     vibrate(5);
                     setTranslation(t.id);
-                    localStorage.setItem('solapath_translation', t.id);
+                    setTranslation(t.id);
                     loadChapter(book, chapter);
                   }
                   setShowVersionSheet(false);

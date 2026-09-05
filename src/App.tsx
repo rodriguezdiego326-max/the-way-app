@@ -26,6 +26,13 @@ import ProductionStatusScreen from '@/screens/ProductionStatusScreen';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import AuthForm from '@/components/AuthForm';
 import { BookOpen } from 'lucide-react';
+import type { BibleTranslation } from '@/lib/bibleTypes';
+
+function getInitialTranslation(): BibleTranslation {
+  if (typeof localStorage === 'undefined') return 'WEB';
+  const saved = localStorage.getItem('solapath_translation');
+  return saved === 'RV1909' ? 'RV1909' : 'WEB';
+}
 
 // Phase 8 imports
 import TogetherScreen from '@/screens/TogetherScreen';
@@ -162,6 +169,14 @@ export default function App() {
   const [activeAskConversationId, setActiveAskConversationId] = useState<string | null>(null);
   const [askKeyboardOpen, setAskKeyboardOpen] = useState(false);
   const [activeChurchId, setActiveChurchId] = useState<string | null>(null);
+  const [globalTranslation, setGlobalTranslation] = useState<BibleTranslation>(getInitialTranslation);
+
+  function handleTranslationChange(tr: BibleTranslation) {
+    setGlobalTranslation(tr);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('solapath_translation', tr);
+    }
+  }
   const authGenerationRef = useRef(0);
 
   useEffect(() => {
@@ -388,6 +403,8 @@ export default function App() {
       <ErrorBoundary>
         <BibleScreen
           onStartWalk={handleStartWalk}
+          translation={globalTranslation}
+          onTranslationChange={handleTranslationChange}
           onAskScripture={(b, c, vs, ve) => {
             const ref = vs === ve ? `${b} ${c}:${vs}` : `${b} ${c}:${vs}\u2013${ve}`;
             setOverlay({ type: 'none' });
@@ -406,6 +423,8 @@ export default function App() {
       <ErrorBoundary>
         <BibleScreen
           onStartWalk={handleStartWalk}
+          translation={globalTranslation}
+          onTranslationChange={handleTranslationChange}
           onAskScripture={(b, c, vs, ve) => {
             const ref = vs === ve ? `${b} ${c}:${vs}` : `${b} ${c}:${vs}\u2013${ve}`;
             setOverlay({ type: 'none' });
@@ -760,12 +779,12 @@ export default function App() {
           onReadInApp={handleReadInApp}
         />
       )}
-      {activeTab === 'bible' && <BibleScreen onStartWalk={handleStartWalk} onAskScripture={(b, c, vs, ve) => {
+      {activeTab === 'bible' && <BibleScreen onStartWalk={handleStartWalk} translation={globalTranslation} onTranslationChange={handleTranslationChange} onAskScripture={(b, c, vs, ve) => {
         const ref = vs === ve ? `${b} ${c}:${vs}` : `${b} ${c}:${vs}\u2013${ve}`;
         setActiveTab('ask');
         setAskContext(ref);
       }} />}
-      {activeTab === 'ask' && <AskScreen theologicalDepth={profile?.theological_depth || 'simple'} profile={profile} onStartWalk={handleStartWalk} onOpenBibleReference={handleOpenBibleReference} initialContext={askContext} onContextConsumed={() => setAskContext(null)} onKeyboardVisibilityChange={setAskKeyboardOpen} activeConversationId={activeAskConversationId} onConversationChange={setActiveAskConversationId} />}
+      {activeTab === 'ask' && <AskScreen theologicalDepth={profile?.theological_depth || 'simple'} profile={profile} onStartWalk={handleStartWalk} onOpenBibleReference={handleOpenBibleReference} initialContext={askContext} onContextConsumed={() => setAskContext(null)} onKeyboardVisibilityChange={setAskKeyboardOpen} activeConversationId={activeAskConversationId} onConversationChange={setActiveAskConversationId} translation={globalTranslation} onTranslationChange={handleTranslationChange} />}
 
       {activeTab === 'prayer' && <PrayerScreen profile={profile} />}
       {activeTab === 'you' && <YouScreen profile={profile} onProfileUpdate={handleProfileUpdate} session={session} onSignOut={handleSignOut} onShowAuth={() => setShowAuth(true)} onOpenFamily={() => setOverlay({ type: 'family' })} onOpenReach={() => setOverlay({ type: 'reach' })} onOpenLibrarySearch={() => setOverlay({ type: 'library_search' })} onOpenAdminSources={() => setOverlay({ type: 'admin_sources' })} onOpenRetrievalDebug={() => setOverlay({ type: 'retrieval_debug' })} onOpenRAGTests={() => setOverlay({ type: 'rag_tests' })} onOpenPhase6Tests={() => setOverlay({ type: 'phase6_tests' })} onOpenQADashboard={() => setOverlay({ type: 'qa_dashboard' })} onOpenSourceBatches={() => setOverlay({ type: 'source_batches' })} onOpenReleaseGate={() => setOverlay({ type: 'release_gate' })} onOpenProductionStatus={() => setOverlay({ type: 'production_status' })} onOpenTogether={() => setOverlay({ type: 'together' })} onOpenMyChurch={() => setOverlay({ type: 'my_church' })} onOpenPhase8Tests={() => setOverlay({ type: 'phase8_tests' })} onOpenLegacy={() => setOverlay({ type: 'legacy_home' })} onOpenPhase9Tests={() => setOverlay({ type: 'phase9_tests' })} onOpenPrivacyCenter={() => setOverlay({ type: 'privacy_center' })} onOpenProductionReadiness={() => setOverlay({ type: 'production_readiness' })} onOpenPhase10Tests={() => setOverlay({ type: 'phase10_tests' })} onOpenBetaFeedback={() => setOverlay({ type: 'beta_feedback' })} />}

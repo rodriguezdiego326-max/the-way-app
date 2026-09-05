@@ -4,6 +4,7 @@ import type {
   StructuredTheologicalResponse,
   StudyMemoryEvidence,
 } from './intelligenceTypes';
+import type { InlineScriptureReference } from './intelligenceTypes';
 import type { Profile, Memory } from './types';
 
 // ============================================================
@@ -20,6 +21,7 @@ export async function fetchIntelligenceResponse(
   sessionId?: string,
   responseLanguage?: string,
   studyMemoryEvidence?: StudyMemoryEvidence[],
+  lastAssistantContext?: IntelligenceRequest['last_assistant_context'],
 ): Promise<StructuredTheologicalResponse> {
   // Retrieve relevant memories (selective, not all)
   const relevantMemories = await retrieveRelevantMemories(question, profile);
@@ -42,6 +44,7 @@ export async function fetchIntelligenceResponse(
     relevant_memories: relevantMemories,
     study_memory_evidence: studyMemoryEvidence,
     conversation_history: conversationHistory,
+    last_assistant_context: lastAssistantContext,
     session_id: sessionId,
   };
 

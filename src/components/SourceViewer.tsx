@@ -14,6 +14,18 @@ const CATEGORY_LABELS: Record<string, { label: string; icon: typeof BookOpen }> 
   scripture: { label: 'Scripture Sources', icon: BookOpen },
 };
 
+function dedupSources(sources: SourceCitation[]): SourceCitation[] {
+  const seen = new Set<string>();
+  const result: SourceCitation[] = [];
+  for (const s of sources) {
+    const key = `${s.source_id}-${s.section || ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(s);
+  }
+  return result;
+}
+
 export default function SourceViewer({ sources, onClose }: SourceViewerProps) {
   const verifiedSources = sources.filter((s) => s.verified);
   // Unverified sources are never shown to users in Build 52+
@@ -63,8 +75,8 @@ export default function SourceViewer({ sources, onClose }: SourceViewerProps) {
                       <p className="ui-label">{meta.label}</p>
                     </div>
                     <div className="flex flex-col gap-3">
-                      {grouped[cat].map((source, i) => (
-                        <div key={i} className="premium-card p-4">
+                      {dedupSources(grouped[cat]).map((source, i) => (
+                        <div key={`${source.source_id}-${source.section}-${i}`} className="premium-card p-4">
                           <div className="flex items-start gap-3">
                             <div className="w-8 h-8 rounded-lg bg-sage-500/10 border border-sage-500/20 flex items-center justify-center shrink-0">
                               <ShieldCheck size={15} className="text-sage-400" />

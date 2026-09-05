@@ -128,11 +128,6 @@ function getAskLang(translation: BibleTranslation): AskLang {
   return translation === 'RV1909' ? 'es' : 'en';
 }
 
-function getActiveTranslation(): BibleTranslation {
-  if (typeof localStorage === 'undefined') return 'WEB';
-  return (localStorage.getItem('solapath_translation') as BibleTranslation) || 'WEB';
-}
-
 function localizeRef(ref: string, translation: BibleTranslation): string {
   const parsed = parsePassageReference(ref);
   if (!parsed || parsed.verseStart === null) return ref;
@@ -143,7 +138,7 @@ function localizeRef(ref: string, translation: BibleTranslation): string {
   return `${bookName} ${parsed.chapter}:${parsed.verseStart}\u2013${parsed.verseEnd}`;
 }
 
-const SCRIPTURE_REF_REGEX = /((?:1|2|3|I|II|III)\s)?(?:Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalm|Psalms|Proverbs|Ecclesiastes|Song of Solomon|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation)\s+\d+:\d+(?:[–-]\d+)?(?:\s*[:–-]\s*\d+(?:[–-]\d+)?)?/g;
+const SCRIPTURE_REF_REGEX = /((?:1|2|3|I|II|III)\s)?(?:Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalm|Psalms|Proverbs|Ecclesiastes|Song of Solomon|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans|Corinthians|Galatians|Ephesians|Philippians|Colossians|Thessalonians|Timothy|Titus|Philemon|Hebrews|James|Peter|Jude|Revelation|Génesis|Éxodo|Levítico|Números|Deuteronomio|Josué|Jueces|Rut|Samuel|Reyes|Crónicas|Esdras|Nehemías|Ester|Job|Salmos|Proverbios|Eclesiastés|Cantares|Isaías|Jeremías|Lamentaciones|Ezequiel|Daniel|Oseas|Joel|Amós|Abdías|Jonás|Miqueas|Nahum|Habacuc|Sofonías|Hageo|Zacarías|Malaquías|Mateo|Marcos|Lucas|Juan|Hechos|Romanos|Corintios|Gálatas|Efesios|Filipenses|Colosenses|Tesalonicenses|Timoteo|Tito|Filemón|Hebreos|Santiago|Pedro|Judas|Apocalipsis)\s+\d+:\d+(?:[–-]\d+)?(?:\s*[:–-]\s*\d+(?:[–-]\d+)?)?/g;
 
 type TextScale = 'small' | 'default' | 'large' | 'extra_large';
 
@@ -168,9 +163,11 @@ interface AskScreenProps {
   onKeyboardVisibilityChange?: (visible: boolean) => void;
   activeConversationId?: string | null;
   onConversationChange?: (id: string | null) => void;
+  translation: BibleTranslation;
+  onTranslationChange: (tr: BibleTranslation) => void;
 }
 
-export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOpenBibleReference, initialContext, onContextConsumed, onKeyboardVisibilityChange, activeConversationId, onConversationChange }: AskScreenProps) {
+export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOpenBibleReference, initialContext, onContextConsumed, onKeyboardVisibilityChange, activeConversationId, onConversationChange, translation, onTranslationChange }: AskScreenProps) {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [vvHeight, setVvHeight] = useState(typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.height : (typeof window !== 'undefined' ? window.innerHeight : 800));
   const [nativeKeyboardHeight, setNativeKeyboardHeight] = useState(0);
@@ -191,7 +188,8 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
   const [textScale, setTextScale] = useState<TextScale>('default');
   const [showTextSizeMenu, setShowTextSizeMenu] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-  const [activeTranslation, setActiveTranslation] = useState<BibleTranslation>(getActiveTranslation());
+  const activeTranslation = translation;
+  const setActiveTranslation = onTranslationChange;
   const [showChatHistory, setShowChatHistory] = useState(false);
   const [conversationList, setConversationList] = useState<Array<{ id: string; title: string | null; updated_at: string; language: string | null }>>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -538,6 +536,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
         undefined,
         askLang === 'es' ? 'Spanish' : 'English',
         memoryEvidence,
+        undefined,
       );
 
       // Guard: ignore if a newer request has started or conversation changed
@@ -616,6 +615,23 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
         console.warn('[AskScreen] study memory retrieval failed, continuing without:', memErr);
       }
 
+      // Build last assistant context for follow-up reference resolution
+      const lastAssistantItem = [...thread].reverse().find(item => item.kind === 'assistant');
+      const lastAssistantCtx = lastAssistantItem && lastAssistantItem.kind === 'assistant' && lastAssistantItem.response.last_assistant_context
+        ? lastAssistantItem.response.last_assistant_context
+        : lastAssistantItem && lastAssistantItem.kind === 'assistant' && lastAssistantItem.response.inline_references && lastAssistantItem.response.inline_references.length > 0
+          ? {
+              topic: lastAssistantItem.response.answer_summary.slice(0, 200),
+              scripture_references: lastAssistantItem.response.inline_references.map(r => ({
+                canonical_book: r.canonical_book,
+                chapter: r.chapter,
+                verse_start: r.verse_start,
+                verse_end: r.verse_end,
+                role: r.role as 'primary' | 'supporting',
+              })),
+            }
+          : null;
+
       const aiResponse = await fetchIntelligenceResponse(
         text,
         profile,
@@ -624,6 +640,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
         undefined,
         askLang === 'es' ? 'Spanish' : 'English',
         memoryEvidence,
+        lastAssistantCtx,
       );
 
       // Guard: ignore if a newer request has started or conversation changed
@@ -708,13 +725,26 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
                   {t.prompt}
                 </h1>
               </div>
-              <button
-                onClick={() => { vibrate(6); loadConversationList(); setShowChatHistory(true); }}
-                aria-label={t.chatHistory}
-                className="w-10 h-10 rounded-full bg-ink-800/50 backdrop-blur-sm border border-ink-600/30 flex items-center justify-center text-ivory-300 hover:text-ivory-100 transition-colors no-tap-highlight"
-              >
-                <MessageSquare size={18} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    vibrate(4);
+                    const newTr: BibleTranslation = activeTranslation === 'WEB' ? 'RV1909' : 'WEB';
+                    setActiveTranslation(newTr);
+                  }}
+                  aria-label="Translation"
+                  className="px-3 h-10 rounded-full bg-ink-800/50 backdrop-blur-sm border border-ink-600/30 flex items-center gap-1.5 text-ivory-300 hover:text-ivory-100 transition-colors no-tap-highlight text-xs font-medium"
+                >
+                  {activeTranslation === 'WEB' ? 'WEB' : 'RV1909'}
+                </button>
+                <button
+                  onClick={() => { vibrate(6); loadConversationList(); setShowChatHistory(true); }}
+                  aria-label={t.chatHistory}
+                  className="w-10 h-10 rounded-full bg-ink-800/50 backdrop-blur-sm border border-ink-600/30 flex items-center justify-center text-ivory-300 hover:text-ivory-100 transition-colors no-tap-highlight"
+                >
+                  <MessageSquare size={18} />
+                </button>
+              </div>
             </div>
           </header>
 
@@ -844,9 +874,6 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
                       onClick={() => {
                         vibrate(4);
                         setActiveTranslation(tr);
-                        if (typeof localStorage !== 'undefined') {
-                          localStorage.setItem('solapath_translation', tr);
-                        }
                       }}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all no-tap-highlight ${
                         activeTranslation === tr

@@ -130,13 +130,37 @@ export interface StructuredTheologicalResponse {
   is_development_mode?: boolean;
   verification_state?: VerificationState;
   has_development_content?: boolean;
+  grounding_level?: GroundingLevel;
+  inline_references?: InlineScriptureReference[];
+  last_assistant_context?: {
+    topic: string;
+    scripture_references: Array<{
+      canonical_book: string;
+      chapter: number;
+      verse_start: number;
+      verse_end: number;
+      role: 'primary' | 'supporting';
+    }>;
+  };
 }
 
 export type VerificationState =
   | 'ALL_SOURCES_VERIFIED'
   | 'PARTIALLY_VERIFIED'
+  | 'SCRIPTURE_VERIFIED'
   | 'SOURCES_UNAVAILABLE'
   | 'NO_EXTERNAL_SOURCES_REQUIRED';
+
+export type GroundingLevel = 'SCRIPTURE_ONLY' | 'SCRIPTURE_PLUS_THEOLOGY' | 'INSUFFICIENT';
+
+export interface InlineScriptureReference {
+  display_text: string;
+  canonical_book: string;
+  chapter: number;
+  verse_start: number;
+  verse_end: number;
+  role: 'primary' | 'supporting';
+}
 
 export interface RAGCitation {
   source_id: string;
@@ -235,6 +259,16 @@ export interface IntelligenceRequest {
     role: 'user' | 'assistant';
     body: string;
   }>;
+  last_assistant_context?: {
+    topic: string;
+    scripture_references: Array<{
+      canonical_book: string;
+      chapter: number;
+      verse_start: number;
+      verse_end: number;
+      role: 'primary' | 'supporting';
+    }>;
+  } | null;
   session_id?: string;
 }
 

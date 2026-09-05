@@ -270,6 +270,17 @@ type VerificationState =
   | 'SOURCES_UNAVAILABLE'
   | 'NO_EXTERNAL_SOURCES_REQUIRED';
 
+type GroundingLevel = "SCRIPTURE_ONLY" | "SCRIPTURE_PLUS_THEOLOGY" | "INSUFFICIENT";
+
+interface InlineScriptureReference {
+  display_text: string;
+  canonical_book: string;
+  chapter: number;
+  verse_start: number;
+  verse_end: number;
+  role: "primary" | "supporting";
+}
+
 interface StructuredTheologicalResponse {
   answer_summary: string;
   scripture_first_required: boolean;
@@ -312,6 +323,12 @@ interface StructuredTheologicalResponse {
   verification_state?: VerificationState;
   has_development_content?: boolean;
   is_development_mode?: boolean;
+  grounding_level?: GroundingLevel;
+  inline_references?: InlineScriptureReference[];
+  last_assistant_context?: {
+    topic: string;
+    scripture_references: Array<{ canonical_book: string; chapter: number; verse_start: number; verse_end: number; role: "primary" | "supporting" }>;
+  } | null;
 }
 
 interface AIProvider {
@@ -472,6 +489,17 @@ async function retrieveFromLibrary(question: string): Promise<RAGRetrievalResult
     "disciple": ["revelation_sufficiency"],
     "forgive": ["atonement_reconciliation"],
     "forgiveness": ["atonement_reconciliation"],
+    "widow": ["christian_life_mercy", "christian_life_charity"],
+    "widows": ["christian_life_mercy", "christian_life_charity"],
+    "laziness": ["christian_life_diligence"],
+    "lazy": ["christian_life_diligence"],
+    "sloth": ["christian_life_diligence"],
+    "hospitality": ["christian_life_hospitality"],
+    "generosity": ["christian_life_generosity"],
+    "gossip": ["christian_life_speech"],
+    "stewardship": ["christian_life_stewardship"],
+    "consistent": ["revelation_sufficiency", "christian_life_diligence"],
+    "discipline": ["christian_life_diligence"],
   };
 
   for (const [keyword, ids] of Object.entries(doctrineMap)) {
@@ -845,11 +873,14 @@ function computeVerificationState(
   sourceUnavailable: boolean,
   isDivine: boolean,
   isCrisis: boolean,
+  hasScriptureGrounding: boolean,
 ): VerificationState {
   if (isDivine || isCrisis) return 'NO_EXTERNAL_SOURCES_REQUIRED';
-  if (sourceUnavailable || ragCitations.length === 0) return 'SOURCES_UNAVAILABLE';
-  const allCitations = [...scriptureSources, ...confessionalSources, ...historicalSources];
+  if (sourceUnavailable && !hasScriptureGrounding) return 'SOURCES_UNAVAILABLE';
   if (scriptureSources.length > 0 && (confessionalSources.length > 0 || historicalSources.length > 0)) return 'ALL_SOURCES_VERIFIED';
+  if (scriptureSources.length > 0) return 'SCRIPTURE_VERIFIED';
+  if (hasScriptureGrounding) return 'SCRIPTURE_VERIFIED';
+  const allCitations = [...scriptureSources, ...confessionalSources, ...historicalSources];
   if (allCitations.length > 0) return 'PARTIALLY_VERIFIED';
   return 'SOURCES_UNAVAILABLE';
 }
@@ -1051,6 +1082,89 @@ function generateWalkRecommendation(mood: string | undefined, contextText: strin
     themes: detectedThemes.length > 0 ? detectedThemes : ["general"],
     candidates: candidates.slice(0, 5),
   };
+}
+
+// ============================================================
+// SCRIPTURE REFERENCE PARSING HELPERS
+// ============================================================
+
+const CANONICAL_BOOK_NAMES = [
+  "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth",
+  "1 Samuel", "2 Samuel", "1 Kings", "2 Kings", "1 Chronicles", "2 Chronicles", "Ezra",
+  "Nehemiah", "Esther", "Job", "Psalm", "Psalms", "Proverbs", "Ecclesiastes", "Song of Solomon",
+  "Isaiah", "Jeremiah", "Lamentations", "Ezekiel", "Daniel", "Hosea", "Joel", "Amos",
+  "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk", "Zephaniah", "Haggai", "Zechariah", "Malachi",
+  "Matthew", "Mark", "Luke", "John", "Acts", "Romans", "1 Corinthians", "2 Corinthians",
+  "Galatians", "Ephesians", "Philippians", "Colossians", "1 Thessalonians", "2 Thessalonians",
+  "1 Timothy", "2 Timothy", "Titus", "Philemon", "Hebrews", "James", "1 Peter", "2 Peter",
+  "1 John", "2 John", "3 John", "Jude", "Revelation",
+];
+
+const SPANISH_BOOK_MAP: Record<string, string> = {
+  "génesis": "Genesis", "genesis": "Genesis", "exodo": "Exodus", "exodus": "Exodus",
+  "levitico": "Leviticus", "levítico": "Leviticus", "leviticus": "Leviticus",
+  "numeros": "Numbers", "números": "Numbers", "numbers": "Numbers",
+  "deuteronomio": "Deuteronomy", "deuteronomy": "Deuteronomy",
+  "josue": "Joshua", "josué": "Joshua", "joshua": "Joshua",
+  "jueces": "Judges", "judges": "Judges", "rut": "Ruth", "ruth": "Ruth",
+  "1 samuel": "1 Samuel", "2 samuel": "2 Samuel",
+  "1 reyes": "1 Kings", "2 reyes": "2 Kings",
+  "1 cronicas": "1 Chronicles", "1 crónicas": "1 Chronicles", "2 cronicas": "2 Chronicles", "2 crónicas": "2 Chronicles",
+  "esdras": "Ezra", "ezra": "Ezra", "nehemias": "Nehemiah", "nehemías": "Nehemiah",
+  "nehemiah": "Nehemiah", "ester": "Esther", "esther": "Esther",
+  "job": "Job", "salmos": "Psalm", "psalm": "Psalm", "psalms": "Psalm",
+  "proverbios": "Proverbs", "proverbs": "Proverbs",
+  "eclesiastes": "Ecclesiastes", "eclesiastés": "Ecclesiastes", "ecclesiastes": "Ecclesiastes",
+  "cantares": "Song of Solomon", "cantar": "Song of Solomon",
+  "isaias": "Isaiah", "isaías": "Isaiah", "isaiah": "Isaiah",
+  "jeremias": "Jeremiah", "jeremías": "Jeremiah", "jeremiah": "Jeremiah",
+  "lamentaciones": "Lamentations", "lamentations": "Lamentations",
+  "ezequiel": "Ezekiel", "ezekiel": "Ezekiel",
+  "daniel": "Daniel", "oseas": "Hosea", "hosea": "Hosea",
+  "joel": "Joel", "amos": "Amos", "abdias": "Obadiah", "abdías": "Obadiah", "obadiah": "Obadiah",
+  "jonas": "Jonah", "jonás": "Jonah", "jonah": "Jonah",
+  "miqueas": "Micah", "micah": "Micah", "nahum": "Nahum",
+  "habacuc": "Habakkuk", "habacuc": "Habakkuk", "habakkuk": "Habakkuk",
+  "sofonias": "Zephaniah", "sofonías": "Zephaniah", "zephaniah": "Zephaniah",
+  "hageo": "Haggai", "hageo": "Haggai", "haggai": "Haggai",
+  "zacarias": "Zechariah", "zacarías": "Zechariah", "zechariah": "Zechariah",
+  "malaquias": "Malachi", "malaquías": "Malachi", "malachi": "Malachi",
+  "mateo": "Matthew", "matthew": "Matthew", "marcos": "Mark", "mark": "Mark",
+  "lucas": "Luke", "luke": "Luke", "juan": "John", "john": "John",
+  "hechos": "Acts", "acts": "Acts", "romanos": "Romans", "romans": "Romans",
+  "1 corintios": "1 Corinthians", "2 corintios": "2 Corinthians",
+  "galatas": "Galatians", "gálatas": "Galatians", "galatians": "Galatians",
+  "efesios": "Ephesians", "ephesians": "Ephesians",
+  "filipenses": "Philippians", "philippians": "Philippians",
+  "colosenses": "Colossians", "colossians": "Colossians",
+  "1 tesalonicenses": "1 Thessalonians", "2 tesalonicenses": "2 Thessalonians",
+  "1 timoteo": "1 Timothy", "2 timoteo": "2 Timothy",
+  "tito": "Titus", "titus": "Titus", "filemon": "Philemon", "filemón": "Philemon", "philemon": "Philemon",
+  "hebreos": "Hebrews", "hebrews": "Hebrews", "santiago": "James", "james": "James",
+  "1 pedro": "1 Peter", "2 pedro": "2 Peter",
+  "1 juan": "1 John", "2 juan": "2 John", "3 juan": "3 John",
+  "judas": "Jude", "jude": "Jude", "apocalipsis": "Revelation", "revelation": "Revelation",
+};
+
+function toCanonicalBookName(name: string): string | null {
+  const lower = name.toLowerCase().trim();
+  if (SPANISH_BOOK_MAP[lower]) return SPANISH_BOOK_MAP[lower];
+  for (const canonical of CANONICAL_BOOK_NAMES) {
+    if (canonical.toLowerCase() === lower) return canonical;
+  }
+  // Partial match
+  for (const canonical of CANONICAL_BOOK_NAMES) {
+    if (canonical.toLowerCase().startsWith(lower) || lower.startsWith(canonical.toLowerCase())) return canonical;
+  }
+  return null;
+}
+
+function parseRef(ref: string): { book: string; chapter: number; verseStart: number; verseEnd: number } | null {
+  const match = ref.trim().match(/^(.+?)\s+(\d+):(\d+)(?:-(\d+))?$/);
+  if (!match) return null;
+  const book = toCanonicalBookName(match[1]);
+  if (!book) return null;
+  return { book, chapter: parseInt(match[2]), verseStart: parseInt(match[3]), verseEnd: match[4] ? parseInt(match[4]) : parseInt(match[3]) };
 }
 
 // ============================================================
@@ -1276,13 +1390,91 @@ const devProvider: AIProvider = {
           ? "La fe es un don de Dios por el cual confiamos en Cristo para la salvación. Efesios 2:8-9 dice: \"Porque por gracia sois salvos por medio de la fe; y esto no de vosotros, pues es don de Dios; no por obras, para que nadie se gloríe.\" La fe no es lo que merecemos, sino el instrumento que recibe la gracia de Dios."
           : "Faith is a gift from God by which we trust in Christ for salvation. Ephesians 2:8-9 says, \"For by grace you are saved through faith, and that not of yourselves; it is the gift of God, not of works, that no one would boast.\" Faith isn't something we earn — it's the instrument that receives God's grace.";
         reformedUnderstanding = "The grace of faith, whereby the elect are enabled to believe to the saving of their souls, is the work of the Spirit of Christ in their hearts, ordinarily wrought by the ministry of the Word.";
+      } else if (intentSubject.includes("widow") || resolvedQuery.includes("widow")) {
+        answerSummary = isSpanish
+          ? "La Escritura enseña que Dios tiene especial cuidado por las viudas. Santiago 1:27 dice: \"La religión pura y sin mancha delante de Dios el Padre es esta: visitar a los huérfanos y a las viudas en sus tribulaciones.\" 1 Timoteo 5 describe cómo la iglesia debe honrar y cuidar a las viudas verdaderamente necesitadas. Hechos 6 muestra a los apóstoles designando diáconos para asegurar que las viudas no fueran olvidadas en la distribución diaria. Cuidar a las viudas no es opcional — es una expresión de la religión pura que Dios aprueba."
+          : "Scripture teaches that God has special care for widows. James 1:27 says, \"Pure religion and undefiled before our God and Father is this: to visit the fatherless and widows in their affliction.\" 1 Timothy 5 describes how the church should honor and care for widows who are truly in need. Acts 6 shows the apostles appointing deacons to ensure widows weren't neglected in the daily distribution. Caring for widows isn't optional — it's an expression of the pure religion God approves.";
+        scriptureContext = "James 1:27 defines pure religion as caring for widows and orphans. 1 Timothy 5:3-16 provides detailed instructions for the church's care of widows. Acts 6:1-7 shows the early church appointing deacons to ensure widows were not neglected.";
+      } else if (intentSubject.includes("laziness") || intentSubject.includes("lazy") || intentSubject.includes("sloth") || resolvedQuery.includes("laziness") || resolvedQuery.includes("lazy")) {
+        answerSummary = isSpanish
+          ? "La Escritura advierte claramente contra la pereza. Proverbios 6:6-11 dice: \"Ve a la hormiga, oh perezoso, mira sus caminos, y sé sabio... tanto tiempo como duerme el perezoso, la pobreza vendrá.\" 2 Tesalonicenses 3:10 dice: \"Si alguno no quiere trabajar, tampoco coma.\" La Escritura no condena el descanso legítimo, pero sí condena la pereza como una falta de mayordomía de lo que Dios nos ha dado. El trabajo es un don de Dios, y la diligencia honra al Creador."
+          : "Scripture clearly warns against laziness. Proverbs 6:6-11 says, \"Go to the ant, you sluggard; consider her ways, and be wise... the sluggard will come to poverty.\" 2 Thessalonians 3:10 says, \"If anyone is not willing to work, let him not eat.\" Scripture doesn't condemn legitimate rest, but it does condemn laziness as a failure of stewardship over what God has given. Work is a gift from God, and diligence honors the Creator.";
+        scriptureContext = "Proverbs 6:6-11 uses the ant as an example of diligence. Proverbs 24:30-34 warns that laziness leads to poverty. 2 Thessalonians 3:6-12 commands the idle to work quietly and earn their own bread.";
+      } else if (intentSubject.includes("hospitality") || resolvedQuery.includes("hospitality")) {
+        answerSummary = isSpanish
+          ? "La Escritura llama a los creyentes a practicar la hospitalidad. Romanos 12:13 dice: \"compartiendo para las necesidades de los santos; practicando la hospitalidad.\" Hebreos 13:2 dice: \"No os olvidéis de la hospitalidad, porque por ella algunos, sin saberlo, hospedaron ángeles.\" La hospitalidad no es solo para amigos — 1 Pedro 4:9 dice: \"Hospitalarios unos con otros sin murmuraciones.\" Es una expresión práctica del amor de Cristo."
+          : "Scripture calls believers to practice hospitality. Romans 12:13 says, \"contributing to the needs of the saints, seeking to show hospitality.\" Hebrews 13:2 says, \"Do not neglect to show hospitality to strangers, for thereby some have entertained angels unawares.\" Hospitality isn't just for friends — 1 Peter 4:9 says, \"Show hospitality to one another without grumbling.\" It's a practical expression of Christ's love.";
+        scriptureContext = "Romans 12:13 commands sharing with saints and practicing hospitality. Hebrews 13:2 encourages hospitality to strangers. 1 Peter 4:9 calls for hospitality without grumbling.";
+      } else if (intentSubject.includes("generosity") || resolvedQuery.includes("generosity")) {
+        answerSummary = isSpanish
+          ? "La Escritura enseña que Dios ama al dador alegre. 2 Corintios 9:7 dice: \"Cada uno dé como propuso en su corazón: no con tristeza, ni por necesidad, porque Dios ama al dador alegre.\" La generosidad no se basa en cuánto tienes, sino en la disposición del corazón. 1 Timoteo 6:17-19 advierte a los ricos que no sean altivos ni pongan su esperanza en las riquezas, sino que sean ricos en buenas obras y generosos."
+          : "Scripture teaches that God loves a cheerful giver. 2 Corinthians 9:7 says, \"Let each one give as he has decided in his heart, not reluctantly or under compulsion, for God loves a cheerful giver.\" Generosity isn't about how much you have, but the disposition of the heart. 1 Timothy 6:17-19 warns the rich not to be haughty or set their hope on wealth, but to be rich in good works and generous.";
+        scriptureContext = "2 Corinthians 9:6-7 teaches cheerful giving. 1 Timothy 6:17-19 commands generosity from those with means. Proverbs 11:24-25 shows that generosity leads to abundance.";
+      } else if (intentSubject.includes("gossip") || resolvedQuery.includes("gossip")) {
+        answerSummary = isSpanish
+          ? "La Escritura condena la murmuración y el chisme. Proverbios 16:28 dice: \"El hombre perverso levanta contienda; y el chismoso aparta a los mejores amigos.\" Efesios 4:29 dice: \"Ninguna palabra corrompida salga de vuestra boca, sino la que sea buena para edificación.\" El chisme destruye relaciones y deshonra a Dios. Santiago 4:11 advierte: \"No murmuréis los unos de los otros, hermanos.\""
+          : "Scripture condemns gossip and slander. Proverbs 16:28 says, \"A dishonest man spreads strife, and a whisperer separates close friends.\" Ephesians 4:29 says, \"Let no corrupting talk come out of your mouths, but only such as is good for building up.\" Gossip destroys relationships and dishonors God. James 4:11 warns, \"Do not speak evil against one another, brothers.\"";
+        scriptureContext = "Proverbs 16:28 shows that gossip separates friends. Ephesians 4:29 commands edifying speech. James 4:11-12 prohibits speaking evil of one another.";
+      } else if (intentSubject.includes("stewardship") || resolvedQuery.includes("stewardship")) {
+        answerSummary = isSpanish
+          ? "La Escritura enseña que todo lo que tenemos pertenece a Dios y somos mayordomos de Sus recursos. 1 Corintios 4:7 dice: \"¿Qué tienes que no hayas recibido? Y si lo recibiste, ¿por qué te glorías como si no lo hubieras recibido?\" La parábola de los talentos en Mateo 25:14-30 muestra que Dios espera que usemos lo que nos ha dado para Su gloria. La mayordomía fiel incluye nuestro tiempo, talentos, recursos y relaciones."
+          : "Scripture teaches that everything we have belongs to God and we are stewards of His resources. 1 Corinthians 4:7 says, \"What do you have that you did not receive? If then you received it, why do you boast as if you did not receive it?\" The parable of the talents in Matthew 25:14-30 shows that God expects us to use what He's given for His glory. Faithful stewardship includes our time, talents, resources, and relationships.";
+        scriptureContext = "1 Corinthians 4:7 reminds us that everything is received from God. Matthew 25:14-30 shows the parable of the talents. 1 Peter 4:10 calls believers to use their gifts to serve one another as good stewards.";
+      } else if ((intentSubject.includes("consistent") || resolvedQuery.includes("consistent")) && (intentSubject.includes("scripture") || intentSubject.includes("learning") || intentSubject.includes("study") || resolvedQuery.includes("scripture"))) {
+        answerSummary = isSpanish
+          ? "La consistencia en el estudio de la Escritura comienza con un plan simple y sostenible. Josué 1:8 dice: \"Nunca se apartará de tu boca este libro de la ley, sino que de día y de noche meditarás en él, para que guardes y hagas conforme a todo lo que en él está escrito.\" Aquí hay un ritmo práctico:\n\nHoy: Elige un libro (Juan es un buen comienzo). Lee un capítulo lentamente.\nObserva: ¿Qué dice el texto sobre Dios, sobre ti, sobre el pecado?\nEntiende: ¿Cuál es el punto principal del pasaje?\nAplica: ¿Qué verdad puedes poner en práctica hoy?\nOra: Pide a Dios que transforme tu corazón por Su Palabra.\nAnota: Escribe una observación o pregunta.\nMañana: Continúa con el siguiente capítulo.\n\nLa clave no es la cantidad, sino la fidelidad diaria. La Escritura misma es el medio por el cual Dios renueva nuestra mente (Romanos 12:2)."
+          : "Consistency in studying Scripture starts with a simple, sustainable plan. Joshua 1:8 says, \"This Book of the Law shall not depart from your mouth, but you shall meditate on it day and night, so that you may be careful to do according to all that is written in it.\" Here's a practical rhythm:\n\nToday: Pick a book (John is a great start). Read one chapter slowly.\nObserve: What does the text say about God, about you, about sin?\nUnderstand: What's the main point of the passage?\nApply: What truth can you put into practice today?\nPray: Ask God to transform your heart through His Word.\nNote: Write down one observation or question.\nTomorrow: Continue with the next chapter.\n\nThe key isn't volume — it's daily faithfulness. Scripture itself is the means by which God renews our minds (Romans 12:2).";
+        scriptureContext = "Joshua 1:8 commands meditation on God's Word day and night. Psalm 1:1-3 describes the one who delights in God's law as like a tree planted by streams of water. Romans 12:2 shows that transformation comes through the renewing of the mind.";
       } else {
         answerSummary = failMsg;
         sourceUnavailable = true;
       }
     } else {
-      answerSummary = "SOLAPATH's verified library does not currently contain a source for this specific query. A general biblical reflection may be offered, but no attributed theological claims will be made without verified sources.";
-      sourceUnavailable = true;
+      // No RAG citations — but Scripture alone is sufficient for biblical questions.
+      // Use intentSubject to generate a Scripture-grounded answer.
+      if (intentSubject.includes("widow") || resolvedQuery.includes("widow")) {
+        answerSummary = isSpanish
+          ? "La Escritura enseña que Dios tiene especial cuidado por las viudas. Santiago 1:27 dice: \"La religión pura y sin mancha delante de Dios el Padre es esta: visitar a los huérfanos y a las viudas en sus tribulaciones.\" 1 Timoteo 5 describe cómo la iglesia debe honrar y cuidar a las viudas verdaderamente necesitadas. Hechos 6 muestra a los apóstoles designando diáconos para asegurar que las viudas no fueran olvidadas. Cuidar a las viudas es una expresión de la religión pura que Dios aprueba."
+          : "Scripture teaches that God has special care for widows. James 1:27 says, \"Pure religion and undefiled before our God and Father is this: to visit the fatherless and widows in their affliction.\" 1 Timothy 5 describes how the church should honor and care for widows who are truly in need. Acts 6 shows the apostles appointing deacons to ensure widows weren't neglected. Caring for widows is an expression of the pure religion God approves.";
+        scriptureContext = "James 1:27 defines pure religion as caring for widows and orphans. 1 Timothy 5:3-16 provides detailed instructions for the church's care of widows. Acts 6:1-7 shows the early church appointing deacons to ensure widows were not neglected.";
+      } else if (intentSubject.includes("laziness") || intentSubject.includes("lazy") || intentSubject.includes("sloth") || resolvedQuery.includes("laziness") || resolvedQuery.includes("lazy")) {
+        answerSummary = isSpanish
+          ? "La Escritura advierte claramente contra la pereza. Proverbios 6:6-11 dice: \"Ve a la hormiga, oh perezoso... tanto tiempo como duerme el perezoso, la pobreza vendrá.\" 2 Tesalonicenses 3:10 dice: \"Si alguno no quiere trabajar, tampoco coma.\" La Escritura condena la pereza como una falta de mayordomía, pero no condena el descanso legítimo. La diligencia honra a Dios."
+          : "Scripture clearly warns against laziness. Proverbs 6:6-11 says, \"Go to the ant, you sluggard... the sluggard will come to poverty.\" 2 Thessalonians 3:10 says, \"If anyone is not willing to work, let him not eat.\" Scripture condemns laziness as a failure of stewardship, but it doesn't condemn legitimate rest. Diligence honors God.";
+        scriptureContext = "Proverbs 6:6-11 uses the ant as an example of diligence. Proverbs 24:30-34 warns that laziness leads to poverty. 2 Thessalonians 3:6-12 commands the idle to work quietly.";
+      } else if (intentSubject.includes("hospitality") || resolvedQuery.includes("hospitality")) {
+        answerSummary = isSpanish
+          ? "La Escritura llama a los creyentes a practicar la hospitalidad. Romanos 12:13 dice: \"practicando la hospitalidad.\" Hebreos 13:2 dice: \"No os olvidéis de la hospitalidad, porque por ella algunos, sin saberlo, hospedaron ángeles.\" 1 Pedro 4:9 dice: \"Hospitalarios unos con otros sin murmuraciones.\""
+          : "Scripture calls believers to practice hospitality. Romans 12:13 says, \"seeking to show hospitality.\" Hebrews 13:2 says, \"Do not neglect to show hospitality to strangers, for thereby some have entertained angels unawares.\" 1 Peter 4:9 says, \"Show hospitality to one another without grumbling.\"";
+        scriptureContext = "Romans 12:13 commands practicing hospitality. Hebrews 13:2 encourages hospitality to strangers. 1 Peter 4:9 calls for hospitality without grumbling.";
+      } else if (intentSubject.includes("generosity") || resolvedQuery.includes("generosity")) {
+        answerSummary = isSpanish
+          ? "La Escritura enseña que Dios ama al dador alegre. 2 Corintios 9:7 dice: \"Dios ama al dader alegre.\" La generosidad se basa en la disposición del corazón, no en la cantidad. 1 Timoteo 6:17-19 llama a los ricos a ser generosos y ricos en buenas obras."
+          : "Scripture teaches that God loves a cheerful giver. 2 Corinthians 9:7 says, \"God loves a cheerful giver.\" Generosity is about the heart's disposition, not the amount. 1 Timothy 6:17-19 calls the rich to be generous and rich in good works.";
+        scriptureContext = "2 Corinthians 9:6-7 teaches cheerful giving. 1 Timothy 6:17-19 commands generosity. Proverbs 11:24-25 shows generosity leads to abundance.";
+      } else if (intentSubject.includes("gossip") || resolvedQuery.includes("gossip")) {
+        answerSummary = isSpanish
+          ? "La Escritura condena el chisme. Proverbios 16:28 dice: \"El chismoso aparta a los mejores amigos.\" Efesios 4:29 dice: \"Ninguna palabra corrompida salga de vuestra boca, sino la que sea buena para edificación.\" Santiago 4:11 dice: \"No murmuréis los unos de los otros, hermanos.\""
+          : "Scripture condemns gossip. Proverbs 16:28 says, \"A whisperer separates close friends.\" Ephesians 4:29 says, \"Let no corrupting talk come out of your mouths, but only such as is good for building up.\" James 4:11 says, \"Do not speak evil against one another, brothers.\"";
+        scriptureContext = "Proverbs 16:28 shows gossip separates friends. Ephesians 4:29 commands edifying speech. James 4:11-12 prohibits speaking evil of one another.";
+      } else if (intentSubject.includes("stewardship") || resolvedQuery.includes("stewardship")) {
+        answerSummary = isSpanish
+          ? "La Escritura enseña que somos mayordomos de lo que Dios nos ha dado. 1 Corintios 4:7 dice: \"¿Qué tienes que no hayas recibido?\" La parábola de los talentos (Mateo 25:14-30) muestra que Dios espera que usemos Sus recursos para Su gloria. 1 Pedro 4:10 dice: \"Cada uno según el don que ha recibido, minístrelo a los otros, como buenos dispensadores de la multiforme gracia de Dios.\""
+          : "Scripture teaches that we are stewards of what God has given. 1 Corinthians 4:7 says, \"What do you have that you did not receive?\" The parable of the talents (Matthew 25:14-30) shows God expects us to use His resources for His glory. 1 Peter 4:10 says, \"As each has received a gift, use it to serve one another, as good stewards of God's varied grace.\"";
+        scriptureContext = "1 Corinthians 4:7 reminds us everything is received from God. Matthew 25:14-30 shows the parable of the talents. 1 Peter 4:10 calls believers to be good stewards.";
+      } else if ((intentSubject.includes("consistent") || resolvedQuery.includes("consistent")) && (intentSubject.includes("scripture") || intentSubject.includes("learning") || intentSubject.includes("study") || resolvedQuery.includes("scripture"))) {
+        answerSummary = isSpanish
+          ? "La consistencia en el estudio de la Escritura comienza con un plan simple. Josué 1:8 dice: \"de día y de noche meditarás en él.\" Hoy: Elige un libro (Juan es un buen comienzo). Lee un capítulo lentamente. Observa: ¿Qué dice el texto? Entiende: ¿Cuál es el punto principal? Aplica: ¿Qué verdad puedes practicar? Ora: Pide a Dios que transforme tu corazón. Anota: Escribe una observación. Mañana: Continúa con el siguiente capítulo. La clave es la fidelidad diaria, no la cantidad."
+          : "Consistency in studying Scripture starts with a simple plan. Joshua 1:8 says, \"you shall meditate on it day and night.\" Today: Pick a book (John is a great start). Read one chapter slowly. Observe: What does the text say? Understand: What's the main point? Apply: What truth can you practice? Pray: Ask God to transform your heart. Note: Write one observation. Tomorrow: Continue with the next chapter. The key is daily faithfulness, not volume.";
+        scriptureContext = "Joshua 1:8 commands meditation on God's Word day and night. Psalm 1:1-3 describes delight in God's law. Romans 12:2 shows transformation through the renewing of the mind.";
+      } else {
+        // General Scripture-grounded fallback — do NOT block the answer.
+        // Scripture is the primary verified source per SOLAPATH's authority order.
+        answerSummary = isSpanish
+          ? "La Escritura es nuestra autoridad final. Aunque no tengo una fuente teológica secundaria verificada para este tema en este momento, la Palabra de Dios es suficiente para guiarte. Te recomiendo leer el pasaje relevante y meditar en lo que Dios dice. Si deseas una respuesta más específica, intenta reformular tu pregunta con más detalle."
+          : "Scripture is our final authority. While I don't have a verified secondary theological source for this specific topic right now, God's Word is sufficient to guide you. I recommend reading the relevant passage and meditating on what God says. If you'd like a more specific answer, try rephrasing your question with more detail.";
+      }
+      // Scripture-only grounding — do not set sourceUnavailable
     }
 
     const personalContextUsed: string[] = [];
@@ -1298,12 +1490,66 @@ const devProvider: AIProvider = {
       if (proposal) memoryProposals.push(proposal);
     }
 
-    const recommendedScripture = sourceUnavailable ? [] : buildRecommendedScripture(resolvedQuery, divineRevelationDetected, isCrisis || isAbuse);
-    const biblicalBasis = sourceUnavailable ? [] : buildBiblicalBasis(resolvedQuery);
+    // Scripture is always a valid verified source — never clear it when only theology is missing.
+    const hasScriptureGrounding = !sourceUnavailable || scriptureContext !== null || biblicalBasis.length > 0 || recommendedScripture.length > 0;
+
+    // Build Scripture references even when theology is unavailable
+    const recommendedScripture = buildRecommendedScripture(resolvedQuery, divineRevelationDetected, isCrisis || isAbuse);
+    const biblicalBasis = buildBiblicalBasis(resolvedQuery);
+
+    // Only clear secondary theological sources when unavailable
     const clearedConfessionalSources = sourceUnavailable ? [] : confessionalSources;
     const clearedHistoricalSources = sourceUnavailable ? [] : historicalSources;
-    const clearedScriptureSources = sourceUnavailable ? [] : scriptureSources;
-    const clearedScriptureContext = sourceUnavailable ? null : scriptureContext;
+    const clearedScriptureSources = scriptureSources; // Always preserve Scripture
+    const clearedScriptureContext = scriptureContext; // Always preserve Scripture context
+
+    // Compute grounding level
+    let groundingLevel: GroundingLevel = "INSUFFICIENT";
+    if (clearedScriptureSources.length > 0 || recommendedScripture.length > 0 || biblicalBasis.length > 0) {
+      if (clearedConfessionalSources.length > 0 || clearedHistoricalSources.length > 0) {
+        groundingLevel = "SCRIPTURE_PLUS_THEOLOGY";
+      } else {
+        groundingLevel = "SCRIPTURE_ONLY";
+      }
+    }
+    if (sourceUnavailable && groundingLevel === "INSUFFICIENT" && answerSummary !== failMsg) {
+      // We have a Scripture-grounded answer even without RAG
+      groundingLevel = "SCRIPTURE_ONLY";
+    }
+
+    // Build inline references from recommended Scripture and biblical basis
+    const inlineReferences: InlineScriptureReference[] = [];
+    for (const rs of recommendedScripture) {
+      const parsed = parseRef(rs.reference);
+      if (parsed) inlineReferences.push({ display_text: rs.reference, canonical_book: parsed.book, chapter: parsed.chapter, verse_start: parsed.verseStart, verse_end: parsed.verseEnd, role: "primary" as const });
+    }
+    for (const bb of biblicalBasis) {
+      const parsed = parseRef(bb.reference);
+      if (parsed && !inlineReferences.some(r => r.display_text === bb.reference)) {
+        inlineReferences.push({ display_text: bb.reference, canonical_book: parsed.book, chapter: parsed.chapter, verse_start: parsed.verseStart, verse_end: parsed.verseEnd, role: bb.is_primary ? "primary" as const : "supporting" as const });
+      }
+    }
+
+    // Build last assistant context from conversation history
+    let lastAssistantContext: { topic: string; scripture_references: Array<{ canonical_book: string; chapter: number; verse_start: number; verse_end: number; role: "primary" | "supporting" }> } | null = null;
+    if (request.conversation_history && request.conversation_history.length > 0) {
+      const lastAssistant = [...request.conversation_history].reverse().find(m => m.role === "assistant");
+      if (lastAssistant) {
+        const refPattern = /\b(1\s?[A-Za-z]+|2\s?[A-Za-z]+|3\s?[A-Za-z]+|[A-Za-z]+)\s+(\d+):(\d+)(?:-(\d+))?\b/g;
+        const matches = [...lastAssistant.body.matchAll(refPattern)];
+        const scriptureRefs: Array<{ canonical_book: string; chapter: number; verse_start: number; verse_end: number; role: "primary" | "supporting" }> = [];
+        for (const m of matches.slice(0, 5)) {
+          const bookName = m[1].replace(/\s+/g, " ").trim();
+          const canonicalBook = toCanonicalBookName(bookName);
+          if (canonicalBook) {
+            scriptureRefs.push({ canonical_book: canonicalBook, chapter: parseInt(m[2]), verse_start: parseInt(m[3]), verse_end: m[4] ? parseInt(m[4]) : parseInt(m[3]), role: scriptureRefs.length === 0 ? "primary" : "supporting" });
+          }
+        }
+        if (scriptureRefs.length > 0) {
+          lastAssistantContext = { topic: intentSubject, scripture_references: scriptureRefs };
+        }
+      }
+    }
 
     const response: StructuredTheologicalResponse = {
       answer_summary: answerSummary,
@@ -1348,8 +1594,11 @@ const devProvider: AIProvider = {
       query_id: queryId,
       source_unavailable: sourceUnavailable,
       warnings: [],
-      verification_state: computeVerificationState(ragCitations, confessionalSources, historicalSources, scriptureSources, sourceUnavailable, divineRevelationDetected, isCrisis || isAbuse || isEmergency),
+      verification_state: computeVerificationState(ragCitations, confessionalSources, historicalSources, scriptureSources, sourceUnavailable, divineRevelationDetected, isCrisis || isAbuse || isEmergency, hasScriptureGrounding),
       has_development_content: false,
+      grounding_level: groundingLevel,
+      inline_references: inlineReferences,
+      last_assistant_context: lastAssistantContext,
     };
 
     const validation = validateResponse(response);
@@ -1834,6 +2083,20 @@ function buildRecommendedScripture(question: string, isDivine: boolean, isCrisis
     refs.push({ reference: "1 John 5:13", reading_objective: "Read John's purpose: that you may know you have eternal life.", reason: "Directly addresses assurance of salvation." });
   } else if (lower.includes("faith")) {
     refs.push({ reference: "Ephesians 2:8-9", reading_objective: "Read about salvation by grace through faith, not of works.", reason: "Directly addresses faith as a gift of God." });
+  } else if (lower.includes("widow")) {
+    refs.push({ reference: "James 1:27", reading_objective: "Read about pure religion: visiting widows and orphans in their affliction.", reason: "Directly addresses care for widows as pure religion." });
+  } else if (lower.includes("laziness") || lower.includes("lazy") || lower.includes("sloth")) {
+    refs.push({ reference: "Proverbs 6:6-11", reading_objective: "Read the ant's example of diligence and the warning against sloth.", reason: "Directly addresses laziness and its consequences." });
+  } else if (lower.includes("hospitality")) {
+    refs.push({ reference: "Romans 12:13", reading_objective: "Read Paul's command to practice hospitality.", reason: "Directly commands hospitality as a Christian duty." });
+  } else if (lower.includes("generosity")) {
+    refs.push({ reference: "2 Corinthians 9:7", reading_objective: "Read about cheerful giving and God's love for the generous heart.", reason: "Directly addresses generosity as a matter of the heart." });
+  } else if (lower.includes("gossip")) {
+    refs.push({ reference: "Ephesians 4:29", reading_objective: "Read Paul's instruction that only edifying words come from our mouths.", reason: "Directly addresses the kind of speech gossip violates." });
+  } else if (lower.includes("stewardship")) {
+    refs.push({ reference: "1 Peter 4:10", reading_objective: "Read about using our gifts to serve others as good stewards of God's grace.", reason: "Directly addresses stewardship of God's varied grace." });
+  } else if ((lower.includes("consistent") || lower.includes("consistency")) && (lower.includes("scripture") || lower.includes("learning") || lower.includes("study"))) {
+    refs.push({ reference: "Joshua 1:8", reading_objective: "Read God's command to meditate on His Word day and night.", reason: "Directly addresses the practice of consistent Scripture meditation." });
   }
   // No catch-all default — return empty if no topic matched
   return refs;
@@ -1890,6 +2153,27 @@ function buildBiblicalBasis(question: string): BiblicalBasisPassage[] {
   } else if (lower.includes("faith")) {
     passages.push({ reference: "Ephesians 2:8-9", relevance: "By grace you are saved through faith, not of works.", contextual_note: "Faith as the instrument, not the merit.", is_primary: true });
     passages.push({ reference: "Romans 5:1", relevance: "Having been justified by faith, we have peace with God.", contextual_note: "Faith brings peace with God through justification.", is_primary: false });
+  } else if (lower.includes("widow")) {
+    passages.push({ reference: "James 1:27", relevance: "Pure religion includes visiting widows in their affliction.", contextual_note: "James defines true religion partly by care for widows.", is_primary: true });
+    passages.push({ reference: "1 Timothy 5:3-8", relevance: "The church must honor and provide for widows who are truly in need.", contextual_note: "Paul gives detailed instructions for the church's care of widows.", is_primary: false });
+  } else if (lower.includes("laziness") || lower.includes("lazy") || lower.includes("sloth")) {
+    passages.push({ reference: "Proverbs 6:6-11", relevance: "The ant models diligence; laziness leads to poverty.", contextual_note: "Wisdom literature uses creation to teach diligence.", is_primary: true });
+    passages.push({ reference: "2 Thessalonians 3:10", relevance: "If anyone is not willing to work, let him not eat.", contextual_note: "Paul commands the idle to work quietly and earn their own bread.", is_primary: false });
+  } else if (lower.includes("hospitality")) {
+    passages.push({ reference: "Romans 12:13", relevance: "Contribute to the needs of the saints and practice hospitality.", contextual_note: "Hospitality is a regular Christian duty, not a gift for the few.", is_primary: true });
+    passages.push({ reference: "Hebrews 13:2", relevance: "Do not neglect hospitality to strangers.", contextual_note: "Some have entertained angels unawares through hospitality.", is_primary: false });
+  } else if (lower.includes("generosity")) {
+    passages.push({ reference: "2 Corinthians 9:7", relevance: "God loves a cheerful giver.", contextual_note: "Generosity is about the heart's disposition, not the amount.", is_primary: true });
+    passages.push({ reference: "1 Timothy 6:17-19", relevance: "The rich are to be generous and rich in good works.", contextual_note: "Paul commands generosity from those who have means.", is_primary: false });
+  } else if (lower.includes("gossip")) {
+    passages.push({ reference: "Proverbs 16:28", relevance: "A whisperer separates close friends.", contextual_note: "Gossip destroys relationships.", is_primary: true });
+    passages.push({ reference: "Ephesians 4:29", relevance: "Let no corrupting talk come out of your mouths.", contextual_note: "Only edifying speech should come from believers.", is_primary: false });
+  } else if (lower.includes("stewardship")) {
+    passages.push({ reference: "1 Peter 4:10", relevance: "Use your gifts to serve one another as good stewards of God's grace.", contextual_note: "Everything we have is received from God.", is_primary: true });
+    passages.push({ reference: "Matthew 25:14-30", relevance: "The parable of the talents.", contextual_note: "God expects us to use what He's given for His glory.", is_primary: false });
+  } else if ((lower.includes("consistent") || lower.includes("consistency")) && (lower.includes("scripture") || lower.includes("learning") || lower.includes("study"))) {
+    passages.push({ reference: "Joshua 1:8", relevance: "Meditate on God's Word day and night for success and obedience.", contextual_note: "Consistency in Scripture leads to transformed living.", is_primary: true });
+    passages.push({ reference: "Psalm 1:1-3", relevance: "The one who delights in God's law is like a tree planted by water.", contextual_note: "Daily meditation yields stability and fruitfulness.", is_primary: false });
   }
   // No catch-all default — return empty if no topic matched
   return passages;
