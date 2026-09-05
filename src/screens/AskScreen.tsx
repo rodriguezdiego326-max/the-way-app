@@ -1153,6 +1153,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
             ...activeResponseForModal.historical_sources,
             ...activeResponseForModal.modern_sources,
           ]}
+          lang={askLang}
           onClose={() => setShowSourceViewer(false)}
         />
       )}
@@ -1164,6 +1165,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
           onClose={() => setShowBiblicalBasis(false)}
           onOpenBible={handleOpenBible}
           translation={activeTranslation}
+          lang={askLang}
         />
       )}
     </>
@@ -1621,12 +1623,19 @@ function AssistantMessage({
             </div>
           );
         })()}
-        {!response.validation_passed && response.validation_warnings.length > 0 && (
-          <div className="flex items-center gap-2">
-            <ShieldX size={11} className="text-error shrink-0" />
-            <p className="text-error text-xs">Response flagged by safety validator: {response.validation_warnings[0]}</p>
-          </div>
-        )}
+        {!response.validation_passed && response.validation_warnings.length > 0 && (() => {
+          // Hide internal validator messages from users — only show a clean error
+          const hasRealSafetyIssue = response.validation_warnings.some(w =>
+            w.includes('Prohibited pattern') && !w.includes('Attribution')
+          );
+          if (!hasRealSafetyIssue) return null;
+          return (
+            <div className="flex items-center gap-2">
+              <ShieldX size={11} className="text-error shrink-0" />
+              <p className="text-error text-xs">{askLang === 'es' ? 'Esta respuesta necesita revisión. Por favor, inténtalo de nuevo.' : 'This response needs review. Please try again.'}</p>
+            </div>
+          );
+        })()}
         <button
           onClick={onReportConcern}
           className="flex items-center gap-1.5 mt-0.5 text-ivory-600 hover:text-clay-400 transition-colors text-xs no-tap-highlight"

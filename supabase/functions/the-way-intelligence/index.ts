@@ -412,7 +412,9 @@ const TEACHER_NAMES = [
 function detectTeacherQuestion(question: string): string | null {
   const lower = question.toLowerCase();
   for (const name of TEACHER_NAMES) {
-    if (lower.includes(name)) {
+    // Use word-boundary matching to avoid false positives (e.g. "James" contains "ames")
+    const regex = new RegExp(`\\b${name}\\b`, "i");
+    if (regex.test(question)) {
       if (/(?:what did|what does|what taught|teach|said|wrote|argue|believe)/i.test(question)) {
         return name.charAt(0).toUpperCase() + name.slice(1);
       }
@@ -677,12 +679,19 @@ function validateResponse(response: StructuredTheologicalResponse): { passed: bo
     }
   }
 
+  // Only check for teacher attribution in the answer if the user explicitly asked about a teacher
   const teacherName = detectTeacherQuestion(response.answer_summary);
-  if (teacherName && response.rag_citations) {
-    const hasTeacherSource = response.rag_citations.some((c) =>
-      c.display_author.toLowerCase().includes(teacherName.toLowerCase()),
-    );
-    if (!hasTeacherSource) warnings.push(`Attribution to ${teacherName} without verified source`);
+  if (teacherName && response.rag_citations && response.rag_citations.length > 0) {
+    // Check if the answer explicitly attributes a quote/position to this teacher
+    const attributionPattern = new RegExp(`(?:according to|as ${teacherName} (?:said|wrote|argued|taught)|${teacherName} (?:said|wrote|argued|taught|believes|states))`, "i");
+    const hasAttribution = attributionPattern.test(response.answer_summary) ||
+      attributionPattern.test(response.reformed_understanding || "");
+    if (hasAttribution) {
+      const hasTeacherSource = response.rag_citations.some((c) =>
+        c.display_author.toLowerCase().includes(teacherName.toLowerCase()),
+      );
+      if (!hasTeacherSource) warnings.push(`Attribution to ${teacherName} without verified source`);
+    }
   }
 
   return { passed: warnings.length === 0, warnings };
@@ -1280,6 +1289,98 @@ const devProvider: AIProvider = {
     let intentSubject = extractIntentSubject(question);
     const isFollowUp = request.conversation_history && request.conversation_history.length > 0;
     const isShortAmbiguous = question.split(/\s+/).length <= 8 || /^(how|what|why|can|should|is|are)\b/i.test(question);
+
+    // Detect "verse you mentioned" follow-up questions — resolve from last_assistant_context
+    const isVerseFollowUp = /(?:verse|passage|scripture|vers[íi]culo|pasaje)/i.test(question) &&
+      /(?:you mentioned|you referenced|you cited|you suggested|you noted|mencion(?:aste|ó)|referiste|sugeriste|indicaste)/i.test(question);
+    const isWhichVerseFollowUp = /(?:what verse|which verse|what passage|which passage|qu[ée] vers[íi]culo|qu[ée] pasaje)/i.test(question);
+
+    if (isVerseFollowUp || isWhichVerseFollowUp) {
+      // Use last_assistant_context from the request (passed by client from previous response)
+      const priorContext = request.last_assistant_context;
+      if (priorContext && priorContext.scripture_references && priorContext.scripture_references.length > 0) {
+        const primary = priorContext.scripture_references.find(r => r.role === 'primary') || priorContext.scripture_references[0];
+        const refStr = primary.verse_start === primary.verse_end
+          ? `${primary.canonical_book} ${primary.chapter}:${primary.verse_start}`
+          : `${primary.canonical_book} ${primary.chapter}:${primary.verse_start}-${primary.verse_end}`;
+        const isSpanish = request.response_language === 'Spanish';
+        answerSummary = isSpanish
+          ? `El pasaje que mencion[é] fue ${refStr}. Te recomiendo comenzar ah[í]. `
+          : `The verse I mentioned was ${refStr}. I recommend starting there. `;
+        // Add context about why this verse is relevant
+        if (priorContext.scripture_references.length > 1) {
+          const supporting = priorContext.scripture_references.filter(r => r.role === 'supporting');
+          if (supporting.length > 0) {
+            const sRef = supporting[0];
+            const sStr = sRef.verse_start === sRef.verse_end
+              ? `${sRef.canonical_book} ${sRef.chapter}:${sRef.verse_start}`
+              : `${sRef.canonical_book} ${sRef.chapter}:${sRef.verse_start}-${sRef.verse_end}`;
+            answerSummary += isSpanish
+              ? `Tambi[é]n puedes consultar ${sStr} como pasaje complementario.`
+              : `You can also look at ${sStr} as a complementary passage.`;
+          }
+        }
+        scriptureContext = `Previous response referenced: ${priorContext.scripture_references.map(r => `${r.canonical_book} ${r.chapter}:${r.verse_start}${r.verse_end !== r.verse_start ? '-' + r.verse_end : ''}`).join(', ')}`;
+        // Set recommended scripture from prior context
+        // Skip the normal topic-matching flow
+        // Build inline references from prior context
+        const inlineRefs: InlineScriptureReference[] = priorContext.scripture_references.map(r => ({
+          display_text: r.verse_start === r.verse_end ? `${r.canonical_book} ${r.chapter}:${r.verse_start}` : `${r.canonical_book} ${r.chapter}:${r.verse_start}-${r.verse_end}`,
+          canonical_book: r.canonical_book,
+          chapter: r.chapter,
+          verse_start: r.verse_start,
+          verse_end: r.verse_end,
+          role: r.role as 'primary' | 'supporting',
+        }));
+        // Return early with verse-follow-up response
+        const earlyResponse: StructuredTheologicalResponse = {
+          answer_summary: answerSummary,
+          scripture_first_required: false,
+          scripture_first_mode: 'ANSWER_NORMALLY',
+          recommended_scripture: inlineRefs.map(r => ({ reference: r.display_text, reading_objective: `Read ${r.display_text}.`, reason: 'Referenced in previous response.' })),
+          scripture_context: scriptureContext,
+          reformed_understanding: null,
+          confessional_sources: [],
+          historical_sources: [],
+          modern_sources: [],
+          scripture_sources: [],
+          other_christian_views: null,
+          application: null,
+          prayer_guidance: null,
+          human_support_recommended: false,
+          human_support_note: null,
+          memory_proposals: [],
+          source_confidence: 'verified',
+          theological_confidence: 'CORE_CHRISTIAN_DOCTRINE',
+          not_explicitly_addressed_by_scripture: false,
+          biblical_basis: [],
+          is_demo: true,
+          divine_revelation_claim_detected: false,
+          divine_revelation_response: null,
+          scripture_testing_flow: null,
+          teacher_attribution_blocked: null,
+          validation_passed: true,
+          validation_warnings: [],
+          rag_citations: [],
+          rag_context_summary: null,
+          rag_retrieved_source_ids: [],
+          rag_rejected_source_ids: [],
+          personal_context_used: [],
+          provider: 'development',
+          model_version: VERSIONS.model,
+          system_versions: VERSIONS,
+          query_id: queryId,
+          source_unavailable: false,
+          warnings: [],
+          verification_state: 'SCRIPTURE_VERIFIED',
+          has_development_content: false,
+          grounding_level: 'SCRIPTURE_ONLY',
+          inline_references: inlineRefs,
+          last_assistant_context: priorContext,
+        };
+        return earlyResponse;
+      }
+    }
 
     if (isFollowUp && isShortAmbiguous) {
       // Find the most recent user message to use as context

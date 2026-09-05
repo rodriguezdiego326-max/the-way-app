@@ -4,14 +4,33 @@ import type { SourceCitation } from '@/lib/intelligenceTypes';
 interface SourceViewerProps {
   sources: SourceCitation[];
   onClose: () => void;
+  lang?: 'en' | 'es';
 }
 
-const CATEGORY_LABELS: Record<string, { label: string; icon: typeof BookOpen }> = {
-  confession: { label: 'Confessional Documents', icon: BookOpen },
-  catechism: { label: 'Confessional Documents', icon: BookOpen },
-  historic_theologian: { label: 'Historical Theologians', icon: Landmark },
-  modern_teacher: { label: 'Selected Teachers', icon: Lightbulb },
-  scripture: { label: 'Scripture Sources', icon: BookOpen },
+const LABELS_EN = {
+  title: 'Sources',
+  scripture: 'Scripture Sources',
+  confession: 'Confessional Documents',
+  catechism: 'Confessional Documents',
+  historic_theologian: 'Historical Theologians',
+  modern_teacher: 'Selected Teachers',
+  verified: 'Verified',
+  empty: 'Verified sources are still being added to SOLAPATH\'s library.',
+  emptyDetail: 'SOLAPATH will never fabricate citations or quotations. When verified theological sources are connected, they will appear here with full attribution.',
+  other: 'Sources',
+};
+
+const LABELS_ES = {
+  title: 'Fuentes',
+  scripture: 'Escritura',
+  confession: 'Documentos confesionales',
+  catechism: 'Documentos confesionales',
+  historic_theologian: 'Teólogos históricos',
+  modern_teacher: 'Maestros seleccionados',
+  verified: 'Verificado',
+  empty: 'Las fuentes verificadas aún se están añadiendo a la biblioteca de SOLAPATH.',
+  emptyDetail: 'SOLAPATH nunca fabricará citas ni atribuciones. Cuando se conecten fuentes teológicas verificadas, aparecerán aquí con atribución completa.',
+  other: 'Fuentes',
 };
 
 function dedupSources(sources: SourceCitation[]): SourceCitation[] {
@@ -26,9 +45,18 @@ function dedupSources(sources: SourceCitation[]): SourceCitation[] {
   return result;
 }
 
-export default function SourceViewer({ sources, onClose }: SourceViewerProps) {
+export default function SourceViewer({ sources, onClose, lang = 'en' }: SourceViewerProps) {
+  const L = lang === 'es' ? LABELS_ES : LABELS_EN;
+
+  const CATEGORY_LABELS: Record<string, { label: string; icon: typeof BookOpen }> = {
+    confession: { label: L.confession, icon: BookOpen },
+    catechism: { label: L.catechism, icon: BookOpen },
+    historic_theologian: { label: L.historic_theologian, icon: Landmark },
+    modern_teacher: { label: L.modern_teacher, icon: Lightbulb },
+    scripture: { label: L.scripture, icon: BookOpen },
+  };
+
   const verifiedSources = sources.filter((s) => s.verified);
-  // Unverified sources are never shown to users in Build 52+
 
   const grouped = verifiedSources.reduce<Record<string, SourceCitation[]>>((acc, s) => {
     const key = s.source_type;
@@ -37,30 +65,30 @@ export default function SourceViewer({ sources, onClose }: SourceViewerProps) {
     return acc;
   }, {});
 
-  const categoryOrder = ['confession', 'catechism', 'historic_theologian', 'modern_teacher', 'scripture'];
+  const categoryOrder = ['scripture', 'confession', 'catechism', 'historic_theologian', 'modern_teacher'];
   const visibleCategories = categoryOrder.filter((cat) => grouped[cat]?.length > 0);
 
   return (
     <div className="fixed inset-0 z-[80] bg-ink-950/90 backdrop-blur-sm flex items-end justify-center">
       <div className="w-full max-w-md max-h-[80vh] overflow-y-auto bg-ink-900 border border-ink-700/50 rounded-t-3xl animate-slide-up">
         <div className="sticky top-0 bg-ink-900/95 backdrop-blur-md px-6 py-4 border-b border-ink-700/40 flex items-center justify-between">
-          <h2 className="font-serif text-xl text-ivory-50">Sources</h2>
+          <h2 className="font-serif text-xl text-ivory-50">{L.title}</h2>
           <button onClick={onClose} className="btn-ghost">
             <X size={18} />
           </button>
         </div>
 
         <div className="px-6 py-5">
-          {sources.length === 0 ? (
+          {verifiedSources.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="w-14 h-14 rounded-2xl bg-ink-800/50 border border-ink-700/40 flex items-center justify-center mb-5">
                 <BookOpen size={22} className="text-ivory-600" />
               </div>
               <p className="text-ivory-400 text-sm font-medium mb-2">
-                Verified sources are still being added to SOLAPATH's library.
+                {L.empty}
               </p>
               <p className="text-ivory-600 text-xs leading-relaxed max-w-xs">
-                SOLAPATH will never fabricate citations or quotations. When verified theological sources are connected, they will appear here with full attribution.
+                {L.emptyDetail}
               </p>
             </div>
           ) : (
@@ -95,11 +123,8 @@ export default function SourceViewer({ sources, onClose }: SourceViewerProps) {
                                 <p className="text-ivory-600 text-xs mt-1 font-mono">{source.citation}</p>
                               )}
                               <div className="flex items-center gap-2 mt-2">
-                                <span className="text-[10px] uppercase tracking-wider text-sage-400 font-medium">
-                                  {source.source_type.replace(/_/g, ' ')}
-                                </span>
                                 <span className="text-[10px] text-sage-400 flex items-center gap-1">
-                                  <ShieldCheck size={10} /> Verified
+                                  <ShieldCheck size={10} /> {L.verified}
                                 </span>
                               </div>
                               {source.url && (
@@ -110,7 +135,7 @@ export default function SourceViewer({ sources, onClose }: SourceViewerProps) {
                                   className="text-gold-300 text-xs mt-2 flex items-center gap-1 hover:text-gold-200 transition-colors"
                                 >
                                   <ExternalLink size={11} />
-                                  View reference
+                                  {lang === 'es' ? 'Ver referencia' : 'View reference'}
                                 </a>
                               )}
                             </div>
@@ -121,8 +146,6 @@ export default function SourceViewer({ sources, onClose }: SourceViewerProps) {
                   </div>
                 );
               })}
-
-              {/* Unverified sources are never displayed to users */}
             </div>
           )}
         </div>
