@@ -121,6 +121,8 @@ export interface StructuredTheologicalResponse {
   rag_retrieved_source_ids?: string[];
   rag_rejected_source_ids?: string[];
   personal_context_used?: string[];
+  personal_context_items?: PersonalContextItem[];
+  personal_claims?: PersonalClaim[];
   provider?: string;
   model_version?: string;
   system_versions?: Record<string, string>;
@@ -143,7 +145,14 @@ export interface StructuredTheologicalResponse {
       role: 'primary' | 'supporting';
     }>;
   };
-  personal_context_used?: PersonalContextItem[];
+}
+
+export interface PersonalClaim {
+  claim_type: string;
+  text: string;
+  evidence_source_type?: string;
+  evidence_source_id?: string;
+  evidence_origin: 'current_turn' | 'current_conversation' | 'memory';
 }
 
 export type VerificationState =

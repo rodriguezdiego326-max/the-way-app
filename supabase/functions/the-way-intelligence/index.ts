@@ -153,6 +153,7 @@ type IntentType =
   | "SCRIPTURE_EXPLANATION" | "THEOLOGY" | "LIFE_APPLICATION" | "PRAYER"
   | "APOLOGETICS" | "DOUBT" | "FAMILY" | "EVANGELISM" | "CHURCH"
   | "ETHICAL_DECISION" | "PERSONAL_WISDOM" | "DIVINE_REVELATION_CLAIM"
+  | "DIRECT_RECALL" | "SPIRITUAL_INTERPRETATION"
   | "PASTORAL_CRISIS" | "GENERAL";
 
 type ScriptureFirstMode =
@@ -329,6 +330,13 @@ interface StructuredTheologicalResponse {
     scripture_reference?: string;
     topic?: string;
     factual_summary: string;
+  }>;
+  personal_claims?: Array<{
+    claim_type: string;
+    text: string;
+    evidence_source_type?: string;
+    evidence_source_id?: string;
+    evidence_origin: "current_turn" | "current_conversation" | "memory";
   }>;
   provider: string;
   model_version: string;
@@ -663,6 +671,10 @@ function classifyIntent(question: string): string {
   const lower = question.toLowerCase();
   if (detectDivineRevelationClaim(question)) return "DIVINE_REVELATION_CLAIM";
   if (detectCrisis(question) || detectAbuse(question)) return "PASTORAL_CRISIS";
+  // Direct recall questions are NOT theology — they're memory lookups
+  if (/\b(?:did i|do i|have i|what (?:verse|passage|chapter) did i|what did i|what was i|what were we|what have i|do you remember|what did we|what \w+ did we|what was that|last time|previously|what have we)\b/i.test(lower)) return "DIRECT_RECALL";
+  // Spiritual interpretation questions are NOT theology — don't route to "teaching"
+  if (/\b(?:what has god been (?:teaching|showing|doing)|what is god (?:trying to (?:tell|show|teach)|doing)|what is the lord (?:teaching|showing|doing))\b/i.test(lower)) return "SPIRITUAL_INTERPRETATION";
   if (lower.includes("what is") || lower.includes("what does") || lower.includes("explain")) return "THEOLOGY";
   if (lower.includes("why")) return "APOLOGETICS";
   if (lower.includes("how")) return "LIFE_APPLICATION";
@@ -687,6 +699,35 @@ const PROHIBITED_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /god wants you to marry/i, reason: "Claims divine instruction for marriage decision" },
   { pattern: /god (?:has|will) make your (?:business|company) succeed/i, reason: "Fabricates divine guarantee of success" },
 ];
+
+function validatePersonalClaims(
+  claims: NonNullable<StructuredTheologicalResponse["personal_claims"]>,
+  currentQuestion: string,
+  conversationHistory: Array<{ role: "user" | "assistant"; body: string }>,
+  memoryEvidence: Array<{ source_type: string; source_id: string; factual_summary: string }>,
+): { claims: NonNullable<StructuredTheologicalResponse["personal_claims"]>; warnings: string[] } {
+  const warnings: string[] = [];
+  const currentLower = currentQuestion.toLowerCase();
+  const conversationText = conversationHistory.map((item) => item.body.toLowerCase()).join(" ");
+  const validClaims = claims.filter((claim) => {
+    if (claim.evidence_origin === "memory") {
+      const valid = Boolean(claim.evidence_source_id && memoryEvidence.some((e) => e.source_id === claim.evidence_source_id));
+      if (!valid) warnings.push("Unsupported memory claim removed");
+      return valid;
+    }
+    if (claim.evidence_origin === "current_turn") {
+      const claimTerms = claim.text.toLowerCase().split(/\s+/).filter((term) => term.length > 4);
+      const valid = claimTerms.length === 0 || claimTerms.some((term) => currentLower.includes(term));
+      if (!valid) warnings.push("Unsupported current-turn claim removed");
+      return valid;
+    }
+    const claimTerms = claim.text.toLowerCase().split(/\s+/).filter((term) => term.length > 4);
+    const valid = claimTerms.length === 0 || claimTerms.some((term) => conversationText.includes(term));
+    if (!valid) warnings.push("Unsupported conversation claim removed");
+    return valid;
+  });
+  return { claims: validClaims, warnings };
+}
 
 function validateResponse(response: StructuredTheologicalResponse): { passed: boolean; warnings: string[] } {
   const warnings: string[] = [];
@@ -1231,6 +1272,24 @@ const devProvider: AIProvider = {
     const isAbuse = detectAbuse(originalQuestion);
     const isEmergency = detectEmergency(originalQuestion);
 
+    // ============================================================
+    // INTENT CLASSIFICATION — distinguish recall, interpretation, and conversational from theology
+    // ============================================================
+    const isDirectRecall = /\b(?:did i|do i|have i|what (?:verse|passage|chapter) did i|what did i|what was i|what were we|what have i|do you remember|what did we|what \w+ did we|what was that|last time|previously|what have we)\b/i.test(question);
+    const isSpiritualInterpretation = /\b(?:what has god been (?:teaching|showing|doing)|what is god (?:trying to (?:tell|show|teach)|doing)|what is the lord (?:teaching|showing|doing))\b/i.test(question);
+    const isConversationalStatement = !isDirectRecall && !isSpiritualInterpretation && !divineRevelationDetected && !isCrisis && !isAbuse && !isEmergency && (
+      /\b(?:i'm (?:exhausted|tired|weary|burned out|drained|struggling|having a hard time)|i haven't|i can't seem to|i keep (?:failing|falling)|i usually (?:start|begin)|i'm losing|i'm doubting)\b/i.test(question)
+    );
+    let recallType: "bookmark" | "highlight" | "note" | "prayer" | "reading" | "conversation" | "walk" | "general" | null = null;
+    if (/\b(?:save|saved|bookmark)\b/i.test(question)) recallType = "bookmark";
+    else if (/\b(?:highlight|highlighted|underline|marked)\b/i.test(question)) recallType = "highlight";
+    else if (/\b(?:note|noted|wrote|wrote down)\b/i.test(question)) recallType = "note";
+    else if (/\b(?:pray|prayed|prayer)\b/i.test(question)) recallType = "prayer";
+    else if (/\b(?:read|reading|was reading|what was i reading)\b/i.test(question)) recallType = "reading";
+    else if (/\b(?:talk|talked|discuss|discussed|conversation|asked about)\b/i.test(question)) recallType = "conversation";
+    else if (/\b(?:walk|studied|study|today's walk)\b/i.test(question)) recallType = "walk";
+    else if (isDirectRecall) recallType = "general";
+
     let intent: IntentType = "GENERAL";
     let scriptureFirstMode: ScriptureFirstMode = "ANSWER_NORMALLY";
 
@@ -1443,6 +1502,120 @@ const devProvider: AIProvider = {
       sourceUnavailable = true;
     } else if (isCrisis || isAbuse || isEmergency) {
       answerSummary = "I want to help you think through this biblically, but this situation also deserves human support. Please consider reaching out to your pastor, a trusted Christian friend, or a qualified professional. If you are in immediate danger, please contact emergency services. SOLAPATH is not a replacement for human care.";
+    } else if (isDirectRecall) {
+      // ============================================================
+      // DIRECT RECALL — answer from memory evidence, not theology
+      // ============================================================
+      const isSpanish = request.response_language === "Spanish";
+      const memEvidence = request.memory_evidence && request.memory_evidence.length > 0
+        ? request.memory_evidence
+        : (request.study_memory_evidence || []).map((e) => ({
+            source_type: e.source_type,
+            source_id: e.id,
+            created_at: e.created_at,
+            scripture_reference: e.reference || undefined,
+            factual_summary: e.summary,
+            relevance_reason: "Keyword match",
+          }));
+
+      // Filter by recall type if specified
+      const filteredEvidence = recallType && recallType !== "general"
+        ? memEvidence.filter((e) => e.source_type.includes(recallType) || (recallType === "bookmark" && e.source_type === "bookmark") || (recallType === "highlight" && e.source_type === "highlight") || (recallType === "prayer" && e.source_type === "prayer") || (recallType === "note" && e.source_type === "bible_note") || (recallType === "conversation" && e.source_type === "ask_conversation") || (recallType === "walk" && e.source_type === "today_walk") || (recallType === "reading" && e.source_type === "bible_reading"))
+        : memEvidence;
+
+      if (filteredEvidence.length === 1) {
+        const e = filteredEvidence[0];
+        const sourceLabel = isSpanish
+          ? (e.source_type === "bookmark" ? "guardaste" : e.source_type === "highlight" ? "resaltaste" : e.source_type === "prayer" ? "oraste" : e.source_type === "bible_note" ? "escribiste una nota" : e.source_type === "ask_conversation" ? "conversamos" : e.source_type === "today_walk" ? "estudiaste" : e.source_type === "bible_reading" ? "leíste" : "tienes un registro")
+          : (e.source_type === "bookmark" ? "you saved" : e.source_type === "highlight" ? "you highlighted" : e.source_type === "prayer" ? "you prayed" : e.source_type === "bible_note" ? "you wrote a note" : e.source_type === "ask_conversation" ? "we talked" : e.source_type === "today_walk" ? "you studied" : e.source_type === "bible_reading" ? "you read" : "you have a record");
+        answerSummary = isSpanish
+          ? `Sí — ${sourceLabel} ${e.scripture_reference || e.topic || "esto"}. ${e.factual_summary}`
+          : `Yes — ${sourceLabel} ${e.scripture_reference || e.topic || "this"}. ${e.factual_summary}`;
+      } else if (filteredEvidence.length > 1) {
+        answerSummary = isSpanish
+          ? `Encontré ${filteredEvidence.length} registros que podrían ser lo que buscas:\n\n`
+          : `I found ${filteredEvidence.length} records that might be what you're looking for:\n\n`;
+        for (const e of filteredEvidence.slice(0, 5)) {
+          answerSummary += isSpanish
+            ? `- ${e.source_type}: ${e.scripture_reference || e.topic || "N/A"} — ${e.factual_summary}\n`
+            : `- ${e.source_type}: ${e.scripture_reference || e.topic || "N/A"} — ${e.factual_summary}\n`;
+        }
+      } else {
+        // No match — valid negative recall
+        const sourceLabel = recallType === "bookmark" ? (isSpanish ? "un versículo guardado" : "a saved verse")
+          : recallType === "highlight" ? (isSpanish ? "un versículo resaltado" : "a highlighted verse")
+          : recallType === "prayer" ? (isSpanish ? "una oración" : "a prayer")
+          : recallType === "note" ? (isSpanish ? "una nota" : "a note")
+          : recallType === "conversation" ? (isSpanish ? "una conversación" : "a conversation")
+          : recallType === "walk" ? (isSpanish ? "un estudio" : "a study")
+          : isSpanish ? "un registro" : "a record";
+        answerSummary = isSpanish
+          ? `No pude encontrar ${sourceLabel} sobre eso. Si crees que existe, intenta reformular tu pregunta.`
+          : `I couldn't find ${sourceLabel} about that. If you think it exists, try rephrasing your question.`;
+      }
+      // Recall responses don't need theological sources
+      sourceUnavailable = false;
+    } else if (isSpiritualInterpretation) {
+      // ============================================================
+      // SPIRITUAL INTERPRETATION — summarize real evidence, no private revelation
+      // ============================================================
+      const isSpanish = request.response_language === "Spanish";
+      const memEvidence = request.memory_evidence && request.memory_evidence.length > 0
+        ? request.memory_evidence
+        : (request.study_memory_evidence || []).map((e) => ({
+            source_type: e.source_type,
+            source_id: e.id,
+            created_at: e.created_at,
+            scripture_reference: e.reference || undefined,
+            factual_summary: e.summary,
+            relevance_reason: "Keyword match",
+          }));
+
+      answerSummary = isSpanish
+        ? "No puedo saber con certeza lo que Dios está haciendo personalmente en tu vida, pero puedo mirar lo que has estado estudiando, orando y volviendo a en la Escritura.\n\n"
+        : "I can't know for certain what God is personally doing in your life, but I can look at what you've been studying, praying about, and returning to in Scripture.\n\n";
+
+      if (memEvidence.length > 0) {
+        answerSummary += isSpanish ? "Esto es lo que veo en tu historial reciente:\n\n" : "Here's what I see in your recent history:\n\n";
+        for (const e of memEvidence.slice(0, 5)) {
+          answerSummary += isSpanish
+            ? `- ${e.source_type}: ${e.scripture_reference || e.topic || "N/A"} — ${e.factual_summary}\n`
+            : `- ${e.source_type}: ${e.scripture_reference || e.topic || "N/A"} — ${e.factual_summary}\n`;
+        }
+        answerSummary += isSpanish
+          ? "\nEstos son los registros reales. Dios puede estar usándolos, pero no puedo afirmarlo con certeza."
+          : "\nThese are your actual records. God may be using them, but I can't claim that with certainty.";
+      } else {
+        answerSummary += isSpanish
+          ? "No encontré registros recientes de estudio, oración o lectura. Si has estado estudiando algo, intenta preguntar más específicamente."
+          : "I didn't find recent records of study, prayer, or reading. If you have been studying something, try asking more specifically.";
+      }
+      sourceUnavailable = false;
+    } else if (isConversationalStatement) {
+      // ============================================================
+      // CURRENT USER STATEMENT — respond to what the user just said
+      // No memory evidence required — the current message is the evidence
+      // ============================================================
+      const isSpanish = request.response_language === "Spanish";
+      // Check for exhaustion / burnout / struggle patterns
+      if (/\b(?:exhausted|tired|weary|burnout|burned out|drained|haven't opened|haven't read|no energy|fatigue)\b/i.test(question)) {
+        answerSummary = isSpanish
+          ? "Si no has abierto tu Biblia en unos días, no intentes recuperar todo esta noche. Comienza pequeño. Lee un solo pasaje — incluso un versículo. Mateo 11:28 dice: \"Venid a mí todos los que estáis trabajados y cargados, y yo os haré descansar.\" El descanso en Cristo no depende de tu rendimiento. Dios no te ama más cuando lees más. Te ama en Cristo. Pero Su Palabra es el medio por el cual renueva tu mente y te da fuerza. Intenta leer un salmo hoy. Solo uno. Y pídele que hable a través de él."
+          : "If you haven't opened your Bible in a few days, don't try to make up for all of it tonight. Start small. Read just one passage — even a single verse. Matthew 11:28 says, \"Come to me, all who labor and are heavy laden, and I will give you rest.\" Rest in Christ doesn't depend on your performance. God doesn't love you more when you read more. He loves you in Christ. But His Word is the means by which He renews your mind and gives you strength. Try reading one Psalm today. Just one. And ask Him to speak through it.";
+        scriptureContext = "Matthew 11:28-30 invites the weary to find rest in Christ. Psalm 23 shows the Lord as shepherd who restores the soul. Isaiah 40:29-31 promises strength to the weary.";
+      } else if (/\b(?:struggling|struggle|hard time|difficult|difficult time|can't seem to|keep failing|keep falling)\b/i.test(question)) {
+        answerSummary = isSpanish
+          ? "La lucha es real, y no estás solo en ella. Romanos 7 muestra al apóstol Pablo luchando con la misma tensión — queriendo hacer el bien pero no siempre lográndolo. La buena noticia es que Romanos 8:1 dice: \"Ahora, pues, ninguna condenación hay para los que están en Cristo Jesús.\" Tu lucha no te separa del amor de Dios. La santificación es un proceso que dura toda la vida. No tienes que ser perfecto para acercarte a Dios — ven a Él en tu lucha y deja que Su Palabra te transforme gradualmente."
+          : "The struggle is real, and you're not alone in it. Romans 7 shows the apostle Paul wrestling with the same tension — wanting to do good but not always achieving it. The good news is that Romans 8:1 says, \"There is therefore now no condemnation for those who are in Christ Jesus.\" Your struggle doesn't separate you from God's love. Sanctification is a lifelong process. You don't have to be perfect to approach God — come to Him in your struggle and let His Word transform you gradually.";
+        scriptureContext = "Romans 7:15-25 shows the struggle between flesh and spirit. Romans 8:1 declares no condemnation in Christ. Philippians 1:6 promises God will complete the work He began.";
+      } else {
+        // Generic conversational response — acknowledge and offer Scripture
+        answerSummary = isSpanish
+          ? "Gracias por compartir eso conmigo. Lo que describes es algo que muchos creyentes enfrentan. La Escritura nos da sabiduría para estos momentos. Te recomiendo leer un pasaje relevante hoy y pedir a Dios que te hable a través de él."
+          : "Thank you for sharing that with me. What you're describing is something many believers face. Scripture gives us wisdom for these moments. I recommend reading a relevant passage today and asking God to speak to you through it.";
+        scriptureContext = "Psalm 34:18 says the Lord is near to the brokenhearted. 1 Peter 5:6-7 calls us to cast our anxieties on Him because He cares for us.";
+      }
+      sourceUnavailable = false;
     } else if (ragCitations.length > 0) {
       const confessionalRefs = ragCitations.filter((c) => c.authority_level === 3);
       const historicRefs = ragCitations.filter((c) => c.authority_level === 4);
@@ -1464,7 +1637,7 @@ const devProvider: AIProvider = {
           : "In Scripture, adoption means God receives us as His children. It's not just a metaphor — it's a real change of legal and relational status. Through faith in Christ, we're brought into God's family with all the rights and privileges of sons. Romans 8:15 says, \"you didn't receive the spirit of bondage again to fear, but you received the Spirit of adoption, by whom we cry, 'Abba! Father!'\" This means you can approach God with the confidence of a child who knows their Father loves them.";
         reformedUnderstanding = "Adoption is an act of God's free grace whereby believers are received into the number of His children, with His name put upon them, the Spirit of His Son given to them, and access to all the liberties and privileges of the children of God.";
         scriptureContext = "Romans 8:15-17 shows that through the Spirit of adoption we cry 'Abba, Father.' Galatians 4:4-7 shows that God sent His Son to redeem those under the law, that we might receive adoption as sons.";
-      } else if ((intentSubject.includes("teach") || intentSubject.includes("teaching") || intentSubject.includes("disciple")) && !intentSubject.includes("widow") && !intentSubject.includes("hospitality") && !intentSubject.includes("stewardship") && !intentSubject.includes("gossip") && !intentSubject.includes("laziness") && !intentSubject.includes("laziness")) {
+      } else if ((intentSubject.includes("teach") || intentSubject.includes("teaching") || intentSubject.includes("disciple")) && !isSpiritualInterpretation && !intentSubject.includes("widow") && !intentSubject.includes("hospitality") && !intentSubject.includes("stewardship") && !intentSubject.includes("gossip") && !intentSubject.includes("laziness") && !intentSubject.includes("laziness")) {
         answerSummary = isSpanish
           ? "La Escritura nos llama a enseñar y discipular a otros como parte de la Gran Comisión. Mateo 28:19-20 dice: \"Por tanto, id, y haced discípulos a todas las naciones... enseñándoles que guarden todas las cosas que os he mandado.\" La enseñanza bíblica no es solo compartir información — es modelar la vida de Cristo para que otros la sigan. Deuteronomio 6:6-7 muestra que la enseñanza comienza en el hogar, en lo cotidiano."
           : "Scripture calls us to teach and disciple others as part of the Great Commission. Matthew 28:19-20 says, \"Go and make disciples of all nations... teaching them to observe all that I commanded you.\" Biblical teaching isn't just sharing information — it's modeling Christ's life so others can follow. Deuteronomy 6:6-7 shows that teaching starts at home, in everyday life.";
@@ -1634,6 +1807,26 @@ const devProvider: AIProvider = {
       factual_summary: e.factual_summary,
     }));
 
+    const personalClaims: StructuredTheologicalResponse["personal_claims"] = [];
+    if (isDirectRecall) {
+      for (const evidence of memoryEvidenceForItems.slice(0, 5)) {
+        personalClaims.push({
+          claim_type: `retrieved_${evidence.source_type}`,
+          text: evidence.factual_summary,
+          evidence_source_type: evidence.source_type,
+          evidence_source_id: evidence.source_id,
+          evidence_origin: "memory",
+        });
+      }
+    }
+    if (isConversationalStatement) {
+      personalClaims.push({
+        claim_type: "current_user_statement",
+        text: originalQuestion,
+        evidence_origin: "current_turn",
+      });
+    }
+
     const memoryProposals: MemoryProposal[] = [];
     if ((intent === "LIFE_APPLICATION" || intent === "DIVINE_REVELATION_CLAIM") && !isCrisis && !isAbuse) {
       const proposal = generateNeutralMemoryProposal(originalQuestion);
@@ -1739,6 +1932,7 @@ const devProvider: AIProvider = {
       rag_rejected_source_ids: ragRejectedIds,
       personal_context_used: personalContextUsed,
       personal_context_items: personalContextItems,
+      personal_claims: personalClaims,
       provider: "development",
       model_version: VERSIONS.model,
       system_versions: VERSIONS,
@@ -1754,8 +1948,10 @@ const devProvider: AIProvider = {
     };
 
     const validation = validateResponse(response);
+    const claimValidation = validatePersonalClaims(response.personal_claims || [], originalQuestion, request.conversation_history || [], memoryEvidenceForItems);
+    response.personal_claims = claimValidation.claims;
     response.validation_passed = validation.passed;
-    response.validation_warnings = validation.warnings;
+    response.validation_warnings = [...validation.warnings, ...claimValidation.warnings];
 
     return response;
   },
