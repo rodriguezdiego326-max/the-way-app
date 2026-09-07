@@ -1,2 +1,5 @@
 [functions.the-way-intelligence]
 verify_jwt = true
+
+[functions.memory-retrieval]
+verify_jwt = true

@@ -210,6 +210,15 @@ interface IntelligenceRequest {
     reference: string | null;
     summary: string;
     created_at: string;
+  }>
+  memory_evidence?: Array<{
+    source_type: string;
+    source_id: string;
+    created_at: string;
+    scripture_reference?: string;
+    topic?: string;
+    factual_summary: string;
+    relevance_reason: string;
   }>;
   conversation_history?: Array<{ role: "user" | "assistant"; body: string }>;
   session_id?: string;
@@ -314,7 +323,13 @@ interface StructuredTheologicalResponse {
   rag_context_summary: string | null;
   rag_retrieved_source_ids: string[];
   rag_rejected_source_ids: string[];
-  personal_context_used: string[];
+  personal_context_used: string[]
+  personal_context_items?: Array<{
+    source_type: string;
+    scripture_reference?: string;
+    topic?: string;
+    factual_summary: string;
+  }>;
   provider: string;
   model_version: string;
   system_versions: Record<string, string>;
@@ -1602,6 +1617,23 @@ const devProvider: AIProvider = {
       }
     }
 
+    const memoryEvidenceForItems = request.memory_evidence && request.memory_evidence.length > 0
+      ? request.memory_evidence
+      : (request.study_memory_evidence || []).map((e) => ({
+          source_type: e.source_type,
+          source_id: e.id,
+          created_at: e.created_at,
+          scripture_reference: e.reference || undefined,
+          factual_summary: e.summary,
+          relevance_reason: 'Keyword match',
+        }));
+    const personalContextItems = memoryEvidenceForItems.slice(0, 5).map((e) => ({
+      source_type: e.source_type,
+      scripture_reference: e.scripture_reference,
+      topic: e.topic || (e as { topic?: string }).topic,
+      factual_summary: e.factual_summary,
+    }));
+
     const memoryProposals: MemoryProposal[] = [];
     if ((intent === "LIFE_APPLICATION" || intent === "DIVINE_REVELATION_CLAIM") && !isCrisis && !isAbuse) {
       const proposal = generateNeutralMemoryProposal(originalQuestion);
@@ -1706,6 +1738,7 @@ const devProvider: AIProvider = {
       rag_retrieved_source_ids: ragSourceIds,
       rag_rejected_source_ids: ragRejectedIds,
       personal_context_used: personalContextUsed,
+      personal_context_items: personalContextItems,
       provider: "development",
       model_version: VERSIONS.model,
       system_versions: VERSIONS,
@@ -2005,6 +2038,12 @@ function createOpenAIProvider(config: ProviderConfig): AIProvider {
             rag_retrieved_source_ids: ragRetrieval?.retrieved_source_ids || [],
             rag_rejected_source_ids: ragRetrieval?.rejected_source_ids || [],
             personal_context_used: [],
+            personal_context_items: (request.memory_evidence || []).slice(0, 5).map((e) => ({
+              source_type: e.source_type,
+              scripture_reference: e.scripture_reference,
+              topic: e.topic,
+              factual_summary: e.factual_summary,
+            })),
             provider: "openai",
             model_version: config.model,
             system_versions: VERSIONS,
@@ -2120,14 +2159,24 @@ function buildUserContext(request: IntelligenceRequest): string {
     parts.push("\nRelevant context from what SOLAPATH remembers:");
     for (const m of request.relevant_memories) parts.push(`- [${m.category}] ${m.content}`);
   }
-  if (request.study_memory_evidence && request.study_memory_evidence.length > 0) {
-    parts.push("\nVerified study memory evidence (real user-owned records):");
-    for (const e of request.study_memory_evidence) {
-      parts.push(`- [${e.source_type}] ${e.reference || 'N/A'}: ${e.summary} (${e.created_at})`);
+  const memoryEvidence = request.memory_evidence && request.memory_evidence.length > 0
+    ? request.memory_evidence
+    : (request.study_memory_evidence || []).map((e) => ({
+        source_type: e.source_type,
+        source_id: e.id,
+        created_at: e.created_at,
+        scripture_reference: e.reference || undefined,
+        factual_summary: e.summary,
+        relevance_reason: 'Keyword match',
+      }));
+  if (memoryEvidence.length > 0) {
+    parts.push("\nVerified personal context (real user-owned records — you may reference these naturally):");
+    for (const e of memoryEvidence) {
+      parts.push(`- [${e.source_type}] ${e.scripture_reference || e.topic || 'N/A'}: ${e.factual_summary} (${e.created_at.split('T')[0]})`);
     }
-    parts.push("IMPORTANT: You may ONLY say 'Remember when you studied...' or 'You recently read...' if the exact study is listed above. If no evidence is listed, do NOT mention prior study.");
+    parts.push("IMPORTANT: You may ONLY say 'Remember when you studied...' or 'You recently read...' or 'You wrote...' or 'You prayed...' or 'We talked about...' if the exact record is listed above. Use factual, qualified language. Do NOT infer spiritual conclusions from these records. Do NOT fabricate any study, prayer, or experience not listed.");
   } else {
-    parts.push("\nNo study memory evidence retrieved. Do NOT say 'Remember when you studied...' or 'You recently read...' or 'Earlier you learned...' or 'We looked at...'. Do NOT fabricate prior study.");
+    parts.push("\nNo personal context retrieved. Do NOT say 'Remember when you studied...' or 'You recently read...' or 'Earlier you learned...' or 'We talked about...' or 'You wrote...' or 'You prayed...'. Do NOT fabricate prior study, prayer, or spiritual experience.");
   }
   if (request.conversation_history && request.conversation_history.length > 0) {
     parts.push("\nConversation so far:");

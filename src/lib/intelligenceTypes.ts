@@ -143,6 +143,7 @@ export interface StructuredTheologicalResponse {
       role: 'primary' | 'supporting';
     }>;
   };
+  personal_context_used?: PersonalContextItem[];
 }
 
 export type VerificationState =
@@ -256,6 +257,7 @@ export interface IntelligenceRequest {
     content: string;
   }>;
   study_memory_evidence?: StudyMemoryEvidence[];
+  memory_evidence?: MemoryEvidence[];
   conversation_history?: Array<{
     role: 'user' | 'assistant';
     body: string;
@@ -279,6 +281,23 @@ export interface StudyMemoryEvidence {
   reference: string | null;
   summary: string;
   created_at: string;
+}
+
+export interface MemoryEvidence {
+  source_type: string;
+  source_id: string;
+  created_at: string;
+  scripture_reference?: string;
+  topic?: string;
+  factual_summary: string;
+  relevance_reason: string;
+}
+
+export interface PersonalContextItem {
+  source_type: string;
+  scripture_reference?: string;
+  topic?: string;
+  factual_summary: string;
 }
 
 export interface IntentClassification {

@@ -26,6 +26,9 @@ import {
   ThumbsUp,
   ThumbsDown,
   RotateCw,
+  Sparkles,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/lib/supabase';
@@ -1385,6 +1388,7 @@ function AssistantMessage({
   onReportConcern,
 }: AssistantMessageProps) {
   const [copied, setCopied] = useState(false);
+  const [showPersonalContext, setShowPersonalContext] = useState(false);
   const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
   const activeProposals = response.memory_proposals || [];
   const visibleProposals = activeProposals.filter((_, i) => !dismissedProposals.has(`${itemId}-${i}`));
@@ -1491,6 +1495,32 @@ function AssistantMessage({
         <div className="space-y-3">
           {renderParagraphs(response.answer_summary, `font-serif ${scale.body} text-ivory-100`, onOpenBible)}
         </div>
+
+        {/* Personal context indicator — subtle, only when memory was used */}
+        {response.personal_context_items && response.personal_context_items.length > 0 && (
+          <div className="pt-1">
+            <button
+              onClick={() => setShowPersonalContext(!showPersonalContext)}
+              className="flex items-center gap-1.5 text-ivory-600 hover:text-gold-400 transition-colors text-xs no-tap-highlight"
+            >
+              <Sparkles size={11} />
+              {askLang === 'es' ? 'Contexto personal utilizado' : 'Used your study history'}
+              {showPersonalContext ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+            </button>
+            {showPersonalContext && (
+              <div className="mt-2 space-y-1 pl-4 border-l border-gold-500/20">
+                {response.personal_context_items.map((item, i) => (
+                  <div key={i} className="text-ivory-600 text-xs">
+                    <span className="text-ivory-500">{item.source_type.replace(/_/g, ' ')}</span>
+                    {item.scripture_reference ? ` — ${item.scripture_reference}` : ''}
+                    {item.topic ? ` — ${item.topic}` : ''}
+                    <p className="text-ivory-600 mt-0.5">{item.factual_summary}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Inline Scripture blocks — exact local text from active translation */}
         {response.recommended_scripture.map((rec, i) => (

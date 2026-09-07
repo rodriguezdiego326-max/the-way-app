@@ -3,6 +3,7 @@ import type {
   IntelligenceRequest,
   StructuredTheologicalResponse,
   StudyMemoryEvidence,
+  MemoryEvidence,
 } from './intelligenceTypes';
 import type { InlineScriptureReference } from './intelligenceTypes';
 import type { Profile, Memory } from './types';
@@ -26,6 +27,9 @@ export async function fetchIntelligenceResponse(
   // Retrieve relevant memories (selective, not all)
   const relevantMemories = await retrieveRelevantMemories(question, profile);
 
+  // Retrieve enriched memory evidence from server-side edge function
+  const memoryEvidence = await retrieveMemoryEvidence(question);
+
   const request: IntelligenceRequest = {
     question,
     theological_depth: theologicalDepth,
@@ -43,6 +47,7 @@ export async function fetchIntelligenceResponse(
       : undefined,
     relevant_memories: relevantMemories,
     study_memory_evidence: studyMemoryEvidence,
+    memory_evidence: memoryEvidence.length > 0 ? memoryEvidence : undefined,
     conversation_history: conversationHistory,
     last_assistant_context: lastAssistantContext,
     session_id: sessionId,
@@ -218,91 +223,64 @@ export async function retrieveStudyMemoryEvidence(
 ): Promise<StudyMemoryEvidence[]> {
   if (!profile) return [];
 
-  const evidence: StudyMemoryEvidence[] = [];
-  const q = question.toLowerCase();
-
-  // Query bible_notes (limit 5 most recent)
   try {
-    const { data: notes } = await supabase
-      .from('bible_notes')
-      .select('id, book, chapter, verse_start, verse_end, title, content, created_at')
-      .order('created_at', { ascending: false })
-      .limit(10);
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session?.access_token) return [];
 
-    if (notes) {
-      for (const note of notes) {
-        const ref = `${note.book} ${note.chapter}:${note.verse_start}${note.verse_end && note.verse_end !== note.verse_start ? `–${note.verse_end}` : ''}`;
-        const noteText = `${note.title || ''} ${note.content || ''}`.toLowerCase();
-        const keywords = q.split(/\s+/).filter((w) => w.length > 4);
-        if (keywords.some((k) => noteText.includes(k) || ref.toLowerCase().includes(k))) {
-          evidence.push({
-            source_type: 'bible_note',
-            id: note.id,
-            reference: ref,
-            summary: (note.title || note.content || '').slice(0, 120),
-            created_at: note.created_at,
-          });
-        }
-      }
-    }
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    const res = await fetch(`${supabaseUrl}/functions/v1/memory-retrieval`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sessionData.session.access_token}`,
+        'apikey': supabaseAnonKey,
+      },
+      body: JSON.stringify({ question }),
+    });
+
+    if (!res.ok) return [];
+
+    const data = await res.json() as { evidence?: MemoryEvidence[] };
+    if (!data.evidence) return [];
+
+    return data.evidence.map((e) => ({
+      source_type: e.source_type as StudyMemoryEvidence['source_type'],
+      id: e.source_id,
+      reference: e.scripture_reference || null,
+      summary: e.factual_summary,
+      created_at: e.created_at,
+    }));
   } catch {
-    // Table may not exist or RLS may block — skip silently
+    return [];
   }
+}
 
-  // Query bible_reading_history (limit 5 most recent)
+export async function retrieveMemoryEvidence(
+  question: string,
+): Promise<MemoryEvidence[]> {
   try {
-    const { data: history } = await supabase
-      .from('bible_reading_history')
-      .select('id, book, chapter, updated_at')
-      .order('updated_at', { ascending: false })
-      .limit(10);
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session?.access_token) return [];
 
-    if (history) {
-      for (const h of history) {
-        const ref = `${h.book} ${h.chapter}`;
-        const keywords = q.split(/\s+/).filter((w) => w.length > 4);
-        if (keywords.some((k) => ref.toLowerCase().includes(k))) {
-          evidence.push({
-            source_type: 'reading_history',
-            id: h.id,
-            reference: ref,
-            summary: `Read ${ref}`,
-            created_at: h.updated_at,
-          });
-        }
-      }
-    }
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    const res = await fetch(`${supabaseUrl}/functions/v1/memory-retrieval`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sessionData.session.access_token}`,
+        'apikey': supabaseAnonKey,
+      },
+      body: JSON.stringify({ question }),
+    });
+
+    if (!res.ok) return [];
+    const data = await res.json() as { evidence?: MemoryEvidence[] };
+    return data.evidence || [];
   } catch {
-    // Skip silently
+    return [];
   }
-
-  // Query bible_bookmarks (limit 5 most recent)
-  try {
-    const { data: bookmarks } = await supabase
-      .from('bible_bookmarks')
-      .select('id, book, chapter, verse_start, verse_end, label, created_at')
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    if (bookmarks) {
-      for (const bm of bookmarks) {
-        const ref = `${bm.book} ${bm.chapter}:${bm.verse_start}${bm.verse_end && bm.verse_end !== bm.verse_start ? `–${bm.verse_end}` : ''}`;
-        const keywords = q.split(/\s+/).filter((w) => w.length > 4);
-        if (keywords.some((k) => ref.toLowerCase().includes(k) || (bm.label || '').toLowerCase().includes(k))) {
-          evidence.push({
-            source_type: 'bible_bookmark',
-            id: bm.id,
-            reference: ref,
-            summary: bm.label || `Bookmark at ${ref}`,
-            created_at: bm.created_at,
-          });
-        }
-      }
-    }
-  } catch {
-    // Skip silently
-  }
-
-  // Limit total evidence to 5 most relevant
-  return evidence.slice(0, 5);
 }
