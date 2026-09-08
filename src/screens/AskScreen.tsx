@@ -39,7 +39,7 @@ import BiblicalBasis from '@/components/BiblicalBasis';
 import MemoryProposalCard from '@/components/MemoryProposalCard';
 import { fetchIntelligenceResponse, retrieveStudyMemoryEvidence } from '@/lib/intelligenceService';
 import type { AskIntent, Profile, Walk } from '@/lib/types';
-import type { StructuredTheologicalResponse, VerificationState, StudyMemoryEvidence } from '@/lib/intelligenceTypes';
+import type { StructuredTheologicalResponse, VerificationState, StudyMemoryEvidence, PersonalContextItem, PersonalClaim } from '@/lib/intelligenceTypes';
 import ScriptureBlock from '@/components/ScriptureBlock';
 import { parsePassageReference } from '@/lib/passageParser';
 import { getBookDisplayName, type BibleTranslation } from '@/lib/bibleTypes';
@@ -331,6 +331,8 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
           teacher_attribution_blocked: null,
           human_support_recommended: false,
           human_support_note: null,
+          personal_context_items: (msg.structured_payload as Record<string, unknown>)?.personal_context_items as PersonalContextItem[] | undefined,
+          personal_claims: (msg.structured_payload as Record<string, unknown>)?.personal_claims as PersonalClaim[] | undefined,
         } as unknown as StructuredTheologicalResponse;
         return { kind: 'assistant', id: msg.id, response: minimal } as ThreadItem;
       });

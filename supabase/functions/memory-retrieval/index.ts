@@ -300,7 +300,7 @@ async function queryBibleNotes(
   keywords: string[],
   recall: RecallIntent,
 ): Promise<MemoryEvidence[]> {
-  if (recall.recallType === "highlight" || recall.recallType === "bookmark" || recall.recallType === "prayer") return [];
+  if (recall.recallType === "highlight" || recall.recallType === "prayer") return [];
   const res = await fetch(
     `${supabaseUrl}/rest/v1/bible_notes?select=id,book,chapter,verse_start,verse_end,title,content,created_at&order=created_at.desc&limit=20`,
     { headers },
@@ -559,7 +559,9 @@ function rankEvidence(
   const semanticTerms = getSemanticTerms(q);
   const sourcePriority: Record<string, number> = {
     bookmark: 10,
+    bible_bookmark: 10,
     highlight: 9,
+    bible_highlight: 9,
     prayer: 8,
     bible_note: 7,
     today_walk: 6,
@@ -567,7 +569,7 @@ function rankEvidence(
     bible_reading: 4,
   };
 
-  return evidence
+  const ranked = evidence
     .map((e) => {
       let score = 0;
       const ageDays = (now - new Date(e.created_at).getTime()) / (1000 * 60 * 60 * 24);
@@ -576,6 +578,11 @@ function rankEvidence(
       if (recall.isRecall) {
         score += 25;
         if (recall.recallType && e.source_type.includes(recall.recallType)) score += 15;
+      }
+
+      // For bookmark-specific recall, boost bookmarks strongly
+      if (recall.recallType === "bookmark" && (e.source_type === "bookmark" || e.source_type === "bible_bookmark")) {
+        score += 30;
       }
 
       const text = `${e.factual_summary} ${e.topic || ""} ${e.scripture_reference || ""}`.toLowerCase();
@@ -589,10 +596,37 @@ function rankEvidence(
         score += semMatches * 5;
       }
 
+      // Scripture content relevance boost: if the scripture reference itself
+      // contains keywords or semantic terms, it's more relevant
+      if (e.scripture_reference) {
+        const refLower = e.scripture_reference.toLowerCase();
+        if (keywords.some((k) => refLower.includes(k))) score += 8;
+        if (semanticTerms.size > 0) {
+          for (const term of semanticTerms) {
+            if (refLower.includes(term)) score += 4;
+          }
+        }
+      }
+
       score += (sourcePriority[e.source_type] || 0) * 0.3;
 
       return { evidence: e, score };
     })
-    .sort((a, b) => b.score - a.score)
-    .map((x) => x.evidence);
+    .sort((a, b) => b.score - a.score);
+
+  // For cross_memory recall, ensure source-type diversity:
+  // take up to 2 per source type before global ranking, then re-rank
+  if (recall.recallType === "cross_memory") {
+    const perType: Record<string, typeof ranked> = {};
+    for (const item of ranked) {
+      const st = item.evidence.source_type;
+      if (!perType[st]) perType[st] = [];
+      if (perType[st].length < 2) perType[st].push(item);
+    }
+    const diverse = Object.values(perType).flat();
+    diverse.sort((a, b) => b.score - a.score);
+    return diverse.slice(0, 8).map((x) => x.evidence);
+  }
+
+  return ranked.slice(0, 8).map((x) => x.evidence);
 }

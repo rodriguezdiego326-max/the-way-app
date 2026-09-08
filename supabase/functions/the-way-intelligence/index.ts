@@ -1527,7 +1527,7 @@ const devProvider: AIProvider = {
       if (filteredEvidence.length === 1) {
         const e = filteredEvidence[0];
         const sourceLabel = isSpanish
-          ? (e.source_type === "bookmark" ? "guardaste" : e.source_type === "highlight" ? "resaltaste" : e.source_type === "prayer" ? "oraste" : e.source_type === "bible_note" ? "escribiste una nota" : e.source_type === "ask_conversation" ? "conversamos" : e.source_type === "today_walk" ? "estudiaste" : e.source_type === "bible_reading" ? "leíste" : "tienes un registro")
+          ? (e.source_type === "bookmark" || e.source_type === "bible_bookmark" ? "guardaste un versículo" : e.source_type === "highlight" || e.source_type === "bible_highlight" ? "resaltaste" : e.source_type === "prayer" ? "oraste" : e.source_type === "bible_note" ? "escribiste una nota" : e.source_type === "ask_conversation" ? "conversamos" : e.source_type === "today_walk" ? "estudiaste" : e.source_type === "bible_reading" ? "leíste" : "tienes un registro")
           : (e.source_type === "bookmark" || e.source_type === "bible_bookmark" ? "you saved a verse" : e.source_type === "highlight" || e.source_type === "bible_highlight" ? "you highlighted" : e.source_type === "prayer" ? "you prayed" : e.source_type === "bible_note" ? "you wrote a Bible note" : e.source_type === "ask_conversation" ? "we talked" : e.source_type === "today_walk" ? "you studied" : e.source_type === "bible_reading" ? "you read" : "you have a record");
         answerSummary = isSpanish
           ? `Sí — ${sourceLabel} ${e.scripture_reference || e.topic || "esto"}. ${e.factual_summary}`
@@ -1594,27 +1594,67 @@ const devProvider: AIProvider = {
       sourceUnavailable = false;
     } else if (isConversationalStatement) {
       // ============================================================
-      // CURRENT USER STATEMENT — respond to what the user just said
-      // No memory evidence required — the current message is the evidence
+      // CURRENT USER STATEMENT — acknowledge briefly, don't over-answer
+      // Only give full advice if the user explicitly asks for it
       // ============================================================
       const isSpanish = request.response_language === "Spanish";
-      // Check for exhaustion / burnout / struggle patterns
-      if (/\b(?:exhausted|tired|weary|burnout|burned out|drained|haven't opened|haven't read|no energy|fatigue)\b/i.test(question)) {
-        answerSummary = isSpanish
-          ? "Si no has abierto tu Biblia en unos días, no intentes recuperar todo esta noche. Comienza pequeño. Lee un solo pasaje — incluso un versículo. Mateo 11:28 dice: \"Venid a mí todos los que estáis trabajados y cargados, y yo os haré descansar.\" El descanso en Cristo no depende de tu rendimiento. Dios no te ama más cuando lees más. Te ama en Cristo. Pero Su Palabra es el medio por el cual renueva tu mente y te da fuerza. Intenta leer un salmo hoy. Solo uno. Y pídele que hable a través de él."
-          : "If you haven't opened your Bible in a few days, don't try to make up for all of it tonight. Start small. Read just one passage — even a single verse. Matthew 11:28 says, \"Come to me, all who labor and are heavy laden, and I will give you rest.\" Rest in Christ doesn't depend on your performance. God doesn't love you more when you read more. He loves you in Christ. But His Word is the means by which He renews your mind and gives you strength. Try reading one Psalm today. Just one. And ask Him to speak through it.";
-        scriptureContext = "Matthew 11:28-30 invites the weary to find rest in Christ. Psalm 23 shows the Lord as shepherd who restores the soul. Isaiah 40:29-31 promises strength to the weary.";
-      } else if (/\b(?:struggling|struggle|hard time|difficult|difficult time|can't seem to|keep failing|keep falling)\b/i.test(question)) {
-        answerSummary = isSpanish
-          ? "La lucha es real, y no estás solo en ella. Romanos 7 muestra al apóstol Pablo luchando con la misma tensión — queriendo hacer el bien pero no siempre lográndolo. La buena noticia es que Romanos 8:1 dice: \"Ahora, pues, ninguna condenación hay para los que están en Cristo Jesús.\" Tu lucha no te separa del amor de Dios. La santificación es un proceso que dura toda la vida. No tienes que ser perfecto para acercarte a Dios — ven a Él en tu lucha y deja que Su Palabra te transforme gradualmente."
-          : "The struggle is real, and you're not alone in it. Romans 7 shows the apostle Paul wrestling with the same tension — wanting to do good but not always achieving it. The good news is that Romans 8:1 says, \"There is therefore now no condemnation for those who are in Christ Jesus.\" Your struggle doesn't separate you from God's love. Sanctification is a lifelong process. You don't have to be perfect to approach God — come to Him in your struggle and let His Word transform you gradually.";
-        scriptureContext = "Romans 7:15-25 shows the struggle between flesh and spirit. Romans 8:1 declares no condemnation in Christ. Philippians 1:6 promises God will complete the work He began.";
+      const isRequestingAdvice = /\b(?:what should i|what would you recommend|how should i|what do you recommend|what can i do|help me|advice|recommend|suggest)\b/i.test(question);
+      const isFollowUpRequest = !!(request.conversation_history && request.conversation_history.length > 0 &&
+        /\b(?:what would you recommend|what should i do|how would you approach|where should i start|why this one|what do you recommend|what can i do)\b/i.test(question));
+
+      if (isFollowUpRequest) {
+        const recentUserMessages = (request.conversation_history || [])
+          .filter((m) => m.role === 'user')
+          .slice(-3)
+          .map((m) => m.body)
+          .join(' ');
+        const hasExhaustion = /\b(?:exhausted|tired|weary|burned out|drained|haven't opened|haven't read|no energy)\b/i.test(recentUserMessages);
+        const hasInconsistency = /\b(?:start strong|stop after|usually start|keep failing|keep falling|can't seem to|inconsistent)\b/i.test(recentUserMessages);
+        if (hasExhaustion || hasInconsistency) {
+          answerSummary = isSpanish
+            ? "Dado lo que me has dicho, te recomiendo algo simple: elige un pasaje corto esta noche — un Salmo o un capítulo de Juan. Léelo despacio. No intentes recuperar el tiempo perdido de una sola vez. La fidelidad diaria importa más que la cantidad. Josué 1:8 dice: \"de día y de noche meditarás en él.\" No dice que leas diez capítulos — dice que medites. Un versículo meditado vale más que diez leídos con prisa."
+            : "Given what you've told me, here's what I'd recommend: pick one short passage tonight — a Psalm or a chapter from John. Read it slowly. Don't try to catch up all at once. Daily faithfulness matters more than volume. Joshua 1:8 says, \"you shall meditate on it day and night.\" It doesn't say read ten chapters — it says meditate. One verse meditated on is worth more than ten read in a rush.";
+          scriptureContext = "Joshua 1:8 commands meditation on God's Word day and night. Matthew 11:28 invites the weary to find rest in Christ. Psalm 1:1-3 describes the one who delights in God's law as like a tree planted by streams of water.";
+        } else {
+          answerSummary = isSpanish
+            ? "Basado en nuestra conversación, te recomiendo buscar un pasaje relevante y leerlo despacio. Pide a Dios que te hable a través de él."
+            : "Based on our conversation, I'd recommend finding a relevant passage and reading it slowly. Ask God to speak to you through it.";
+          scriptureContext = "Psalm 119:105 says God's Word is a lamp to our feet. Philippians 4:8-9 calls us to practice what we have learned.";
+        }
+      } else if (isRequestingAdvice) {
+        if (/\b(?:exhausted|tired|weary|burnout|burned out|drained|haven't opened|haven't read|no energy|fatigue)\b/i.test(question)) {
+          answerSummary = isSpanish
+            ? "Si no has abierto tu Biblia en unos días, no intentes recuperar todo esta noche. Comienza pequeño. Lee un solo pasaje — incluso un versículo. Mateo 11:28 dice: \"Venid a mí todos los que estáis trabajados y cargados, y yo os haré descansar.\" El descanso en Cristo no depende de tu rendimiento. Dios no te ama más cuando lees más. Te ama en Cristo. Pero Su Palabra es el medio por el cual renueva tu mente y te da fuerza. Intenta leer un salmo hoy. Solo uno. Y pídele que hable a través de él."
+            : "If you haven't opened your Bible in a few days, don't try to make up for all of it tonight. Start small. Read just one passage — even a single verse. Matthew 11:28 says, \"Come to me, all who labor and are heavy laden, and I will give you rest.\" Rest in Christ doesn't depend on your performance. God doesn't love you more when you read more. He loves you in Christ. But His Word is the means by which He renews your mind and gives you strength. Try reading one Psalm today. Just one. And ask Him to speak through it.";
+          scriptureContext = "Matthew 11:28-30 invites the weary to find rest in Christ. Psalm 23 shows the Lord as shepherd who restores the soul. Isaiah 40:29-31 promises strength to the weary.";
+        } else if (/\b(?:struggling|struggle|hard time|difficult|difficult time|can't seem to|keep failing|keep falling|usually start|start strong|stop after)\b/i.test(question)) {
+          answerSummary = isSpanish
+            ? "La lucha es real, y no estás solo en ella. Romanos 7 muestra al apóstol Pablo luchando con la misma tensión — queriendo hacer el bien pero no siempre lográndolo. La buena noticia es que Romanos 8:1 dice: \"Ahora, pues, ninguna condenación hay para los que están en Cristo Jesús.\" Tu lucha no te separa del amor de Dios. La santificación es un proceso que dura toda la vida. No tienes que ser perfecto para acercarte a Dios — ven a Él en tu lucha y deja que Su Palabra te transforme gradualmente."
+            : "The struggle is real, and you're not alone in it. Romans 7 shows the apostle Paul wrestling with the same tension — wanting to do good but not always achieving it. The good news is that Romans 8:1 says, \"There is therefore now no condemnation for those who are in Christ Jesus.\" Your struggle doesn't separate you from God's love. Sanctification is a lifelong process. You don't have to be perfect to approach God — come to Him in your struggle and let His Word transform you gradually.";
+          scriptureContext = "Romans 7:15-25 shows the struggle between flesh and spirit. Romans 8:1 declares no condemnation in Christ. Philippians 1:6 promises God will complete the work He began.";
+        } else {
+          answerSummary = isSpanish
+            ? "Gracias por compartir eso conmigo. La Escritura nos da sabiduría para estos momentos. Te recomiendo leer un pasaje relevante hoy y pedir a Dios que te hable a través de él."
+            : "Thank you for sharing that with me. Scripture gives us wisdom for these moments. I recommend reading a relevant passage today and asking God to speak to you through it.";
+          scriptureContext = "Psalm 34:18 says the Lord is near to the brokenhearted. 1 Peter 5:6-7 calls us to cast our anxieties on Him because He cares for us.";
+        }
       } else {
-        // Generic conversational response — acknowledge and offer Scripture
-        answerSummary = isSpanish
-          ? "Gracias por compartir eso conmigo. Lo que describes es algo que muchos creyentes enfrentan. La Escritura nos da sabiduría para estos momentos. Te recomiendo leer un pasaje relevante hoy y pedir a Dios que te hable a través de él."
-          : "Thank you for sharing that with me. What you're describing is something many believers face. Scripture gives us wisdom for these moments. I recommend reading a relevant passage today and asking God to speak to you through it.";
-        scriptureContext = "Psalm 34:18 says the Lord is near to the brokenhearted. 1 Peter 5:6-7 calls us to cast our anxieties on Him because He cares for us.";
+        if (/\b(?:exhausted|tired|weary|burnout|burned out|drained|haven't opened|haven't read|no energy|fatigue)\b/i.test(question)) {
+          answerSummary = isSpanish
+            ? "Entiendo. Si no has abierto tu Biblia en unos días, no hay presión. Dios no te ama menos por eso. ¿Te gustaría una sugerencia para empezar pequeño esta noche?"
+            : "I hear you. If you haven't opened your Bible in a few days, there's no pressure. God doesn't love you less for it. Would you like a suggestion for starting small tonight?";
+          scriptureContext = "Matthew 11:28 invites the weary to find rest in Christ.";
+        } else if (/\b(?:struggling|struggle|hard time|difficult|can't seem to|keep failing|keep falling|usually start|start strong|stop after)\b/i.test(question)) {
+          answerSummary = isSpanish
+            ? "Eso es algo muy común. Romanos 7 muestra que incluso el apóstol Pablo luchaba con la misma tensión. ¿Quieres que pensemos juntos en un próximo paso práctico?"
+            : "That's something many believers face. Romans 7 shows even the apostle Paul wrestled with the same tension. Would you like to think through a practical next step together?";
+          scriptureContext = "Romans 7:15-25 shows the struggle between flesh and spirit. Romans 8:1 declares no condemnation in Christ.";
+        } else {
+          answerSummary = isSpanish
+            ? "Gracias por compartir eso. Lo que describes es algo que muchos creyentes enfrentan. ¿Hay algo específico en lo que pueda ayudarte?"
+            : "Thank you for sharing that. What you're describing is something many believers face. Is there something specific I can help you with?";
+          scriptureContext = "Psalm 34:18 says the Lord is near to the brokenhearted.";
+        }
       }
       sourceUnavailable = false;
     } else if (ragCitations.length > 0) {
@@ -1826,6 +1866,19 @@ const devProvider: AIProvider = {
         text: originalQuestion,
         evidence_origin: "current_turn",
       });
+      // For follow-up requests, add current_conversation claims from prior user messages
+      if (request.conversation_history && request.conversation_history.length > 0) {
+        const priorUserMessages = request.conversation_history
+          .filter((m) => m.role === "user")
+          .slice(-3);
+        for (const pm of priorUserMessages) {
+          personalClaims.push({
+            claim_type: "prior_conversation_statement",
+            text: pm.body,
+            evidence_origin: "current_conversation",
+          });
+        }
+      }
     }
 
     const memoryProposals: MemoryProposal[] = [];
@@ -1839,7 +1892,9 @@ const devProvider: AIProvider = {
 
     // Build Scripture references even when theology is unavailable
     const recommendedScripture = buildRecommendedScripture(resolvedQuery, divineRevelationDetected, isCrisis || isAbuse);
-    const biblicalBasis = buildBiblicalBasis(resolvedQuery);
+    const biblicalBasis = isSpiritualInterpretation
+      ? buildBiblicalBasisForSpiritualInterpretation()
+      : buildBiblicalBasis(resolvedQuery);
 
     // Only clear secondary theological sources when unavailable
     const clearedConfessionalSources = sourceUnavailable ? [] : confessionalSources;
@@ -2479,6 +2534,14 @@ function buildApplication(question: string): string {
     return "Scripture provides principles for marriage: marry in the Lord, seek counsel, examine character, pray for wisdom. But Scripture does not tell you by name whom to marry.";
   }
   return "Application will be clearly distinguished from biblical command. SOLAPATH will help you see what Scripture commands, what it commends as wisdom, and what is a matter of Christian liberty.";
+}
+
+function buildBiblicalBasisForSpiritualInterpretation(): BiblicalBasisPassage[] {
+  return [
+    { reference: "2 Timothy 3:16-17", relevance: "Scripture is God-breathed and sufficient for teaching, reproof, and training in righteousness.", contextual_note: "God's revealed Word — not private impressions — is the standard for discerning His will.", is_primary: true },
+    { reference: "1 John 4:1", relevance: "Test every spirit and every claim against Scripture.", contextual_note: "We are commanded to test impressions, not assume they are from God.", is_primary: false },
+    { reference: "Psalm 119:105", relevance: "God's Word is a lamp to our feet and a light to our path.", contextual_note: "Scripture is the primary means God uses to guide His people.", is_primary: false },
+  ];
 }
 
 function buildBiblicalBasis(question: string): BiblicalBasisPassage[] {
