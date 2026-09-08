@@ -1275,19 +1275,20 @@ const devProvider: AIProvider = {
     // ============================================================
     // INTENT CLASSIFICATION — distinguish recall, interpretation, and conversational from theology
     // ============================================================
-    const isDirectRecall = /\b(?:did i|do i|have i|what (?:verse|passage|chapter) did i|what did i|what was i|what were we|what have i|do you remember|what did we|what \w+ did we|what was that|last time|previously|what have we)\b/i.test(question);
+    const isDirectRecall = /\b(?:did i|do i|have i|what (?:verse|passage|chapter) did i|what did i|what was i|what were we|what have i|do you remember|what did we|what \w+ did we|what was that|last time|previously|what have we|qué he|qué estaba|qué guardé|qué marqué|qué resalté|he orado|recuerdas cuando|de qué hablamos|qué he leído|qué he estudiado)\b/i.test(question);
     const isSpiritualInterpretation = /\b(?:what has god been (?:teaching|showing|doing)|what is god (?:trying to (?:tell|show|teach)|doing)|what is the lord (?:teaching|showing|doing))\b/i.test(question);
     const isConversationalStatement = !isDirectRecall && !isSpiritualInterpretation && !divineRevelationDetected && !isCrisis && !isAbuse && !isEmergency && (
-      /\b(?:i'm (?:exhausted|tired|weary|burned out|drained|struggling|having a hard time)|i haven't|i can't seem to|i keep (?:failing|falling)|i usually (?:start|begin)|i'm losing|i'm doubting)\b/i.test(question)
+      /\b(?:i['’]m (?:exhausted|tired|weary|burned out|drained|struggling|having a hard time)|i haven't|i can['’]t seem to|i keep (?:failing|falling)|i usually (?:start|begin)|i['’]m losing|i['’]m doubting|exhausted|haven't opened my bible|no energy for reading)\b/i.test(question)
     );
-    let recallType: "bookmark" | "highlight" | "note" | "prayer" | "reading" | "conversation" | "walk" | "general" | null = null;
+    let recallType: "bookmark" | "highlight" | "note" | "prayer" | "reading" | "conversation" | "walk" | "cross_memory" | "general" | null = null;
     if (/\b(?:save|saved|bookmark)\b/i.test(question)) recallType = "bookmark";
     else if (/\b(?:highlight|highlighted|underline|marked)\b/i.test(question)) recallType = "highlight";
     else if (/\b(?:note|noted|wrote|wrote down)\b/i.test(question)) recallType = "note";
     else if (/\b(?:pray|prayed|prayer)\b/i.test(question)) recallType = "prayer";
     else if (/\b(?:read|reading|was reading|what was i reading)\b/i.test(question)) recallType = "reading";
     else if (/\b(?:talk|talked|discuss|discussed|conversation|asked about)\b/i.test(question)) recallType = "conversation";
-    else if (/\b(?:walk|studied|study|today's walk)\b/i.test(question)) recallType = "walk";
+    else if (/\b(?:walk|today's walk)\b/i.test(question)) recallType = "walk";
+    else if (/\b(?:what have i already studied|what have i studied|what have i looked at|what have i been learning|what have i saved or studied|qué he estudiado|qué estaba estudiando|qué he leído|qué he guardado)\b/i.test(question)) recallType = "cross_memory";
     else if (isDirectRecall) recallType = "general";
 
     let intent: IntentType = "GENERAL";
@@ -1502,7 +1503,7 @@ const devProvider: AIProvider = {
       sourceUnavailable = true;
     } else if (isCrisis || isAbuse || isEmergency) {
       answerSummary = "I want to help you think through this biblically, but this situation also deserves human support. Please consider reaching out to your pastor, a trusted Christian friend, or a qualified professional. If you are in immediate danger, please contact emergency services. SOLAPATH is not a replacement for human care.";
-    } else if (isDirectRecall) {
+    } else if (isDirectRecall || recallType === "cross_memory") {
       // ============================================================
       // DIRECT RECALL — answer from memory evidence, not theology
       // ============================================================
@@ -1519,15 +1520,15 @@ const devProvider: AIProvider = {
           }));
 
       // Filter by recall type if specified
-      const filteredEvidence = recallType && recallType !== "general"
-        ? memEvidence.filter((e) => e.source_type.includes(recallType) || (recallType === "bookmark" && e.source_type === "bookmark") || (recallType === "highlight" && e.source_type === "highlight") || (recallType === "prayer" && e.source_type === "prayer") || (recallType === "note" && e.source_type === "bible_note") || (recallType === "conversation" && e.source_type === "ask_conversation") || (recallType === "walk" && e.source_type === "today_walk") || (recallType === "reading" && e.source_type === "bible_reading"))
+      const filteredEvidence = recallType && recallType !== "general" && recallType !== "cross_memory"
+        ? memEvidence.filter((e) => e.source_type.includes(recallType) || (recallType === "bookmark" && (e.source_type === "bookmark" || e.source_type === "bible_bookmark")) || (recallType === "highlight" && (e.source_type === "highlight" || e.source_type === "bible_highlight")) || (recallType === "prayer" && e.source_type === "prayer") || (recallType === "note" && e.source_type === "bible_note") || (recallType === "conversation" && e.source_type === "ask_conversation") || (recallType === "walk" && e.source_type === "today_walk") || (recallType === "reading" && e.source_type === "bible_reading"))
         : memEvidence;
 
       if (filteredEvidence.length === 1) {
         const e = filteredEvidence[0];
         const sourceLabel = isSpanish
           ? (e.source_type === "bookmark" ? "guardaste" : e.source_type === "highlight" ? "resaltaste" : e.source_type === "prayer" ? "oraste" : e.source_type === "bible_note" ? "escribiste una nota" : e.source_type === "ask_conversation" ? "conversamos" : e.source_type === "today_walk" ? "estudiaste" : e.source_type === "bible_reading" ? "leíste" : "tienes un registro")
-          : (e.source_type === "bookmark" ? "you saved" : e.source_type === "highlight" ? "you highlighted" : e.source_type === "prayer" ? "you prayed" : e.source_type === "bible_note" ? "you wrote a note" : e.source_type === "ask_conversation" ? "we talked" : e.source_type === "today_walk" ? "you studied" : e.source_type === "bible_reading" ? "you read" : "you have a record");
+          : (e.source_type === "bookmark" || e.source_type === "bible_bookmark" ? "you saved a verse" : e.source_type === "highlight" || e.source_type === "bible_highlight" ? "you highlighted" : e.source_type === "prayer" ? "you prayed" : e.source_type === "bible_note" ? "you wrote a Bible note" : e.source_type === "ask_conversation" ? "we talked" : e.source_type === "today_walk" ? "you studied" : e.source_type === "bible_reading" ? "you read" : "you have a record");
         answerSummary = isSpanish
           ? `Sí — ${sourceLabel} ${e.scripture_reference || e.topic || "esto"}. ${e.factual_summary}`
           : `Yes — ${sourceLabel} ${e.scripture_reference || e.topic || "this"}. ${e.factual_summary}`;
@@ -1808,7 +1809,7 @@ const devProvider: AIProvider = {
     }));
 
     const personalClaims: StructuredTheologicalResponse["personal_claims"] = [];
-    if (isDirectRecall) {
+    if (isDirectRecall || recallType === "cross_memory") {
       for (const evidence of memoryEvidenceForItems.slice(0, 5)) {
         personalClaims.push({
           claim_type: `retrieved_${evidence.source_type}`,

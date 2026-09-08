@@ -138,13 +138,13 @@ Deno.serve(async (req: Request) => {
 
 interface RecallIntent {
   isRecall: boolean;
-  recallType: "bookmark" | "highlight" | "note" | "prayer" | "reading" | "conversation" | "walk" | "general" | null;
+  recallType: "bookmark" | "highlight" | "note" | "prayer" | "reading" | "conversation" | "walk" | "cross_memory" | "general" | null;
   isSpiritualInterpretation: boolean;
   isCurrentStatement: boolean;
 }
 
 function classifyRecallIntent(q: string): RecallIntent {
-  const isRecall = /\b(?:did i|do i|have i|what (?:verse|passage|chapter) did i|what did i|what was i|what were we|what have i|do you remember|what did we|what \w+ did we|what was that|last time|previously|what have we|what has god been|what is god (?:trying|doing)|what has god been teaching|what has god been showing)\b/.test(q);
+  const isRecall = /\b(?:did i|do i|have i|what (?:verse|passage|chapter) did i|what did i|what was i|what were we|what have i|do you remember|what did we|what \w+ did we|what was that|last time|previously|what have we|what has god been|what is god (?:trying|doing)|what has god been teaching|what has god been showing|qué he|qué estaba|qué guardé|qué marqué|qué resalté|he orado|recuerdas cuando|de qué hablamos|qué he leído|qué he estudiado)\b/.test(q);
   const isSpiritualInterpretation = /\b(?:what has god been (?:teaching|showing|doing)|what is god (?:trying to (?:tell|show|teach)|doing)|what is the lord (?:teaching|showing|doing))\b/.test(q);
 
   let recallType: RecallIntent["recallType"] = null;
@@ -154,7 +154,8 @@ function classifyRecallIntent(q: string): RecallIntent {
   else if (/\b(?:pray|prayed|prayer)\b/.test(q)) recallType = "prayer";
   else if (/\b(?:read|reading|was reading|what was i reading)\b/.test(q)) recallType = "reading";
   else if (/\b(?:talk|talked|discuss|discussed|conversation|asked about)\b/.test(q)) recallType = "conversation";
-  else if (/\b(?:walk|studied|study|today's walk)\b/.test(q)) recallType = "walk";
+  else if (/\b(?:walk|today's walk)\b/.test(q)) recallType = "walk";
+  else if (/\b(?:what have i already studied|what have i studied|what have i looked at|what have i been learning|what have i saved or studied|qué he estudiado|qué estaba estudiando|qué he leído|qué he guardado)\b/.test(q)) recallType = "cross_memory";
   else if (isRecall) recallType = "general";
 
   return {
@@ -185,6 +186,7 @@ const STOP_WORDS = new Set([
   "save", "saved", "verse", "passage", "chapter", "scripture", "bible",
   "word", "words", "god", "jesus", "christ", "lord", "holy", "spirit",
   "church", "pray", "prayer", "prayed", "study", "studied", "highlight",
+  "qué", "he", "estudiado", "estudiando", "recientemente", "palabra", "dios", "sobre", "guardé", "marqué", "resalté", "orado", "recuerdas", "hablamos", "leído",
   "highlighted", "bookmark", "note", "remember", "talk", "talked",
 ]);
 
@@ -247,7 +249,8 @@ const TOPIC_SYNONYMS: Record<string, string[]> = {
   scripture_alone: ["sola scriptura", "scripture alone", "word alone"],
   christ_alone: ["solus christus", "christ alone", "jesus alone"],
   glory_alone: ["soli deo", "glory alone", "god alone"],
-  "god's word": ["word of god", "scripture", "bible", "law", "truth", "precepts", "statutes"],
+  "god's word": ["word of god", "scripture", "bible", "law", "truth", "precepts", "statutes", "palabra de dios", "palabra", "escritura"],
+  "palabra de dios": ["god's word", "word of god", "scripture", "bible", "palabra", "escritura", "precepts", "statutes"],
   consistent: ["consistency", "faithful", "regular", "habit", "discipline", "daily", "routine"],
   exhausted: ["tired", "weary", "drained", "burnout", "burned out", "fatigue", "no energy"],
   alaska: ["alaska", "move", "moving", "relocate", "relocation"],
@@ -334,7 +337,7 @@ async function queryReadingHistory(
   keywords: string[],
   recall: RecallIntent,
 ): Promise<MemoryEvidence[]> {
-  if (recall.recallType && !["reading", "general", null].includes(recall.recallType)) {
+  if (recall.recallType && !["reading", "cross_memory", "general", null].includes(recall.recallType)) {
     if (recall.recallType !== "reading" && recall.recallType !== "general") return [];
   }
   const res = await fetch(
@@ -371,7 +374,7 @@ async function queryBookmarks(
   keywords: string[],
   recall: RecallIntent,
 ): Promise<MemoryEvidence[]> {
-  if (recall.recallType && recall.recallType !== "bookmark" && recall.recallType !== "general") return [];
+  if (recall.recallType && recall.recallType !== "bookmark" && recall.recallType !== "cross_memory" && recall.recallType !== "general") return [];
   const res = await fetch(
     `${supabaseUrl}/rest/v1/bible_bookmarks?select=id,book,chapter,verse_start,verse_end,label,created_at&order=created_at.desc&limit=20`,
     { headers },
@@ -408,7 +411,7 @@ async function queryHighlights(
   keywords: string[],
   recall: RecallIntent,
 ): Promise<MemoryEvidence[]> {
-  if (recall.recallType && recall.recallType !== "highlight" && recall.recallType !== "general") return [];
+  if (recall.recallType && recall.recallType !== "highlight" && recall.recallType !== "cross_memory" && recall.recallType !== "general") return [];
   const res = await fetch(
     `${supabaseUrl}/rest/v1/bible_highlights?select=id,book,chapter,verse_start,verse_end,selected_text,color_key,created_at&order=created_at.desc&limit=20`,
     { headers },
@@ -444,7 +447,7 @@ async function queryWalks(
   keywords: string[],
   recall: RecallIntent,
 ): Promise<MemoryEvidence[]> {
-  if (recall.recallType && recall.recallType !== "walk" && recall.recallType !== "general") return [];
+  if (recall.recallType && recall.recallType !== "walk" && recall.recallType !== "cross_memory" && recall.recallType !== "general") return [];
   const res = await fetch(
     `${supabaseUrl}/rest/v1/walks?select=id,passage_reference,reading_objective,status,created_at&order=created_at.desc&limit=15`,
     { headers },
@@ -479,7 +482,7 @@ async function queryPrayers(
   keywords: string[],
   recall: RecallIntent,
 ): Promise<MemoryEvidence[]> {
-  if (recall.recallType && recall.recallType !== "prayer" && recall.recallType !== "general") return [];
+  if (recall.recallType && recall.recallType !== "prayer" && recall.recallType !== "cross_memory" && recall.recallType !== "general") return [];
   const res = await fetch(
     `${supabaseUrl}/rest/v1/prayers?select=id,title,description,related_scripture,status,created_at&order=created_at.desc&limit=20`,
     { headers },
@@ -514,7 +517,7 @@ async function queryAskConversations(
   keywords: string[],
   recall: RecallIntent,
 ): Promise<MemoryEvidence[]> {
-  if (recall.recallType && recall.recallType !== "conversation" && recall.recallType !== "general") return [];
+  if (recall.recallType && recall.recallType !== "conversation" && recall.recallType !== "cross_memory" && recall.recallType !== "general") return [];
   const res = await fetch(
     `${supabaseUrl}/rest/v1/ask_conversations?select=id,title,intent,created_at&order=created_at.desc&limit=15`,
     { headers },
