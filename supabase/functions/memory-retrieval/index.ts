@@ -148,14 +148,14 @@ function classifyRecallIntent(q: string): RecallIntent {
   const isSpiritualInterpretation = /\b(?:what has god been (?:teaching|showing|doing)|what is god (?:trying to (?:tell|show|teach)|doing)|what is the lord (?:teaching|showing|doing))\b/.test(q);
 
   let recallType: RecallIntent["recallType"] = null;
-  if (/\b(?:save|saved|bookmark)\b/.test(q)) recallType = "bookmark";
-  else if (/\b(?:highlight|highlighted|underline|marked)\b/.test(q)) recallType = "highlight";
-  else if (/\b(?:note|noted|wrote|wrote down|jot)\b/.test(q)) recallType = "note";
-  else if (/\b(?:pray|prayed|prayer)\b/.test(q)) recallType = "prayer";
-  else if (/\b(?:read|reading|was reading|what was i reading)\b/.test(q)) recallType = "reading";
-  else if (/\b(?:talk|talked|discuss|discussed|conversation|asked about)\b/.test(q)) recallType = "conversation";
-  else if (/\b(?:walk|today's walk)\b/.test(q)) recallType = "walk";
-  else if (/\b(?:what have i already studied|what have i studied|what have i looked at|what have i been learning|what have i saved or studied|qué he estudiado|qué estaba estudiando|qué he leído|qué he guardado)\b/.test(q)) recallType = "cross_memory";
+  if (/\b(?:save|saved|bookmark|guardé|guardado)\b/i.test(q)) recallType = "bookmark";
+  else if (/\b(?:highlight|highlighted|underline|marked|resalté|resaltado)\b/i.test(q)) recallType = "highlight";
+  else if (/\b(?:note|noted|wrote|wrote down|jot|nota|anoté|escribí)\b/i.test(q)) recallType = "note";
+  else if (/\b(?:pray|prayed|prayer|oré|oraba|he orado|oración)\b/i.test(q)) recallType = "prayer";
+  else if (/\b(?:read|reading|was reading|what was i reading|leí|leyendo|he leído)\b/i.test(q)) recallType = "reading";
+  else if (/\b(?:talk|talked|discuss|discussed|conversation|asked about|conversamos|hablamos|conversación)\b/i.test(q)) recallType = "conversation";
+  else if (/\b(?:walk|today's walk|caminata|estudio de hoy)\b/i.test(q)) recallType = "walk";
+  else if (/\b(?:what have i already studied|what have i studied|what have i looked at|what have i been learning|what have i saved or studied|qué he estudiado|qué estaba estudiando|qué he leído|qué he guardado|qué he estudiado recientemente)\b/i.test(q)) recallType = "cross_memory";
   else if (isRecall) recallType = "general";
 
   return {
@@ -186,7 +186,7 @@ const STOP_WORDS = new Set([
   "save", "saved", "verse", "passage", "chapter", "scripture", "bible",
   "word", "words", "god", "jesus", "christ", "lord", "holy", "spirit",
   "church", "pray", "prayer", "prayed", "study", "studied", "highlight",
-  "qué", "he", "estudiado", "estudiando", "recientemente", "palabra", "dios", "sobre", "guardé", "marqué", "resalté", "orado", "recuerdas", "hablamos", "leído",
+  "qué", "he", "recientemente", "guardé", "marqué", "resalté", "orado", "recuerdas", "hablamos",
   "highlighted", "bookmark", "note", "remember", "talk", "talked",
 ]);
 
@@ -268,15 +268,14 @@ function getSemanticTerms(q: string): Set<string> {
 }
 
 function matchesSemantic(text: string, q: string, keywords: string[]): boolean {
-  if (keywords.length === 0) return false;
-  if (keywords.some((k) => text.includes(k))) return true;
+  if (keywords.length > 0 && keywords.some((k) => text.includes(k))) return true;
   const semanticTerms = getSemanticTerms(q);
   if (semanticTerms.size > 0) {
     let semanticMatches = 0;
     for (const term of semanticTerms) {
       if (text.includes(term)) semanticMatches++;
     }
-    return semanticMatches >= 1;
+    if (semanticMatches >= 1) return true;
   }
   return false;
 }
@@ -382,13 +381,13 @@ async function queryBookmarks(
   if (!res.ok) return [];
   const rows = await res.json();
   const results: MemoryEvidence[] = [];
+  // For bookmark-specific recall, return ALL bookmarks — ranking will sort by relevance
+  const returnAll = recall.recallType === "bookmark";
   for (const bm of rows) {
     const ref = formatRef(bm.book, bm.chapter, bm.verse_start, bm.verse_end);
     const labelText = (bm.label || "").toLowerCase();
     const refLower = ref.toLowerCase();
-    const matches = recall.isRecall
-      ? matchesSemantic(labelText, q, keywords) || matchesSemantic(refLower, q, keywords)
-      : matchesSemantic(labelText, q, keywords) || matchesSemantic(refLower, q, keywords);
+    const matches = returnAll || matchesSemantic(labelText, q, keywords) || matchesSemantic(refLower, q, keywords);
     if (matches) {
       results.push({
         source_type: "bookmark",

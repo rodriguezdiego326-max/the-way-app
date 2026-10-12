@@ -1276,9 +1276,9 @@ const devProvider: AIProvider = {
     // INTENT CLASSIFICATION — distinguish recall, interpretation, and conversational from theology
     // ============================================================
     const isDirectRecall = /\b(?:did i|do i|have i|what (?:verse|passage|chapter) did i|what did i|what was i|what were we|what have i|do you remember|what did we|what \w+ did we|what was that|last time|previously|what have we|qué he|qué estaba|qué guardé|qué marqué|qué resalté|he orado|recuerdas cuando|de qué hablamos|qué he leído|qué he estudiado)\b/i.test(question);
-    const isSpiritualInterpretation = /\b(?:what has god been (?:teaching|showing|doing)|what is god (?:trying to (?:tell|show|teach)|doing)|what is the lord (?:teaching|showing|doing))\b/i.test(question);
+    const isSpiritualInterpretation = /\b(?:what has god been (?:teaching|showing|doing)|what is god (?:trying to (?:tell|show|teach)|doing)|what is the lord (?:teaching|showing|doing)|qué (?:me |te |le )?(?:ha estado enseñando|está enseñando|está mostrando|está haciendo) dios|qué (?:me |te |le )?(?:está diciendo|está tratando de (?:decir|mostrar|enseñar)) dios|qué está haciendo (?:el señor|dios) en mi vida)\b/i.test(question);
     const isConversationalStatement = !isDirectRecall && !isSpiritualInterpretation && !divineRevelationDetected && !isCrisis && !isAbuse && !isEmergency && (
-      /\b(?:i['’]m (?:exhausted|tired|weary|burned out|drained|struggling|having a hard time)|i haven't|i can['’]t seem to|i keep (?:failing|falling)|i usually (?:start|begin)|i['’]m losing|i['’]m doubting|exhausted|haven't opened my bible|no energy for reading)\b/i.test(question)
+      /\b(?:i[‘’]m (?:exhausted|tired|weary|burned out|drained|struggling|having a hard time)|i haven’t|i can[‘’]t seem to|i keep (?:failing|falling)|i usually (?:start|begin)|i[‘’]m losing|i[‘’]m doubting|exhausted|haven’t opened my bible|no energy for reading|what would you recommend|what should i do|what do you recommend|what can i do|how should i|estoy exhausto|estoy cansado|estoy agotado|estoy weary|no he abierto|suelo empezar|empiezo fuerte|dejo de|qué me recomiendas|qué debería hacer|qué me sugieres|ayúdame|aconéjame)\b/i.test(question)
     );
     let recallType: "bookmark" | "highlight" | "note" | "prayer" | "reading" | "conversation" | "walk" | "cross_memory" | "general" | null = null;
     if (/\b(?:save|saved|bookmark)\b/i.test(question)) recallType = "bookmark";
@@ -1358,6 +1358,12 @@ const devProvider: AIProvider = {
       /explain /i,
       /tell me about /i,
       /teach me about /i,
+      /qué (enseña|dice|dice) la biblia (sobre|acerca de) /i,
+      /qué (enseña|dice) la escritura (sobre|acerca de) /i,
+      /qué (es|son) la (enseñanza|perspectiva) bíblica (sobre|acerca de) /i,
+      /explica /i,
+      /dime sobre /i,
+      /enséñame sobre /i,
     ];
 
     function extractIntentSubject(q: string): string {
@@ -1379,7 +1385,7 @@ const devProvider: AIProvider = {
     let resolvedQuery = question;
     let intentSubject = extractIntentSubject(question);
     const isFollowUp = request.conversation_history && request.conversation_history.length > 0;
-    const isShortAmbiguous = question.split(/\s+/).length <= 8 || /^(how|what|why|can|should|is|are)\b/i.test(question);
+    const isShortAmbiguous = question.split(/\s+/).length <= 8 || /^(how|what|why|can|should|is|are|cómo|qué|por qué|puedo|debería|es|son)\b/i.test(question);
 
     // Detect "verse you mentioned" follow-up questions — resolve from last_assistant_context
     const isVerseFollowUp = /(?:verse|passage|scripture|vers[íi]culo|pasaje)/i.test(question) &&
@@ -1639,16 +1645,18 @@ const devProvider: AIProvider = {
           scriptureContext = "Psalm 34:18 says the Lord is near to the brokenhearted. 1 Peter 5:6-7 calls us to cast our anxieties on Him because He cares for us.";
         }
       } else {
+        // Statement without explicit advice request — give full advice for struggle/inconsistency patterns
+        // (Build 61 real-device testing confirmed this response as PASS)
         if (/\b(?:exhausted|tired|weary|burnout|burned out|drained|haven't opened|haven't read|no energy|fatigue)\b/i.test(question)) {
           answerSummary = isSpanish
-            ? "Entiendo. Si no has abierto tu Biblia en unos días, no hay presión. Dios no te ama menos por eso. ¿Te gustaría una sugerencia para empezar pequeño esta noche?"
-            : "I hear you. If you haven't opened your Bible in a few days, there's no pressure. God doesn't love you less for it. Would you like a suggestion for starting small tonight?";
-          scriptureContext = "Matthew 11:28 invites the weary to find rest in Christ.";
+            ? "Si no has abierto tu Biblia en unos días, no intentes recuperar todo esta noche. Comienza pequeño. Lee un solo pasaje — incluso un versículo. Mateo 11:28 dice: \"Venid a mí todos los que estáis trabajados y cargados, y yo os haré descansar.\" El descanso en Cristo no depende de tu rendimiento. Dios no te ama más cuando lees más. Te ama en Cristo. Pero Su Palabra es el medio por el cual renueva tu mente y te da fuerza. Intenta leer un salmo hoy. Solo uno. Y pídele que hable a través de él."
+            : "If you haven't opened your Bible in a few days, don't try to make up for all of it tonight. Start small. Read just one passage — even a single verse. Matthew 11:28 says, \"Come to me, all who labor and are heavy laden, and I will give you rest.\" Rest in Christ doesn't depend on your performance. God doesn't love you more when you read more. He loves you in Christ. But His Word is the means by which He renews your mind and gives you strength. Try reading one Psalm today. Just one. And ask Him to speak through it.";
+          scriptureContext = "Matthew 11:28-30 invites the weary to find rest in Christ. Psalm 23 shows the Lord as shepherd who restores the soul. Isaiah 40:29-31 promises strength to the weary.";
         } else if (/\b(?:struggling|struggle|hard time|difficult|can't seem to|keep failing|keep falling|usually start|start strong|stop after)\b/i.test(question)) {
           answerSummary = isSpanish
-            ? "Eso es algo muy común. Romanos 7 muestra que incluso el apóstol Pablo luchaba con la misma tensión. ¿Quieres que pensemos juntos en un próximo paso práctico?"
-            : "That's something many believers face. Romans 7 shows even the apostle Paul wrestled with the same tension. Would you like to think through a practical next step together?";
-          scriptureContext = "Romans 7:15-25 shows the struggle between flesh and spirit. Romans 8:1 declares no condemnation in Christ.";
+            ? "La lucha es real, y no estás solo en ella. Romanos 7 muestra al apóstol Pablo luchando con la misma tensión — queriendo hacer el bien pero no siempre lográndolo. La buena noticia es que Romanos 8:1 dice: \"Ahora, pues, ninguna condenación hay para los que están en Cristo Jesús.\" Tu lucha no te separa del amor de Dios. La santificación es un proceso que dura toda la vida. No tienes que ser perfecto para acercarte a Dios — ven a Él en tu lucha y deja que Su Palabra te transforme gradualmente."
+            : "The struggle is real, and you're not alone in it. Romans 7 shows the apostle Paul wrestling with the same tension — wanting to do good but not always achieving it. The good news is that Romans 8:1 says, \"There is therefore now no condemnation for those who are in Christ Jesus.\" Your struggle doesn't separate you from God's love. Sanctification is a lifelong process. You don't have to be perfect to approach God — come to Him in your struggle and let His Word transform you gradually.";
+          scriptureContext = "Romans 7:15-25 shows the struggle between flesh and spirit. Romans 8:1 declares no condemnation in Christ. Philippians 1:6 promises God will complete the work He began.";
         } else {
           answerSummary = isSpanish
             ? "Gracias por compartir eso. Lo que describes es algo que muchos creyentes enfrentan. ¿Hay algo específico en lo que pueda ayudarte?"
@@ -1892,9 +1900,7 @@ const devProvider: AIProvider = {
 
     // Build Scripture references even when theology is unavailable
     const recommendedScripture = buildRecommendedScripture(resolvedQuery, divineRevelationDetected, isCrisis || isAbuse);
-    const biblicalBasis = isSpiritualInterpretation
-      ? buildBiblicalBasisForSpiritualInterpretation()
-      : buildBiblicalBasis(resolvedQuery);
+    const biblicalBasis = buildBiblicalBasis(isSpiritualInterpretation ? resolvedQuery.replace(/\b(?:what has god been (?:teaching|showing|doing)|what is god (?:trying to (?:tell|show|teach)|doing)|what is the lord (?:teaching|showing|doing))\b/gi, '') : resolvedQuery);
 
     // Only clear secondary theological sources when unavailable
     const clearedConfessionalSources = sourceUnavailable ? [] : confessionalSources;
@@ -2290,7 +2296,17 @@ function createOpenAIProvider(config: ProviderConfig): AIProvider {
             rag_retrieved_source_ids: ragRetrieval?.retrieved_source_ids || [],
             rag_rejected_source_ids: ragRetrieval?.rejected_source_ids || [],
             personal_context_used: [],
-            personal_context_items: (request.memory_evidence || []).slice(0, 5).map((e) => ({
+            personal_context_items: (request.memory_evidence && request.memory_evidence.length > 0
+              ? request.memory_evidence
+              : (request.study_memory_evidence || []).map((e) => ({
+                  source_type: e.source_type,
+                  source_id: e.id,
+                  created_at: e.created_at,
+                  scripture_reference: e.reference || undefined,
+                  factual_summary: e.summary,
+                  relevance_reason: 'Keyword match',
+                }))
+            ).slice(0, 5).map((e) => ({
               source_type: e.source_type,
               scripture_reference: e.scripture_reference,
               topic: e.topic,
@@ -2536,14 +2552,6 @@ function buildApplication(question: string): string {
   return "Application will be clearly distinguished from biblical command. SOLAPATH will help you see what Scripture commands, what it commends as wisdom, and what is a matter of Christian liberty.";
 }
 
-function buildBiblicalBasisForSpiritualInterpretation(): BiblicalBasisPassage[] {
-  return [
-    { reference: "2 Timothy 3:16-17", relevance: "Scripture is God-breathed and sufficient for teaching, reproof, and training in righteousness.", contextual_note: "God's revealed Word — not private impressions — is the standard for discerning His will.", is_primary: true },
-    { reference: "1 John 4:1", relevance: "Test every spirit and every claim against Scripture.", contextual_note: "We are commanded to test impressions, not assume they are from God.", is_primary: false },
-    { reference: "Psalm 119:105", relevance: "God's Word is a lamp to our feet and a light to our path.", contextual_note: "Scripture is the primary means God uses to guide His people.", is_primary: false },
-  ];
-}
-
 function buildBiblicalBasis(question: string): BiblicalBasisPassage[] {
   const lower = question.toLowerCase();
   const passages: BiblicalBasisPassage[] = [];
@@ -2557,7 +2565,7 @@ function buildBiblicalBasis(question: string): BiblicalBasisPassage[] {
   } else if (lower.includes("adoption")) {
     passages.push({ reference: "Romans 8:15-17", relevance: "The Spirit of adoption lets us cry 'Abba, Father.'", contextual_note: "Paul teaches that believers are adopted as children of God.", is_primary: true });
     passages.push({ reference: "Galatians 4:4-7", relevance: "God sent His Son so we might receive adoption as sons.", contextual_note: "Adoption grants full rights and privileges of children.", is_primary: false });
-  } else if (lower.includes("teach") || lower.includes("teaching") || lower.includes("disciple")) {
+  } else if ((lower.includes("teach") || lower.includes("teaching") || lower.includes("disciple")) && !lower.includes("what has god been") && !lower.includes("what is god") && !lower.includes("what is the lord")) {
     passages.push({ reference: "Matthew 28:19-20", relevance: "The Great Commission commands teaching as central to discipleship.", contextual_note: "Jesus commands making disciples through teaching obedience to all He commanded.", is_primary: true });
     passages.push({ reference: "Deuteronomy 6:6-7", relevance: "Teaching God's Word diligently to the next generation.", contextual_note: "Teaching begins in the home, in everyday life.", is_primary: false });
   } else if (lower.includes("forgive") || lower.includes("forgiveness")) {

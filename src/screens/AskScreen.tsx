@@ -1154,9 +1154,9 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
         <SourceViewer
           sources={[
             ...(activeResponseForModal.scripture_sources || []),
-            ...activeResponseForModal.confessional_sources,
-            ...activeResponseForModal.historical_sources,
-            ...activeResponseForModal.modern_sources,
+            ...(activeResponseForModal.confessional_sources || []),
+            ...(activeResponseForModal.historical_sources || []),
+            ...(activeResponseForModal.modern_sources || []),
           ]}
           lang={askLang}
           onClose={() => setShowSourceViewer(false)}
