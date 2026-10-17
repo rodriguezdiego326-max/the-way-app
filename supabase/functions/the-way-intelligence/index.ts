@@ -1514,16 +1514,7 @@ const devProvider: AIProvider = {
       // DIRECT RECALL — answer from memory evidence, not theology
       // ============================================================
       const isSpanish = request.response_language === "Spanish";
-      const memEvidence = request.memory_evidence && request.memory_evidence.length > 0
-        ? request.memory_evidence
-        : (request.study_memory_evidence || []).map((e) => ({
-            source_type: e.source_type,
-            source_id: e.id,
-            created_at: e.created_at,
-            scripture_reference: e.reference || undefined,
-            factual_summary: e.summary,
-            relevance_reason: "Keyword match",
-          }));
+      const memEvidence = (request.memory_evidence || []) as Array<{ source_type: string; source_id: string; created_at: string; scripture_reference?: string; topic?: string; factual_summary: string; relevance_reason: string }>;
 
       // Filter by recall type if specified
       const filteredEvidence = recallType && recallType !== "general" && recallType !== "cross_memory"
@@ -1567,16 +1558,7 @@ const devProvider: AIProvider = {
       // SPIRITUAL INTERPRETATION — summarize real evidence, no private revelation
       // ============================================================
       const isSpanish = request.response_language === "Spanish";
-      const memEvidence = request.memory_evidence && request.memory_evidence.length > 0
-        ? request.memory_evidence
-        : (request.study_memory_evidence || []).map((e) => ({
-            source_type: e.source_type,
-            source_id: e.id,
-            created_at: e.created_at,
-            scripture_reference: e.reference || undefined,
-            factual_summary: e.summary,
-            relevance_reason: "Keyword match",
-          }));
+      const memEvidence = (request.memory_evidence || []) as Array<{ source_type: string; source_id: string; created_at: string; scripture_reference?: string; topic?: string; factual_summary: string; relevance_reason: string }>;
 
       answerSummary = isSpanish
         ? "No puedo saber con certeza lo que Dios está haciendo personalmente en tu vida, pero puedo mirar lo que has estado estudiando, orando y volviendo a en la Escritura.\n\n"
@@ -1839,17 +1821,28 @@ const devProvider: AIProvider = {
       }
     }
 
-    const memoryEvidenceForItems = request.memory_evidence && request.memory_evidence.length > 0
-      ? request.memory_evidence
-      : (request.study_memory_evidence || []).map((e) => ({
-          source_type: e.source_type,
-          source_id: e.id,
-          created_at: e.created_at,
-          scripture_reference: e.reference || undefined,
-          factual_summary: e.summary,
-          relevance_reason: 'Keyword match',
-        }));
-    const personalContextItems = memoryEvidenceForItems.slice(0, 5).map((e) => ({
+    const finalMemoryEvidence = (request.memory_evidence || []) as Array<{ source_type: string; source_id: string; created_at: string; scripture_reference?: string; topic?: string; factual_summary: string; relevance_reason: string }>;
+
+    // Filter personalContextItems to only evidence actually referenced in the answer
+    const answerLower = answerSummary.toLowerCase();
+    const usedEvidence = finalMemoryEvidence.filter((e) => {
+      const ref = (e.scripture_reference || '').toLowerCase();
+      const summary = (e.factual_summary || '').toLowerCase();
+      const topic = (e.topic || '').toLowerCase();
+      // Check if the answer text references this evidence's scripture ref, topic, or summary keywords
+      if (ref && answerLower.includes(ref)) return true;
+      if (topic && answerLower.includes(topic)) return true;
+      // Check for partial summary match (first 30 chars of meaningful words)
+      const summaryWords = summary.split(/\s+/).filter((w) => w.length > 4).slice(0, 4);
+      if (summaryWords.length > 0 && summaryWords.some((w) => answerLower.includes(w))) return true;
+      // For recall/direct-recall answers, all filtered evidence was used
+      if (isDirectRecall || recallType === 'cross_memory') return true;
+      // For spiritual interpretation, all evidence was listed
+      if (isSpiritualInterpretation) return true;
+      return false;
+    });
+
+    const personalContextItems = usedEvidence.slice(0, 5).map((e) => ({
       source_type: e.source_type,
       scripture_reference: e.scripture_reference,
       topic: e.topic || (e as { topic?: string }).topic,
@@ -1858,7 +1851,7 @@ const devProvider: AIProvider = {
 
     const personalClaims: StructuredTheologicalResponse["personal_claims"] = [];
     if (isDirectRecall || recallType === "cross_memory") {
-      for (const evidence of memoryEvidenceForItems.slice(0, 5)) {
+      for (const evidence of usedEvidence.slice(0, 5)) {
         personalClaims.push({
           claim_type: `retrieved_${evidence.source_type}`,
           text: evidence.factual_summary,
@@ -2010,7 +2003,7 @@ const devProvider: AIProvider = {
     };
 
     const validation = validateResponse(response);
-    const claimValidation = validatePersonalClaims(response.personal_claims || [], originalQuestion, request.conversation_history || [], memoryEvidenceForItems);
+    const claimValidation = validatePersonalClaims(response.personal_claims || [], originalQuestion, request.conversation_history || [], finalMemoryEvidence);
     response.personal_claims = claimValidation.claims;
     response.validation_passed = validation.passed;
     response.validation_warnings = [...validation.warnings, ...claimValidation.warnings];
@@ -2018,6 +2011,39 @@ const devProvider: AIProvider = {
     return response;
   },
 };
+
+// ============================================================
+// CANONICAL MEMORY EVIDENCE RESOLUTION
+// Resolves memory_evidence / study_memory_evidence into ONE array.
+// This is the ONLY evidence source for generation, claims, and UI.
+// ============================================================
+
+type ResolvedMemoryEvidence = {
+  source_type: string;
+  source_id: string;
+  created_at: string;
+  scripture_reference?: string;
+  topic?: string;
+  factual_summary: string;
+  relevance_reason: string;
+};
+
+function resolveFinalMemoryEvidence(request: IntelligenceRequest): ResolvedMemoryEvidence[] {
+  if (request.memory_evidence && request.memory_evidence.length > 0) {
+    return request.memory_evidence;
+  }
+  if (request.study_memory_evidence && request.study_memory_evidence.length > 0) {
+    return request.study_memory_evidence.map((e) => ({
+      source_type: e.source_type,
+      source_id: e.id,
+      created_at: e.created_at,
+      scripture_reference: e.reference || undefined,
+      factual_summary: e.summary,
+      relevance_reason: 'Keyword match',
+    }));
+  }
+  return [];
+}
 
 // ============================================================
 // PROVIDER CONFIGURATION
@@ -2296,17 +2322,7 @@ function createOpenAIProvider(config: ProviderConfig): AIProvider {
             rag_retrieved_source_ids: ragRetrieval?.retrieved_source_ids || [],
             rag_rejected_source_ids: ragRetrieval?.rejected_source_ids || [],
             personal_context_used: [],
-            personal_context_items: (request.memory_evidence && request.memory_evidence.length > 0
-              ? request.memory_evidence
-              : (request.study_memory_evidence || []).map((e) => ({
-                  source_type: e.source_type,
-                  source_id: e.id,
-                  created_at: e.created_at,
-                  scripture_reference: e.reference || undefined,
-                  factual_summary: e.summary,
-                  relevance_reason: 'Keyword match',
-                }))
-            ).slice(0, 5).map((e) => ({
+            personal_context_items: ((request.memory_evidence || []) as Array<{ source_type: string; scripture_reference?: string; topic?: string; factual_summary: string }>).slice(0, 5).map((e) => ({
               source_type: e.source_type,
               scripture_reference: e.scripture_reference,
               topic: e.topic,
@@ -2427,16 +2443,7 @@ function buildUserContext(request: IntelligenceRequest): string {
     parts.push("\nRelevant context from what SOLAPATH remembers:");
     for (const m of request.relevant_memories) parts.push(`- [${m.category}] ${m.content}`);
   }
-  const memoryEvidence = request.memory_evidence && request.memory_evidence.length > 0
-    ? request.memory_evidence
-    : (request.study_memory_evidence || []).map((e) => ({
-        source_type: e.source_type,
-        source_id: e.id,
-        created_at: e.created_at,
-        scripture_reference: e.reference || undefined,
-        factual_summary: e.summary,
-        relevance_reason: 'Keyword match',
-      }));
+  const memoryEvidence = (request.memory_evidence || []) as Array<{ source_type: string; source_id: string; created_at: string; scripture_reference?: string; topic?: string; factual_summary: string; relevance_reason: string }>;
   if (memoryEvidence.length > 0) {
     parts.push("\nVerified personal context (real user-owned records — you may reference these naturally):");
     for (const e of memoryEvidence) {
@@ -2740,7 +2747,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const filteredMemories = filterRelevantMemories(request.question, request.relevant_memories);
-    const filteredRequest = { ...request, relevant_memories: filteredMemories };
+    // Resolve canonical memory evidence ONCE — all downstream code uses this array
+    const finalMemoryEvidence = resolveFinalMemoryEvidence(request);
+    const filteredRequest = { ...request, relevant_memories: filteredMemories, memory_evidence: finalMemoryEvidence.length > 0 ? finalMemoryEvidence : undefined };
 
     let ragRetrieval: RAGRetrievalResult | null = null;
     let retrievalOps = 0;
