@@ -1270,27 +1270,60 @@ function ReadingSection({
 function generateFollowUps(response: StructuredTheologicalResponse, lang: AskLang): string[] {
   const suggestions: string[] = [];
   const isEs = lang === 'es';
+  const answerText = (response.answer_summary || '').toLowerCase();
 
+  // Contextual follow-ups based on what was discussed
+  const hasScripture = response.recommended_scripture.length > 0 || response.biblical_basis.length > 0;
+  const hasDoctrinalAnswer = /justific|atonement|trinity|predestin|election|sanctif|adopt|persever|faith|providence|sovereignt/i.test(answerText);
+  const hasApplication = /appl|today|practical|begin|start|read one|pick one|try read/i.test(answerText);
+  const hasEmotionalResponse = /tired|exhausted|struggl|guilt|anxious|weary|drain|cansado|agotado|culpable|ansioso/i.test(answerText);
+  const hasForgiveness = /forgiv|perdon/i.test(answerText);
+  const hasPrayer = /pray|oraci/i.test(answerText);
+
+  // 1. If Scripture was referenced, offer to go deeper into it
   if (response.recommended_scripture.length > 0) {
     const ref = response.recommended_scripture[0].reference;
     suggestions.push(isEs ? `¿Puedes explicar ${ref} más?` : `Can you explain ${ref} further?`);
-  }
-
-  if (response.biblical_basis.length > 0) {
+  } else if (response.biblical_basis.length > 0) {
     const ref = response.biblical_basis[0].reference;
     if (!suggestions.some((s) => s.includes(ref))) {
       suggestions.push(isEs ? `¿Qué significa ${ref} en contexto?` : `What does ${ref} mean in context?`);
     }
   }
 
-  suggestions.push(isEs ? '¿Cómo puedo aplicar esto hoy?' : 'How can I apply this today?');
+  // 2. Contextual follow-up based on answer type
+  if (hasEmotionalResponse) {
+    suggestions.push(isEs ? '¿Cómo puedo empezar pequeño hoy?' : 'How can I start small today?');
+  } else if (hasDoctrinalAnswer && !hasApplication) {
+    suggestions.push(isEs ? '¿Cómo se ve esto en la vida diaria?' : 'What does this look like in daily life?');
+  } else if (hasForgiveness) {
+    suggestions.push(isEs ? '¿Y si no puedo olvidar lo que hicieron?' : 'What if I can\'t forget what they did?');
+  } else if (hasPrayer) {
+    suggestions.push(isEs ? '¿Puedes guiarme en oración ahora?' : 'Can you guide me in prayer right now?');
+  } else {
+    suggestions.push(isEs ? '¿Cómo puedo aplicar esto hoy?' : 'How can I apply this today?');
+  }
 
-  if (response.recommended_scripture.length === 0 && response.biblical_basis.length === 0) {
+  // 3. A natural conversational follow-up
+  if (hasScripture && response.recommended_scripture.length > 1) {
+    const ref2 = response.recommended_scripture[1].reference;
+    if (!suggestions.some((s) => s.includes(ref2))) {
+      suggestions.push(isEs ? `¿Qué pasa con ${ref2}?` : `What about ${ref2}?`);
+    }
+  } else if (hasDoctrinalAnswer) {
+    suggestions.push(isEs ? '¿Qué más dice la Biblia sobre esto?' : 'What else does the Bible say about this?');
+  } else if (response.recommended_scripture.length === 0 && response.biblical_basis.length === 0) {
     suggestions.push(isEs ? '¿Qué Escritura debo leer ahora?' : 'What Scripture should I read next?');
   }
 
+  // 4. Other traditions view if applicable
   if (response.other_christian_views) {
     suggestions.push(isEs ? '¿Cómo ven otras tradiciones cristianas esto?' : 'How do other Christian traditions view this?');
+  }
+
+  // 5. A reflective question for personal application
+  if (suggestions.length < 4) {
+    suggestions.push(isEs ? '¿Puedes ayudarme a orar sobre esto?' : 'Can you help me pray about this?');
   }
 
   return suggestions.slice(0, 5);

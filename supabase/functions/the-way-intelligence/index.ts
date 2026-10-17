@@ -58,11 +58,21 @@ AI is the servant. Scripture is the authority.
 ## CONVERSATIONAL STYLE
 - Answer the person's question directly and naturally, like a thoughtful texting conversation with a knowledgeable Christian mentor
 - Use natural sentences, contractions where appropriate, empathy without canned therapeutic language
-- Give 1-3 short paragraphs of direct response before any heavier detail
+- Match response length to the question: a one-sentence question gets 1-3 sentences, not a sermon
+- When someone shares an emotional state (tired, struggling, guilty), acknowledge it briefly FIRST, then offer help only if they ask for it
+- Do NOT open with "The Bible teaches..." or "Scripture calls us to..." or "Scripture shows us..." — just state the point directly
+- Do NOT open doctrinal answers with "From a Reformed perspective..." — state the doctrine and its biblical basis directly
+- Lead with the actual explanation, not an announcement of what you're about to explain
+- Integrate 1 Scripture passage naturally into the flow of the answer — do not list 5-8 passages as a data dump
+- Reference personal memory subtly ("the verse you saved last week") only when memory evidence is provided — never say "Remember when you..." without evidence
 - Do NOT merely tell the user to "read" a passage — provide the relevant Scripture text inline when it materially supports the answer
 - Do NOT use constant headings, repetitive disclaimers, or preach at the user
-- Do NOT use canned introductions like "Great question!" or "That's a wonderful question"
-- Follow-up questions are welcome when genuinely helpful
+- Do NOT use canned introductions like "Great question!" or "That's a wonderful question" or "Thank you for sharing that"
+- Do NOT use fake empathy like "I hear your pain" or "That must be so difficult" — just respond naturally
+- Follow-up questions are welcome when genuinely helpful, not as a reflex
+- For very short follow-ups ("why?", "how?", "what about?"), resolve context from conversation history and answer concisely
+- Maintain conversational continuity: reference what was just discussed without repeating it
+- In Spanish, use natural Latin American conversational Spanish, not formal academic prose
 
 ## RETRIEVAL-FIRST THEOLOGY
 - Only use "Calvin taught..." / "Owen wrote..." / "Sproul said..." when a verified source object is attached
@@ -142,7 +152,7 @@ const VERSIONS = {
   source_library: "v7.0-batch-a",
   regression_tests: "v7.0",
   app: "v7.3.0",
-  response_schema: "57",
+  response_schema: "58",
 };
 
 // ============================================================
@@ -1262,9 +1272,14 @@ const devProvider: AIProvider = {
     request: IntelligenceRequest,
     ragRetrieval: RAGRetrievalResult | null,
   ): Promise<StructuredTheologicalResponse> {
-    const question = request.question.toLowerCase();
     const originalQuestion = request.question;
     const queryId = crypto.randomUUID();
+
+    // Punctuation-robust normalization — intent must survive missing commas,
+    // casual grammar, fragments, typos, and run-on sentences.
+    const normalizedQuestion = originalQuestion.replace(/[,;:!?]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const question = normalizedQuestion.toLowerCase();
+    const wordCount = question.split(/\s+/).filter((w) => w.length > 0).length;
 
     const divineRevelationDetected = detectDivineRevelationClaim(originalQuestion);
     const teacherName = detectTeacherQuestion(originalQuestion);
@@ -1277,9 +1292,13 @@ const devProvider: AIProvider = {
     // ============================================================
     const isDirectRecall = /\b(?:did i|do i|have i|what (?:verse|passage|chapter) did i|what did i|what was i|what were we|what have i|do you remember|what did we|what \w+ did we|what was that|last time|previously|what have we|qué he|qué estaba|qué guardé|qué marqué|qué resalté|he orado|recuerdas cuando|de qué hablamos|qué he leído|qué he estudiado)\b/i.test(question);
     const isSpiritualInterpretation = /\b(?:what has god been (?:teaching|showing|doing)|what is god (?:trying to (?:tell|show|teach)|doing)|what is the lord (?:teaching|showing|doing)|qué (?:me |te |le )?(?:ha estado enseñando|está enseñando|está mostrando|está haciendo) dios|qué (?:me |te |le )?(?:está diciendo|está tratando de (?:decir|mostrar|enseñar)) dios|qué está haciendo (?:el señor|dios) en mi vida)\b/i.test(question);
-    const isConversationalStatement = !isDirectRecall && !isSpiritualInterpretation && !divineRevelationDetected && !isCrisis && !isAbuse && !isEmergency && (
-      /\b(?:i[‘’]m (?:exhausted|tired|weary|burned out|drained|struggling|having a hard time)|i haven’t|i can[‘’]t seem to|i keep (?:failing|falling)|i usually (?:start|begin)|i[‘’]m losing|i[‘’]m doubting|exhausted|haven’t opened my bible|no energy for reading|what would you recommend|what should i do|what do you recommend|what can i do|how should i|estoy exhausto|estoy cansado|estoy agotado|estoy weary|no he abierto|suelo empezar|empiezo fuerte|dejo de|qué me recomiendas|qué debería hacer|qué me sugieres|ayúdame|aconéjame)\b/i.test(question)
+    const isSharingStatement = !isDirectRecall && !isSpiritualInterpretation && !divineRevelationDetected && !isCrisis && !isAbuse && !isEmergency && (
+      /\b(?:i[‘’']m (?:exhausted|tired|weary|burned out|drained|struggling|having a hard time|losing|doubting|afraid|anxious|worried|discouraged|frustrated|overwhelmed|guilty|ashamed)|i haven[’']t|i can[‘’']t seem to|i keep (?:failing|falling|struggling)|i usually (?:start|begin)|haven[’']t opened my bible|no energy for reading|i feel (?:lost|stuck|alone|guilty|ashamed|tired|weak)|estoy (?:exhausto|cansado|agotado|abrumado|perdido|triste|debil|ansioso)|no he abierto|suelo empezar|empiezo fuerte|dejo de|me siento (?:perdido|triste|culpable|debil))\b/i.test(question)
     );
+    const isAdviceRequest = !isDirectRecall && !isSpiritualInterpretation && !divineRevelationDetected && !isCrisis && !isAbuse && !isEmergency && (
+      /\b(?:what should i do|what would you recommend|what do you recommend|what can i do|how should i|how do i start|how do i|where should i start|what would you suggest|help me|advice|recommend|suggest|qué me recomiendas|qué debería hacer|qué me sugieres|ayúdame|aconéjame|cómo empiezo)\b/i.test(question)
+    );
+    const isConversationalStatement = isSharingStatement || isAdviceRequest;
     let recallType: "bookmark" | "highlight" | "note" | "prayer" | "reading" | "conversation" | "walk" | "cross_memory" | "general" | null = null;
     if (/\b(?:save|saved|bookmark)\b/i.test(question)) recallType = "bookmark";
     else if (/\b(?:highlight|highlighted|underline|marked)\b/i.test(question)) recallType = "highlight";
@@ -1495,13 +1514,49 @@ const devProvider: AIProvider = {
       }
     }
 
+    // Handle very short follow-up questions (1-3 words) with conversation context
     let answerSummary = "";
     let reformedUnderstanding: string | null = null;
     let scriptureContext: string | null = null;
     let sourceUnavailable = false;
     let teacherAttributionBlocked: string | null = null;
 
-    if (divineRevelationDetected) {
+    const isVeryShortFollowUp = isFollowUp && wordCount <= 3 && (
+      /^(why|how|what about|which one|what next|what did i say|what do you mean|can you explain|tell me more|por qu[ée]|c[óo]mo|qu[ée] m[áa]s|cu[áa]l|expl[íi]came|m[áa]s)\b/i.test(question)
+    );
+    if (isVeryShortFollowUp) {
+      const recentAssistant = [...(request.conversation_history || [])].reverse().find((m) => m.role === 'assistant');
+      const recentUser = (request.conversation_history || []).filter((m) => m.role === 'user').slice(-1)[0];
+      if (recentAssistant && recentUser) {
+        const isSpanish = request.response_language === 'Spanish';
+        const isWhy = /^why\b|por qu/i.test(question);
+        const isHow = /^how\b|c[óo]mo\b/i.test(question);
+        const isWhatAbout = /what about|qu[ée] (?:m[áa]s|tal|y)\b/i.test(question);
+
+        if (isWhy) {
+          answerSummary = isSpanish
+            ? `Sobre lo que mencionamos — ${recentUser.body.slice(0, 60)}... La razón es que la Escritura nos muestra un principio consistente aquí. ¿Quieres que profundice más?`
+            : `About what we were discussing — ${recentUser.body.slice(0, 60)}... The reason is that Scripture shows a consistent principle here. Want me to go deeper?`;
+        } else if (isHow) {
+          answerSummary = isSpanish
+            ? `Una forma práctica de aplicar lo que conversamos: empieza con algo pequeño y constante. ¿Quieres que sea más específico?`
+            : `One practical way to apply what we discussed: start with something small and consistent. Want me to be more specific?`;
+        } else if (isWhatAbout) {
+          answerSummary = isSpanish
+            ? `Hay otro aspecto relacionado que vale la pena considerar. Basado en lo que hablábamos, ¿quieres que lo explore?`
+            : `There's another related angle worth considering. Based on what we were talking about, want me to explore it?`;
+        } else {
+          answerSummary = isSpanish
+            ? `Para aclarar lo que dije antes: ${recentAssistant.body.slice(0, 100)}... ¿Qué parte te gustaría que explique más?`
+            : `To clarify what I said before: ${recentAssistant.body.slice(0, 100)}... Which part would you like me to explain more?`;
+        }
+        sourceUnavailable = false;
+      }
+    }
+
+    if (answerSummary && isVeryShortFollowUp) {
+      // Short follow-up already answered above — skip main intent chain
+    } else if (divineRevelationDetected) {
       answerSummary = "I cannot confirm that God told you this. SOLAPATH will not authenticate claimed private revelation. Personal impressions, circumstances, feelings, dreams, inner thoughts, or claimed revelation should not be treated as equal to Scripture. SCRIPTURE IS THE STANDARD. Let's examine what Scripture actually teaches about this situation.";
     } else if (teacherName && ragConfidence === "source_unavailable") {
       teacherAttributionBlocked = `${teacherName} is associated with teaching on this topic, but SOLAPATH does not currently have a verified ${teacherName} source connected for this response. SOLAPATH will not fabricate quotations, sermon titles, or attributions. Explore the biblical doctrine first, and the explanation will be provided without pretending ${teacherName} was retrieved.`;
@@ -1580,71 +1635,84 @@ const devProvider: AIProvider = {
           : "I didn't find recent records of study, prayer, or reading. If you have been studying something, try asking more specifically.";
       }
       sourceUnavailable = false;
-    } else if (isConversationalStatement) {
+    } else if (isSharingStatement && !isAdviceRequest) {
       // ============================================================
-      // CURRENT USER STATEMENT — acknowledge briefly, don't over-answer
-      // Only give full advice if the user explicitly asks for it
+      // SHARING / EMOTIONAL STATEMENT — brief acknowledgment, not a sermon
       // ============================================================
       const isSpanish = request.response_language === "Spanish";
-      const isRequestingAdvice = /\b(?:what should i|what would you recommend|how should i|what do you recommend|what can i do|help me|advice|recommend|suggest)\b/i.test(question);
-      const isFollowUpRequest = !!(request.conversation_history && request.conversation_history.length > 0 &&
-        /\b(?:what would you recommend|what should i do|how would you approach|where should i start|why this one|what do you recommend|what can i do)\b/i.test(question));
+      const hasExhaustion = /\b(?:exhausted|tired|weary|burned out|drained|haven[’']t opened|haven[’']t read|no energy|fatigue|overwhelmed|agotado|cansado|abrumado)\b/i.test(question);
+      const hasInconsistency = /\b(?:usually start|start strong|stop after|keep failing|keep falling|can[’']t seem to|inconsistent|quitting|quit|empiezo fuerte|dejo de)\b/i.test(question);
+      const hasDoubt = /\b(?:doubt|doubting|losing my faith|questioning|wondering if)\b/i.test(question);
+      const hasGuilt = /\b(?:guilty|ashamed|failure|failed god|disappointed|culpable|avergonzado)\b/i.test(question);
+      const hasAnxiety = /\b(?:anxious|anxiety|worried|afraid|fear|scared|ansioso|preocupado|miedo)\b/i.test(question);
 
-      if (isFollowUpRequest) {
-        const recentUserMessages = (request.conversation_history || [])
-          .filter((m) => m.role === 'user')
-          .slice(-3)
-          .map((m) => m.body)
-          .join(' ');
-        const hasExhaustion = /\b(?:exhausted|tired|weary|burned out|drained|haven't opened|haven't read|no energy)\b/i.test(recentUserMessages);
-        const hasInconsistency = /\b(?:start strong|stop after|usually start|keep failing|keep falling|can't seem to|inconsistent)\b/i.test(recentUserMessages);
-        if (hasExhaustion || hasInconsistency) {
-          answerSummary = isSpanish
-            ? "Dado lo que me has dicho, te recomiendo algo simple: elige un pasaje corto esta noche — un Salmo o un capítulo de Juan. Léelo despacio. No intentes recuperar el tiempo perdido de una sola vez. La fidelidad diaria importa más que la cantidad. Josué 1:8 dice: \"de día y de noche meditarás en él.\" No dice que leas diez capítulos — dice que medites. Un versículo meditado vale más que diez leídos con prisa."
-            : "Given what you've told me, here's what I'd recommend: pick one short passage tonight — a Psalm or a chapter from John. Read it slowly. Don't try to catch up all at once. Daily faithfulness matters more than volume. Joshua 1:8 says, \"you shall meditate on it day and night.\" It doesn't say read ten chapters — it says meditate. One verse meditated on is worth more than ten read in a rush.";
-          scriptureContext = "Joshua 1:8 commands meditation on God's Word day and night. Matthew 11:28 invites the weary to find rest in Christ. Psalm 1:1-3 describes the one who delights in God's law as like a tree planted by streams of water.";
-        } else {
-          answerSummary = isSpanish
-            ? "Basado en nuestra conversación, te recomiendo buscar un pasaje relevante y leerlo despacio. Pide a Dios que te hable a través de él."
-            : "Based on our conversation, I'd recommend finding a relevant passage and reading it slowly. Ask God to speak to you through it.";
-          scriptureContext = "Psalm 119:105 says God's Word is a lamp to our feet. Philippians 4:8-9 calls us to practice what we have learned.";
-        }
-      } else if (isRequestingAdvice) {
-        if (/\b(?:exhausted|tired|weary|burnout|burned out|drained|haven't opened|haven't read|no energy|fatigue)\b/i.test(question)) {
-          answerSummary = isSpanish
-            ? "Si no has abierto tu Biblia en unos días, no intentes recuperar todo esta noche. Comienza pequeño. Lee un solo pasaje — incluso un versículo. Mateo 11:28 dice: \"Venid a mí todos los que estáis trabajados y cargados, y yo os haré descansar.\" El descanso en Cristo no depende de tu rendimiento. Dios no te ama más cuando lees más. Te ama en Cristo. Pero Su Palabra es el medio por el cual renueva tu mente y te da fuerza. Intenta leer un salmo hoy. Solo uno. Y pídele que hable a través de él."
-            : "If you haven't opened your Bible in a few days, don't try to make up for all of it tonight. Start small. Read just one passage — even a single verse. Matthew 11:28 says, \"Come to me, all who labor and are heavy laden, and I will give you rest.\" Rest in Christ doesn't depend on your performance. God doesn't love you more when you read more. He loves you in Christ. But His Word is the means by which He renews your mind and gives you strength. Try reading one Psalm today. Just one. And ask Him to speak through it.";
-          scriptureContext = "Matthew 11:28-30 invites the weary to find rest in Christ. Psalm 23 shows the Lord as shepherd who restores the soul. Isaiah 40:29-31 promises strength to the weary.";
-        } else if (/\b(?:struggling|struggle|hard time|difficult|difficult time|can't seem to|keep failing|keep falling|usually start|start strong|stop after)\b/i.test(question)) {
-          answerSummary = isSpanish
-            ? "La lucha es real, y no estás solo en ella. Romanos 7 muestra al apóstol Pablo luchando con la misma tensión — queriendo hacer el bien pero no siempre lográndolo. La buena noticia es que Romanos 8:1 dice: \"Ahora, pues, ninguna condenación hay para los que están en Cristo Jesús.\" Tu lucha no te separa del amor de Dios. La santificación es un proceso que dura toda la vida. No tienes que ser perfecto para acercarte a Dios — ven a Él en tu lucha y deja que Su Palabra te transforme gradualmente."
-            : "The struggle is real, and you're not alone in it. Romans 7 shows the apostle Paul wrestling with the same tension — wanting to do good but not always achieving it. The good news is that Romans 8:1 says, \"There is therefore now no condemnation for those who are in Christ Jesus.\" Your struggle doesn't separate you from God's love. Sanctification is a lifelong process. You don't have to be perfect to approach God — come to Him in your struggle and let His Word transform you gradually.";
-          scriptureContext = "Romans 7:15-25 shows the struggle between flesh and spirit. Romans 8:1 declares no condemnation in Christ. Philippians 1:6 promises God will complete the work He began.";
-        } else {
-          answerSummary = isSpanish
-            ? "Gracias por compartir eso conmigo. La Escritura nos da sabiduría para estos momentos. Te recomiendo leer un pasaje relevante hoy y pedir a Dios que te hable a través de él."
-            : "Thank you for sharing that with me. Scripture gives us wisdom for these moments. I recommend reading a relevant passage today and asking God to speak to you through it.";
-          scriptureContext = "Psalm 34:18 says the Lord is near to the brokenhearted. 1 Peter 5:6-7 calls us to cast our anxieties on Him because He cares for us.";
-        }
+      if (hasExhaustion && hasInconsistency) {
+        answerSummary = isSpanish
+          ? "Eso ayuda a entender dónde estás. Empezar no parece ser lo más difícil para ti — mantener el ritmo es lo que te cuesta."
+          : "That helps me see where you are. Starting doesn't seem to be the hardest part for you — keeping the rhythm going is.";
+      } else if (hasExhaustion) {
+        answerSummary = isSpanish
+          ? "Suena a que llevas tiempo agotado. No necesitas recuperarlo todo esta noche."
+          : "That sounds draining. You don't need to catch up on everything tonight.";
+      } else if (hasInconsistency) {
+        answerSummary = isSpanish
+          ? "Ese patrón de empezar y parar es frustrante, pero no te define."
+          : "That start-and-stop pattern is frustrating, but it doesn't define you.";
+        scriptureContext = "Romans 7:15-25 shows the struggle between wanting good and doing it. Romans 8:1 declares no condemnation in Christ.";
+      } else if (hasDoubt) {
+        answerSummary = isSpanish
+          ? "La duda no es lo opuesto a la fe — es parte de caminar con Dios. Estás en buen lugar si sigues trayendo tus preguntas aquí."
+          : "Doubt isn't the opposite of faith — it's part of walking with God. You're in a good place if you keep bringing your questions here.";
+      } else if (hasGuilt) {
+        answerSummary = isSpanish
+          ? "La culpa puede ser pesada, pero Romanos 8:1 es claro: ninguna condenación hay para los que están en Cristo Jesús. Eso no significa que tu lucha no importe — significa que no te define."
+          : "Guilt can be heavy, but Romans 8:1 is clear: there is therefore now no condemnation for those who are in Christ Jesus. That doesn't mean your struggle doesn't matter — it means it doesn't define you.";
+        scriptureContext = "Romans 8:1 declares no condemnation in Christ. 1 John 1:9 promises forgiveness when we confess.";
+      } else if (hasAnxiety) {
+        answerSummary = isSpanish
+          ? "La ansiedad puede hacer que todo parezca más grande de lo que es. No tienes que resolverlo todo ahora."
+          : "Anxiety can make everything feel bigger than it is. You don't have to solve it all right now.";
+        scriptureContext = "Philippians 4:6-7 calls us to bring our anxieties to God in prayer. 1 Peter 5:7 says to cast all anxieties on Him because He cares for us.";
       } else {
-        // Statement without explicit advice request — give full advice for struggle/inconsistency patterns
-        // (Build 61 real-device testing confirmed this response as PASS)
-        if (/\b(?:exhausted|tired|weary|burnout|burned out|drained|haven't opened|haven't read|no energy|fatigue)\b/i.test(question)) {
-          answerSummary = isSpanish
-            ? "Si no has abierto tu Biblia en unos días, no intentes recuperar todo esta noche. Comienza pequeño. Lee un solo pasaje — incluso un versículo. Mateo 11:28 dice: \"Venid a mí todos los que estáis trabajados y cargados, y yo os haré descansar.\" El descanso en Cristo no depende de tu rendimiento. Dios no te ama más cuando lees más. Te ama en Cristo. Pero Su Palabra es el medio por el cual renueva tu mente y te da fuerza. Intenta leer un salmo hoy. Solo uno. Y pídele que hable a través de él."
-            : "If you haven't opened your Bible in a few days, don't try to make up for all of it tonight. Start small. Read just one passage — even a single verse. Matthew 11:28 says, \"Come to me, all who labor and are heavy laden, and I will give you rest.\" Rest in Christ doesn't depend on your performance. God doesn't love you more when you read more. He loves you in Christ. But His Word is the means by which He renews your mind and gives you strength. Try reading one Psalm today. Just one. And ask Him to speak through it.";
-          scriptureContext = "Matthew 11:28-30 invites the weary to find rest in Christ. Psalm 23 shows the Lord as shepherd who restores the soul. Isaiah 40:29-31 promises strength to the weary.";
-        } else if (/\b(?:struggling|struggle|hard time|difficult|can't seem to|keep failing|keep falling|usually start|start strong|stop after)\b/i.test(question)) {
-          answerSummary = isSpanish
-            ? "La lucha es real, y no estás solo en ella. Romanos 7 muestra al apóstol Pablo luchando con la misma tensión — queriendo hacer el bien pero no siempre lográndolo. La buena noticia es que Romanos 8:1 dice: \"Ahora, pues, ninguna condenación hay para los que están en Cristo Jesús.\" Tu lucha no te separa del amor de Dios. La santificación es un proceso que dura toda la vida. No tienes que ser perfecto para acercarte a Dios — ven a Él en tu lucha y deja que Su Palabra te transforme gradualmente."
-            : "The struggle is real, and you're not alone in it. Romans 7 shows the apostle Paul wrestling with the same tension — wanting to do good but not always achieving it. The good news is that Romans 8:1 says, \"There is therefore now no condemnation for those who are in Christ Jesus.\" Your struggle doesn't separate you from God's love. Sanctification is a lifelong process. You don't have to be perfect to approach God — come to Him in your struggle and let His Word transform you gradually.";
-          scriptureContext = "Romans 7:15-25 shows the struggle between flesh and spirit. Romans 8:1 declares no condemnation in Christ. Philippians 1:6 promises God will complete the work He began.";
-        } else {
-          answerSummary = isSpanish
-            ? "Gracias por compartir eso. Lo que describes es algo que muchos creyentes enfrentan. ¿Hay algo específico en lo que pueda ayudarte?"
-            : "Thank you for sharing that. What you're describing is something many believers face. Is there something specific I can help you with?";
-          scriptureContext = "Psalm 34:18 says the Lord is near to the brokenhearted.";
-        }
+        answerSummary = isSpanish
+          ? "Gracias por compartir eso conmigo. ¿Hay algo específico en lo que quieras que te ayude?"
+          : "Thanks for sharing that with me. Is there something specific you'd like help with?";
+      }
+      sourceUnavailable = false;
+    } else if (isAdviceRequest || (isConversationalStatement && isSharingStatement)) {
+      // ============================================================
+      // ADVICE / PRACTICAL REQUEST — actionable, not overwhelming
+      // Uses conversation context when available
+      // ============================================================
+      const isSpanish = request.response_language === "Spanish";
+      const recentUserMessages = (request.conversation_history || [])
+        .filter((m) => m.role === 'user')
+        .slice(-3)
+        .map((m) => m.body)
+        .join(' ');
+      const hasExhaustion = /\b(?:exhausted|tired|weary|burned out|drained|haven[’']t opened|haven[’']t read|no energy|agotado|cansado)\b/i.test(recentUserMessages + ' ' + question);
+      const hasInconsistency = /\b(?:start strong|stop after|usually start|keep failing|keep falling|can[’']t seem to|inconsistent|quitting|empiezo fuerte|dejo de)\b/i.test(recentUserMessages + ' ' + question);
+
+      if (hasExhaustion && hasInconsistency) {
+        answerSummary = isSpanish
+          ? "Dado lo que me has dicho, algo simple: elige un pasaje corto esta noche — un Salmo o un capítulo de Juan. Léelo despacio. La fidelidad diaria importa más que la cantidad. Josué 1:8 no dice que leas diez capítulos — dice que medites de día y de noche. Un versículo meditado vale más que diez leídos con prisa."
+          : "Given what you've told me, here's what I'd do: pick one short passage tonight — a Psalm or a chapter from John. Read it slowly. Daily faithfulness matters more than volume. Joshua 1:8 doesn't say read ten chapters — it says meditate day and night. One verse meditated on is worth more than ten read in a rush.";
+        scriptureContext = "Joshua 1:8 commands meditation on God's Word day and night. Psalm 1:1-3 describes the one who delights in God's law as like a tree planted by streams of water.";
+      } else if (hasExhaustion) {
+        answerSummary = isSpanish
+          ? "No intentes recuperar todo esta noche. Comienza pequeño — un solo pasaje, incluso un versículo. Mateo 11:28 dice: \"Venid a mí todos los que estáis trabajados y cargados, y yo os haré descansar.\" El descanso en Cristo no depende de tu rendimiento. Lee un salmo hoy. Solo uno."
+          : "Don't try to make up for everything tonight. Start small — one passage, even a single verse. Matthew 11:28 says, \"Come to me, all who labor and are heavy laden, and I will give you rest.\" Rest in Christ doesn't depend on your performance. Read one Psalm today. Just one.";
+        scriptureContext = "Matthew 11:28-30 invites the weary to find rest in Christ. Psalm 23 shows the Lord as shepherd who restores the soul.";
+      } else if (hasInconsistency) {
+        answerSummary = isSpanish
+          ? "Tu problema no es empezar sino continuar. Josué 1:8 es útil aquí: la imagen no es de un estallido ocasional de estudio, sino de la Palabra de Dios cerca de ti día y noche. La santificación es un proceso que dura toda la vida — no tienes que ser perfecto. Romanos 8:1 dice que no hay condenación para los que están en Cristo."
+          : "Your problem isn't starting — it's continuing. Joshua 1:8 is useful here. The picture isn't of an occasional burst of study; it's God's Word staying near you day and night. Sanctification is a lifelong process — you don't have to be perfect. Romans 8:1 says there is no condemnation for those in Christ.";
+        scriptureContext = "Joshua 1:8 commands meditation day and night. Romans 8:1 declares no condemnation. Philippians 1:6 promises God will complete the work He began.";
+      } else {
+        answerSummary = isSpanish
+          ? "Basado en lo que me has dicho, te sugiero buscar un pasaje relevante y leerlo despacio. Pide a Dios que te hable a través de él. ¿Quieres que te recomiende un pasaje?"
+          : "Based on what you've shared, I'd suggest finding a relevant passage and reading it slowly. Ask God to speak to you through it. Want me to recommend one?";
+        scriptureContext = "Psalm 119:105 says God's Word is a lamp to our feet. Philippians 4:8-9 calls us to practice what we have learned.";
       }
       sourceUnavailable = false;
     } else if (ragCitations.length > 0) {
@@ -1670,8 +1738,8 @@ const devProvider: AIProvider = {
         scriptureContext = "Romans 8:15-17 shows that through the Spirit of adoption we cry 'Abba, Father.' Galatians 4:4-7 shows that God sent His Son to redeem those under the law, that we might receive adoption as sons.";
       } else if ((intentSubject.includes("teach") || intentSubject.includes("teaching") || intentSubject.includes("disciple")) && !isSpiritualInterpretation && !intentSubject.includes("widow") && !intentSubject.includes("hospitality") && !intentSubject.includes("stewardship") && !intentSubject.includes("gossip") && !intentSubject.includes("laziness") && !intentSubject.includes("laziness")) {
         answerSummary = isSpanish
-          ? "La Escritura nos llama a enseñar y discipular a otros como parte de la Gran Comisión. Mateo 28:19-20 dice: \"Por tanto, id, y haced discípulos a todas las naciones... enseñándoles que guarden todas las cosas que os he mandado.\" La enseñanza bíblica no es solo compartir información — es modelar la vida de Cristo para que otros la sigan. Deuteronomio 6:6-7 muestra que la enseñanza comienza en el hogar, en lo cotidiano."
-          : "Scripture calls us to teach and disciple others as part of the Great Commission. Matthew 28:19-20 says, \"Go and make disciples of all nations... teaching them to observe all that I commanded you.\" Biblical teaching isn't just sharing information — it's modeling Christ's life so others can follow. Deuteronomy 6:6-7 shows that teaching starts at home, in everyday life.";
+          ? "Enseñar y discipular a otros es parte de la Gran Comisión. Mateo 28:19-20 dice: \"Id, y haced discípulos a todas las naciones... enseñándoles que guarden todas las cosas que os he mandado.\" La enseñanza bíblica no es solo compartir información — es modelar la vida de Cristo para que otros la sigan. Deuteronomio 6:6-7 muestra que la enseñanza comienza en el hogar, en lo cotidiano."
+          : "Teaching and discipling others is part of the Great Commission. Matthew 28:19-20 says, \"Go and make disciples of all nations... teaching them to observe all that I commanded you.\" Biblical teaching isn't just sharing information — it's modeling Christ's life so others can follow. Deuteronomy 6:6-7 shows that teaching starts at home, in everyday life.";
         reformedUnderstanding = "The teaching ministry is a gift of the Spirit for the equipping of the saints. Christ has appointed teachers in His church to instruct in the faith, and all believers are called to make disciples and teach the nations to observe all that Christ commanded.";
         scriptureContext = "Matthew 28:19-20 is the Great Commission's call to teach. Deuteronomy 6:6-7 shows teaching in the home. 2 Timothy 2:2 shows the chain of faithful teaching passing from generation to generation.";
       } else if (intentSubject.includes("forgive") || intentSubject.includes("forgiveness") || resolvedQuery.includes("forgive")) {
@@ -1682,8 +1750,8 @@ const devProvider: AIProvider = {
         scriptureContext = "Ephesians 4:31-32 calls us to forgive as God forgave us. Matthew 18:21-35 shows the parable of the unforgiving servant, grounding our forgiveness in God's prior forgiveness of us.";
       } else if (intentSubject.includes("gay") || intentSubject.includes("homosexual") || intentSubject.includes("same-sex") || intentSubject.includes("same sex")) {
         answerSummary = isSpanish
-          ? "La Escritura enseña que el diseño de Dios para la sexualidad se expresa dentro del matrimonio entre un hombre y una mujer. Pasajes como Romanos 1:26-27, 1 Corintios 6:9-11 y Levítico 18:22 describen la práctica homosexual como contraria al diseño de Dios. Al mismo tiempo, la Escritura distingue entre la tentación y el acto — tener deseos no es lo mismo que actuar según ellos. Toda persona, sin importar sus luchas, es creada a imagen de Dios y merece dignidad y respeto. El Evangelio ofrece gracia, perdón y transformación a todos los que se arrepienten y confían en Cristo. 1 Corintios 6:11 dice: \"Y esto erais algunos vosotros; mas ya habéis sido lavados, ya habéis sido santificados, ya habéis sido justificados en el nombre del Señor Jesús.\""
-          : "Scripture teaches that God's design for sexuality is expressed within marriage between a man and a woman. Passages like Romans 1:26-27, 1 Corinthians 6:9-11, and Leviticus 18:22 describe homosexual practice as contrary to God's design. At the same time, Scripture distinguishes between temptation and conduct — experiencing desires is not the same as acting on them. Every person, regardless of their struggles, is created in God's image and deserves dignity and respect. The Gospel offers grace, forgiveness, and transformation to all who repent and trust in Christ. 1 Corinthians 6:11 says, \"Such were some of you, but you were washed, but you were sanctified, but you were justified in the name of the Lord Jesus.\"";
+          ? "El diseño de Dios para la sexualidad se expresa dentro del matrimonio entre un hombre y una mujer. Pasajes como Romanos 1:26-27, 1 Corintios 6:9-11 y Levítico 18:22 describen la práctica homosexual como contraria al diseño de Dios. Al mismo tiempo, la Escritura distingue entre la tentación y el acto — tener deseos no es lo mismo que actuar según ellos. Toda persona, sin importar sus luchas, es creada a imagen de Dios y merece dignidad y respeto. El Evangelio ofrece gracia, perdón y transformación a todos los que se arrepienten y confían en Cristo. 1 Corintios 6:11 dice: \"Y esto erais algunos vosotros; mas ya habéis sido lavados, ya habéis sido santificados, ya habéis sido justificados en el nombre del Señor Jesús.\""
+          : "God's design for sexuality is expressed within marriage between a man and a woman. Passages like Romans 1:26-27, 1 Corinthians 6:9-11, and Leviticus 18:22 describe homosexual practice as contrary to God's design. At the same time, Scripture distinguishes between temptation and conduct — experiencing desires is not the same as acting on them. Every person, regardless of their struggles, is created in God's image and deserves dignity and respect. The Gospel offers grace, forgiveness, and transformation to all who repent and trust in Christ. 1 Corinthians 6:11 says, \"Such were some of you, but you were washed, but you were sanctified, but you were justified in the name of the Lord Jesus.\"";
         reformedUnderstanding = "Scripture distinguishes between personhood, desire, and conduct. All persons bear God's image and deserve dignity. Temptation is not itself sin, but acting on desires contrary to God's design is. The Gospel calls all people to repentance and offers grace and transformation through Christ.";
         scriptureContext = "Romans 1:26-27 describes the exchange of natural relations. 1 Corinthians 6:9-11 lists sins including homosexual practice but immediately offers hope in Christ. Leviticus 18:22 prohibits it in the Old Testament law.";
       } else if (intentSubject.includes("predestination") || intentSubject.includes("election")) {
@@ -1699,8 +1767,8 @@ const devProvider: AIProvider = {
         reformedUnderstanding = "Sanctification is a work of God's grace whereby believers, having a new heart and spirit, are renewed in their whole man after the image of God, enabled more and more to die unto sin and live unto righteousness.";
       } else if (intentSubject.includes("perseverance") || intentSubject.includes("lose salvation")) {
         answerSummary = isSpanish
-          ? "La Escritura enseña que aquellos a quienes Dios ha salvado no pueden perder su salvación. Juan 10:28 dice: \"y yo les doy vida eterna, y no perecerán jamás, ni nadie las arrebatará de mi mano.\" Filipenses 1:6 dice que el que comenzó la buena obra la perfeccionará. Esto no significa que los creyentes nunca tropiecen, sino que la gracia de Dios los sostendrá hasta el final."
-          : "Scripture teaches that those whom God has saved cannot lose their salvation. John 10:28 says, \"I give eternal life to them. They will never perish, and no one will snatch them out of my hand.\" Philippians 1:6 says He who began a good work will complete it. This doesn't mean believers never stumble, but that God's grace will sustain them to the end.";
+          ? "Aquellos a quienes Dios ha salvado no pueden perder su salvación. Juan 10:28 dice: \"y yo les doy vida eterna, y no perecerán jamás, ni nadie las arrebatará de mi mano.\" Filipenses 1:6 dice que el que comenzó la buena obra la perfeccionará. Esto no significa que los creyentes nunca tropiecen, sino que la gracia de Dios los sostendrá hasta el final."
+          : "Those whom God has saved cannot lose their salvation. John 10:28 says, \"I give eternal life to them. They will never perish, and no one will snatch them out of my hand.\" Philippians 1:6 says He who began a good work will complete it. This doesn't mean believers never stumble, but that God's grace will sustain them to the end.";
         reformedUnderstanding = "Those whom God has accepted in the Beloved, effectually called and sanctified by His Spirit, can neither totally nor finally fall away from the state of grace, but shall certainly persevere therein to the end.";
       } else if (intentSubject.includes("trinity")) {
         answerSummary = isSpanish
@@ -1771,33 +1839,33 @@ const devProvider: AIProvider = {
       // Use intentSubject to generate a Scripture-grounded answer.
       if (intentSubject.includes("widow") || resolvedQuery.includes("widow")) {
         answerSummary = isSpanish
-          ? "La Escritura enseña que Dios tiene especial cuidado por las viudas. Santiago 1:27 dice: \"La religión pura y sin mancha delante de Dios el Padre es esta: visitar a los huérfanos y a las viudas en sus tribulaciones.\" 1 Timoteo 5 describe cómo la iglesia debe honrar y cuidar a las viudas verdaderamente necesitadas. Hechos 6 muestra a los apóstoles designando diáconos para asegurar que las viudas no fueran olvidadas. Cuidar a las viudas es una expresión de la religión pura que Dios aprueba."
-          : "Scripture teaches that God has special care for widows. James 1:27 says, \"Pure religion and undefiled before our God and Father is this: to visit the fatherless and widows in their affliction.\" 1 Timothy 5 describes how the church should honor and care for widows who are truly in need. Acts 6 shows the apostles appointing deacons to ensure widows weren't neglected. Caring for widows is an expression of the pure religion God approves.";
+          ? "Dios tiene especial cuidado por las viudas. Santiago 1:27 dice: \"La religión pura y sin mancha delante de Dios el Padre es esta: visitar a los huérfanos y a las viudas en sus tribulaciones.\" 1 Timoteo 5 describe cómo la iglesia debe honrar y cuidar a las viudas verdaderamente necesitadas. Hechos 6 muestra a los apóstoles designando diáconos para asegurar que las viudas no fueran olvidadas. Cuidar a las viudas es una expresión de la religión pura que Dios aprueba."
+          : "God has special care for widows. James 1:27 says, \"Pure religion and undefiled before our God and Father is this: to visit the fatherless and widows in their affliction.\" 1 Timothy 5 describes how the church should honor and care for widows who are truly in need. Acts 6 shows the apostles appointing deacons to ensure widows weren't neglected. Caring for widows is an expression of the pure religion God approves.";
         scriptureContext = "James 1:27 defines pure religion as caring for widows and orphans. 1 Timothy 5:3-16 provides detailed instructions for the church's care of widows. Acts 6:1-7 shows the early church appointing deacons to ensure widows were not neglected.";
       } else if (intentSubject.includes("laziness") || intentSubject.includes("lazy") || intentSubject.includes("sloth") || resolvedQuery.includes("laziness") || resolvedQuery.includes("lazy")) {
         answerSummary = isSpanish
-          ? "La Escritura advierte claramente contra la pereza. Proverbios 6:6-11 dice: \"Ve a la hormiga, oh perezoso... tanto tiempo como duerme el perezoso, la pobreza vendrá.\" 2 Tesalonicenses 3:10 dice: \"Si alguno no quiere trabajar, tampoco coma.\" La Escritura condena la pereza como una falta de mayordomía, pero no condena el descanso legítimo. La diligencia honra a Dios."
-          : "Scripture clearly warns against laziness. Proverbs 6:6-11 says, \"Go to the ant, you sluggard... the sluggard will come to poverty.\" 2 Thessalonians 3:10 says, \"If anyone is not willing to work, let him not eat.\" Scripture condemns laziness as a failure of stewardship, but it doesn't condemn legitimate rest. Diligence honors God.";
+          ? "La pereza es algo que la Escritura advierte claramente contra. Proverbios 6:6-11 dice: \"Ve a la hormiga, oh perezoso... tanto tiempo como duerme el perezoso, la pobreza vendrá.\" 2 Tesalonicenses 3:10 dice: \"Si alguno no quiere trabajar, tampoco coma.\" No se condena el descanso legítimo, pero sí la pereza como una falta de mayordomía. La diligencia honra a Dios."
+          : "Laziness is something Scripture clearly warns against. Proverbs 6:6-11 says, \"Go to the ant, you sluggard... the sluggard will come to poverty.\" 2 Thessalonians 3:10 says, \"If anyone is not willing to work, let him not eat.\" Legitimate rest isn't condemned, but laziness as a failure of stewardship is. Diligence honors God.";
         scriptureContext = "Proverbs 6:6-11 uses the ant as an example of diligence. Proverbs 24:30-34 warns that laziness leads to poverty. 2 Thessalonians 3:6-12 commands the idle to work quietly.";
       } else if (intentSubject.includes("hospitality") || resolvedQuery.includes("hospitality")) {
         answerSummary = isSpanish
-          ? "La Escritura llama a los creyentes a practicar la hospitalidad. Romanos 12:13 dice: \"practicando la hospitalidad.\" Hebreos 13:2 dice: \"No os olvidéis de la hospitalidad, porque por ella algunos, sin saberlo, hospedaron ángeles.\" 1 Pedro 4:9 dice: \"Hospitalarios unos con otros sin murmuraciones.\""
-          : "Scripture calls believers to practice hospitality. Romans 12:13 says, \"seeking to show hospitality.\" Hebrews 13:2 says, \"Do not neglect to show hospitality to strangers, for thereby some have entertained angels unawares.\" 1 Peter 4:9 says, \"Show hospitality to one another without grumbling.\"";
+          ? "Los creyentes somos llamados a practicar la hospitalidad. Romanos 12:13 dice: \"practicando la hospitalidad.\" Hebreos 13:2 dice: \"No os olvidéis de la hospitalidad, porque por ella algunos, sin saberlo, hospedaron ángeles.\" 1 Pedro 4:9 dice: \"Hospitalarios unos con otros sin murmuraciones.\""
+          : "Believers are called to practice hospitality. Romans 12:13 says, \"seeking to show hospitality.\" Hebrews 13:2 says, \"Do not neglect to show hospitality to strangers, for thereby some have entertained angels unawares.\" 1 Peter 4:9 says, \"Show hospitality to one another without grumbling.\"";
         scriptureContext = "Romans 12:13 commands practicing hospitality. Hebrews 13:2 encourages hospitality to strangers. 1 Peter 4:9 calls for hospitality without grumbling.";
       } else if (intentSubject.includes("generosity") || resolvedQuery.includes("generosity")) {
         answerSummary = isSpanish
-          ? "La Escritura enseña que Dios ama al dador alegre. 2 Corintios 9:7 dice: \"Dios ama al dader alegre.\" La generosidad se basa en la disposición del corazón, no en la cantidad. 1 Timoteo 6:17-19 llama a los ricos a ser generosos y ricos en buenas obras."
-          : "Scripture teaches that God loves a cheerful giver. 2 Corinthians 9:7 says, \"God loves a cheerful giver.\" Generosity is about the heart's disposition, not the amount. 1 Timothy 6:17-19 calls the rich to be generous and rich in good works.";
+          ? "Dios ama al dador alegre. 2 Corintios 9:7 dice: \"Dios ama al dader alegre.\" La generosidad se basa en la disposición del corazón, no en la cantidad. 1 Timoteo 6:17-19 llama a los ricos a ser generosos y ricos en buenas obras."
+          : "God loves a cheerful giver. 2 Corinthians 9:7 says, \"God loves a cheerful giver.\" Generosity is about the heart's disposition, not the amount. 1 Timothy 6:17-19 calls the rich to be generous and rich in good works.";
         scriptureContext = "2 Corinthians 9:6-7 teaches cheerful giving. 1 Timothy 6:17-19 commands generosity. Proverbs 11:24-25 shows generosity leads to abundance.";
       } else if (intentSubject.includes("gossip") || resolvedQuery.includes("gossip")) {
         answerSummary = isSpanish
-          ? "La Escritura condena el chisme. Proverbios 16:28 dice: \"El chismoso aparta a los mejores amigos.\" Efesios 4:29 dice: \"Ninguna palabra corrompida salga de vuestra boca, sino la que sea buena para edificación.\" Santiago 4:11 dice: \"No murmuréis los unos de los otros, hermanos.\""
-          : "Scripture condemns gossip. Proverbs 16:28 says, \"A whisperer separates close friends.\" Ephesians 4:29 says, \"Let no corrupting talk come out of your mouths, but only such as is good for building up.\" James 4:11 says, \"Do not speak evil against one another, brothers.\"";
+          ? "El chisme es condenado en la Escritura. Proverbios 16:28 dice: \"El chismoso aparta a los mejores amigos.\" Efesios 4:29 dice: \"Ninguna palabra corrompida salga de vuestra boca, sino la que sea buena para edificación.\" Santiago 4:11 dice: \"No murmuréis los unos de los otros, hermanos.\""
+          : "Gossip is condemned in Scripture. Proverbs 16:28 says, \"A whisperer separates close friends.\" Ephesians 4:29 says, \"Let no corrupting talk come out of your mouths, but only such as is good for building up.\" James 4:11 says, \"Do not speak evil against one another, brothers.\"";
         scriptureContext = "Proverbs 16:28 shows gossip separates friends. Ephesians 4:29 commands edifying speech. James 4:11-12 prohibits speaking evil of one another.";
       } else if (intentSubject.includes("stewardship") || resolvedQuery.includes("stewardship")) {
         answerSummary = isSpanish
-          ? "La Escritura enseña que somos mayordomos de lo que Dios nos ha dado. 1 Corintios 4:7 dice: \"¿Qué tienes que no hayas recibido?\" La parábola de los talentos (Mateo 25:14-30) muestra que Dios espera que usemos Sus recursos para Su gloria. 1 Pedro 4:10 dice: \"Cada uno según el don que ha recibido, minístrelo a los otros, como buenos dispensadores de la multiforme gracia de Dios.\""
-          : "Scripture teaches that we are stewards of what God has given. 1 Corinthians 4:7 says, \"What do you have that you did not receive?\" The parable of the talents (Matthew 25:14-30) shows God expects us to use His resources for His glory. 1 Peter 4:10 says, \"As each has received a gift, use it to serve one another, as good stewards of God's varied grace.\"";
+          ? "Somos mayordomos de lo que Dios nos ha dado. 1 Corintios 4:7 dice: \"¿Qué tienes que no hayas recibido?\" La parábola de los talentos (Mateo 25:14-30) muestra que Dios espera que usemos Sus recursos para Su gloria. 1 Pedro 4:10 dice: \"Cada uno según el don que ha recibido, minístrelo a los otros, como buenos dispensadores de la multiforme gracia de Dios.\""
+          : "We are stewards of what God has given. 1 Corinthians 4:7 says, \"What do you have that you did not receive?\" The parable of the talents (Matthew 25:14-30) shows God expects us to use His resources for His glory. 1 Peter 4:10 says, \"As each has received a gift, use it to serve one another, as good stewards of God's varied grace.\"";
         scriptureContext = "1 Corinthians 4:7 reminds us everything is received from God. Matthew 25:14-30 shows the parable of the talents. 1 Peter 4:10 calls believers to be good stewards.";
       } else if ((intentSubject.includes("consistent") || resolvedQuery.includes("consistent")) && (intentSubject.includes("scripture") || intentSubject.includes("learning") || intentSubject.includes("study") || resolvedQuery.includes("scripture"))) {
         answerSummary = isSpanish
