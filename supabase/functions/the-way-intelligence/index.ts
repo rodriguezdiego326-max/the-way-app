@@ -141,10 +141,22 @@ For abuse, self-harm, suicide, domestic violence, grief, trauma, severe distress
 // VERSIONING
 // ============================================================
 
+const DEFAULT_OPENAI_MODEL = "gpt-6-luna";
+
+function getOpenAIModel(): string {
+  const configured = Deno.env.get("OPENAI_MODEL")?.trim();
+  // Migrate existing installations even when their server setting pins the old default.
+  // Other explicit model choices remain configurable.
+  if (!configured || configured === "gpt-4o-mini" || configured === "gpt-4o-mini-2024-07-18") {
+    return DEFAULT_OPENAI_MODEL;
+  }
+  return configured;
+}
+
 const VERSIONS = {
   ai_provider: Deno.env.get("OPENAI_API_KEY") ? "openai-production" : "v7.0.0-dev",
   model: Deno.env.get("OPENAI_API_KEY")
-    ? (Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini-2024-07-18")
+    ? getOpenAIModel()
     : "development",
   system_prompt: "v7.1",
   theological_rules: "v7.0",
@@ -2132,13 +2144,23 @@ function getProviderConfig(): ProviderConfig {
   const isProduction = !!Deno.env.get("OPENAI_API_KEY");
   return {
     provider: Deno.env.get("AI_PROVIDER") || (Deno.env.get("OPENAI_API_KEY") ? "openai" : "development"),
-    model: Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini-2024-07-18",
+    model: getOpenAIModel(),
     temperature: parseFloat(Deno.env.get("AI_TEMPERATURE") || "0.3"),
     maxOutputTokens: parseInt(Deno.env.get("AI_MAX_OUTPUT_TOKENS") || "2000"),
     timeoutMs: parseInt(Deno.env.get("AI_TIMEOUT_MS") || "30000"),
     retryCount: parseInt(Deno.env.get("AI_RETRY_COUNT") || "1"),
     structuredOutputSupport: true,
     environment: isProduction ? "production" : "development",
+  };
+}
+
+// Use the same model-compatible options for answers and the live health check.
+function getChatCompletionOptions(config: ProviderConfig, maxOutputTokens = config.maxOutputTokens) {
+  return {
+    temperature: config.temperature,
+    max_completion_tokens: maxOutputTokens,
+    // Match GPT-4o mini's non-reasoning latency and preserve the visible output budget.
+    ...(config.model === "gpt-6-luna" ? { reasoning_effort: "none" as const } : {}),
   };
 }
 
@@ -2291,8 +2313,7 @@ function createOpenAIProvider(config: ProviderConfig): AIProvider {
 
       const body = {
         model: config.model,
-        temperature: config.temperature,
-        max_tokens: config.maxOutputTokens,
+        ...getChatCompletionOptions(config),
         messages: [
           { role: "system", content: systemPrompt + "\n\nYou must respond with a valid JSON object. No markdown, no prose outside JSON." },
           { role: "user", content: userMessage },
@@ -2465,7 +2486,7 @@ async function checkProviderHealth(): Promise<{
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
-    const testBody = { model: config.model, messages: [{ role: "user", content: "Respond with: OK" }], max_tokens: 5 };
+    const testBody = { model: config.model, messages: [{ role: "user", content: "Respond with: OK" }], ...getChatCompletionOptions(config, 5) };
 
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
