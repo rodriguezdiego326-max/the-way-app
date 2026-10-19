@@ -11,9 +11,10 @@ interface ScriptureBlockProps {
   reference: string;
   translation: BibleTranslation;
   onOpenBible: (reference: string) => void;
+  onTextStatus?: (reference: string, translation: BibleTranslation, available: boolean) => void;
 }
 
-export default function ScriptureBlock({ reference, translation, onOpenBible }: ScriptureBlockProps) {
+export default function ScriptureBlock({ reference, translation, onOpenBible, onTextStatus }: ScriptureBlockProps) {
   const [verses, setVerses] = useState<{ verse: number; text: string }[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -21,6 +22,9 @@ export default function ScriptureBlock({ reference, translation, onOpenBible }: 
 
   useEffect(() => {
     let cancelled = false;
+    setFailed(false);
+    setVerses(null);
+    onTextStatus?.(reference, translation, false);
     const parsed = parsePassageReference(reference);
     if (!parsed || parsed.verseStart === null || parsed.verseEnd === null) {
       setFailed(true);
@@ -33,10 +37,11 @@ export default function ScriptureBlock({ reference, translation, onOpenBible }: 
     fetchVerses(parsed.book, parsed.chapter, parsed.verseStart, parsed.verseEnd, translation)
       .then((result) => {
         if (cancelled) return;
-        if (result.verses.length === 0) {
+        if (result.verses.length !== parsed.verseEnd! - parsed.verseStart! + 1) {
           setFailed(true);
         } else {
           setVerses(result.verses);
+          onTextStatus?.(reference, translation, true);
         }
         setLoading(false);
       })
@@ -47,7 +52,7 @@ export default function ScriptureBlock({ reference, translation, onOpenBible }: 
       });
 
     return () => { cancelled = true; };
-  }, [reference, translation]);
+  }, [reference, translation, onTextStatus]);
 
   if (loading) {
     return (

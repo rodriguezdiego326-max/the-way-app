@@ -65,7 +65,7 @@ AI is the servant. Scripture is the authority.
 - Lead with the actual explanation, not an announcement of what you're about to explain
 - Integrate 1 Scripture passage naturally into the flow of the answer — do not list 5-8 passages as a data dump
 - Reference personal memory subtly ("the verse you saved last week") only when memory evidence is provided — never say "Remember when you..." without evidence
-- Do NOT merely tell the user to "read" a passage — provide the relevant Scripture text inline when it materially supports the answer
+- Explain the relevant Scripture meaning with a reference. Exact Scripture text is rendered separately by the app from the selected Bible translation. Do not reproduce or quote Bible wording from model memory in any generated field; use clearly unquoted explanations instead, including when conversation history contains a quotation.
 - Do NOT use constant headings, repetitive disclaimers, or preach at the user
 - Do NOT use canned introductions like "Great question!" or "That's a wonderful question" or "Thank you for sharing that"
 - Do NOT use fake empathy like "I hear your pain" or "That must be so difficult" — just respond naturally
@@ -78,7 +78,7 @@ AI is the servant. Scripture is the authority.
 - Only use "Calvin taught..." / "Owen wrote..." / "Sproul said..." when a verified source object is attached
 - Without verified retrieval, present the theological explanation directly without announcing "From a Reformed perspective" or "Reformed theology teaches" — simply state the doctrine and its biblical basis. Only use the label "Reformed" when the user explicitly asks about theological traditions.
 - Never fabricate quotes, sermon titles, page numbers, or attributions
-- If no verified source is retrieved, say "Verified source not currently available"
+- If no verified secondary source is retrieved, do not claim one. Do not imply that the Bible text displayed separately is unavailable.
 - Only VERIFIED material can appear as an attributed theological source
 - Model memory about theologians is NOT a verified source
 
@@ -158,7 +158,7 @@ const VERSIONS = {
   model: Deno.env.get("OPENAI_API_KEY")
     ? getOpenAIModel()
     : "development",
-  system_prompt: "v7.1",
+  system_prompt: "v7.2",
   theological_rules: "v7.0",
   retrieval: "v7.0",
   source_library: "v7.0-batch-a",
@@ -979,13 +979,12 @@ function computeVerificationState(
   hasScriptureGrounding: boolean,
 ): VerificationState {
   if (isDivine || isCrisis) return 'NO_EXTERNAL_SOURCES_REQUIRED';
-  if (sourceUnavailable && !hasScriptureGrounding) return 'SOURCES_UNAVAILABLE';
-  if (scriptureSources.length > 0 && (confessionalSources.length > 0 || historicalSources.length > 0)) return 'ALL_SOURCES_VERIFIED';
-  if (scriptureSources.length > 0) return 'SCRIPTURE_VERIFIED';
-  if (hasScriptureGrounding) return 'SCRIPTURE_VERIFIED';
   const allCitations = [...scriptureSources, ...confessionalSources, ...historicalSources];
-  if (allCitations.length > 0) return 'PARTIALLY_VERIFIED';
-  return 'SOURCES_UNAVAILABLE';
+  const verified = allCitations.filter((citation) => citation.verified);
+  if (verified.length === 0) return 'SOURCES_UNAVAILABLE';
+  if (verified.length < allCitations.length) return 'PARTIALLY_VERIFIED';
+  if (verified.every((citation) => scriptureSources.includes(citation))) return 'SCRIPTURE_VERIFIED';
+  return 'ALL_SOURCES_VERIFIED';
 }
 
 // ============================================================
@@ -2109,20 +2108,22 @@ type ResolvedMemoryEvidence = {
 };
 
 function resolveFinalMemoryEvidence(request: IntelligenceRequest): ResolvedMemoryEvidence[] {
-  if (request.memory_evidence && request.memory_evidence.length > 0) {
-    return request.memory_evidence;
-  }
-  if (request.study_memory_evidence && request.study_memory_evidence.length > 0) {
-    return request.study_memory_evidence.map((e) => ({
-      source_type: e.source_type,
-      source_id: e.id,
-      created_at: e.created_at,
-      scripture_reference: e.reference || undefined,
-      factual_summary: e.summary,
-      relevance_reason: 'Keyword match',
-    }));
-  }
-  return [];
+  // Both retrieval paths can contribute distinct evidence; neither replaces the other.
+  const candidates: ResolvedMemoryEvidence[] = [
+    ...(request.memory_evidence || []),
+    ...(request.study_memory_evidence || []).map((e) => ({
+      source_type: e.source_type, source_id: e.id, created_at: e.created_at,
+      scripture_reference: e.reference || undefined, factual_summary: e.summary,
+      relevance_reason: 'Study memory match',
+    })),
+  ];
+  const seen = new Set<string>();
+  return candidates.filter((e) => {
+    const key = `${e.source_type}:${e.source_id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 20);
 }
 
 // ============================================================
@@ -2252,7 +2253,7 @@ const STRUCTURED_OUTPUT_SCHEMA = {
 
 function buildSourceBoundaryContext(ragRetrieval: RAGRetrievalResult | null): string {
   if (!ragRetrieval || ragRetrieval.citations.length === 0) {
-    return "NO VERIFIED SOURCES RETRIEVED. Do not attribute claims to any theologian, confession, or historical source. Do not fabricate quotations. State that verified sources are not currently available for this topic.";
+    return "NO VERIFIED SOURCES RETRIEVED. Do not attribute claims to any theologian, confession, or historical source. Do not fabricate quotations. Do not claim verified secondary sources. Explain Scripture in your own words with references; the app displays Bible text separately.";
   }
 
   const lines: string[] = [
@@ -2305,10 +2306,11 @@ function createOpenAIProvider(config: ProviderConfig): AIProvider {
         "",
         sourceContext,
         "",
+        "For personal attribution, return used_memory_ids: an array of source_id values for only the supplied memory records you actually use. Also return used_conversation_context: true only when your answer relies on earlier messages in this conversation. Never treat an earlier AI statement as an independently verified saved note.",
         "Respond with a JSON object matching this schema:",
         JSON.stringify(STRUCTURED_OUTPUT_SCHEMA, null, 2),
         "",
-        "IMPORTANT: Write the answer_summary as a conversational, natural response — like texting a thoughtful Christian mentor. Include the actual Scripture text inline when it supports the answer, not just the reference. Use contractions and warm language. Do NOT just tell the user to read a passage. Do NOT use markdown. Return ONLY valid JSON.",
+        "IMPORTANT: Write the answer_summary as a conversational, natural response — like texting a thoughtful Christian mentor. Explain Scripture with references in your own words, without direct Bible quotations. The app displays exact Bible text separately from its selected translation. Never copy Bible quotations from conversation history. Use contractions and warm language. Do NOT just tell the user to read a passage. Do NOT use markdown. Return ONLY valid JSON.",
       ].join("\n");
 
       const body = {
@@ -2411,7 +2413,7 @@ function createOpenAIProvider(config: ProviderConfig): AIProvider {
             rag_retrieved_source_ids: ragRetrieval?.retrieved_source_ids || [],
             rag_rejected_source_ids: ragRetrieval?.rejected_source_ids || [],
             personal_context_used: [],
-            personal_context_items: ((request.memory_evidence || []) as Array<{ source_type: string; scripture_reference?: string; topic?: string; factual_summary: string }>).slice(0, 5).map((e) => ({
+            personal_context_items: (request.memory_evidence || []).filter((e) => Array.isArray(parsed.used_memory_ids) && parsed.used_memory_ids.includes(e.source_id)).map((e) => ({
               source_type: e.source_type,
               scripture_reference: e.scripture_reference,
               topic: e.topic,
@@ -2423,10 +2425,22 @@ function createOpenAIProvider(config: ProviderConfig): AIProvider {
             query_id: queryId,
             source_unavailable: sourceUnavailable,
             warnings: [],
-            verification_state: computeVerificationState(ragCitations, confessionalSources, historicalSources, scriptureSources, sourceUnavailable, divineRevelationDetected, isCrisis),
+            verification_state: computeVerificationState(ragCitations, confessionalSources, historicalSources, scriptureSources, sourceUnavailable, divineRevelationDetected, isCrisis, false),
             has_development_content: false,
             ask_response_schema_version: VERSIONS.response_schema,
           } as StructuredTheologicalResponse;
+
+          if (parsed.used_conversation_context === true) {
+            const previous = [...(request.conversation_history || [])].reverse().find((m) => m.role === "assistant");
+            if (previous) response.personal_context_items!.push({
+              source_type: "current_conversation",
+              topic: request.response_language === "Spanish" ? "Respuesta anterior en este chat" : "Earlier response in this chat",
+              factual_summary: previous.body.slice(0, 1200),
+            });
+          }
+          // Confidence must come from retrieved evidence, never the model's self-rating.
+          response.source_confidence = response.verification_state === "ALL_SOURCES_VERIFIED" ? "verified"
+            : response.verification_state === "PARTIALLY_VERIFIED" || response.verification_state === "SCRIPTURE_VERIFIED" ? "partial" : "unavailable";
 
           const validation = validateResponse(response);
           response.validation_passed = validation.passed;
@@ -2536,7 +2550,7 @@ function buildUserContext(request: IntelligenceRequest): string {
   if (memoryEvidence.length > 0) {
     parts.push("\nVerified personal context (real user-owned records — you may reference these naturally):");
     for (const e of memoryEvidence) {
-      parts.push(`- [${e.source_type}] ${e.scripture_reference || e.topic || 'N/A'}: ${e.factual_summary} (${e.created_at.split('T')[0]})`);
+      parts.push(`- [source_id=${e.source_id}] [${e.source_type}] ${e.scripture_reference || e.topic || 'N/A'}: ${e.factual_summary} (${e.created_at.split('T')[0]})`);
     }
     parts.push("IMPORTANT: You may ONLY say 'Remember when you studied...' or 'You recently read...' or 'You wrote...' or 'You prayed...' or 'We talked about...' if the exact record is listed above. Use factual, qualified language. Do NOT infer spiritual conclusions from these records. Do NOT fabricate any study, prayer, or experience not listed.");
   } else {

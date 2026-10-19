@@ -20,7 +20,7 @@ function load(env = {}, respond = () => ({ choices: [{ message: { content: JSON.
     crypto, Request, Response, URL, AbortController, setTimeout, clearTimeout, console,
   });
   vm.runInContext(javascript, context);
-  const api = vm.runInContext('({ getProviderConfig, createOpenAIProvider, checkProviderHealth, buildUserContext, SYSTEM_RULES, VERSIONS })', context);
+  const api = vm.runInContext('({ getProviderConfig, createOpenAIProvider, checkProviderHealth, buildUserContext, SYSTEM_RULES, VERSIONS, resolveFinalMemoryEvidence, computeVerificationState })', context);
   return { ...api, handler, requests };
 }
 
@@ -81,4 +81,41 @@ test('unauthenticated Ask requests still fail before any provider call', async (
   const response = await app.handler(new Request('https://example.test/the-way-intelligence', { method: 'POST', body: '{}' }));
   assert.equal(response.status, 401);
   assert.equal(app.requests.length, 0);
+});
+
+
+test('both memory retrieval paths survive and duplicate source IDs are removed', () => {
+  const app = load();
+  const result = app.resolveFinalMemoryEvidence({
+    memory_evidence: [{source_type:'ask_conversation',source_id:'chat1',factual_summary:'Earlier question'}],
+    study_memory_evidence: [
+      {source_type:'bible_note',id:'note1',summary:'Keeping pure',reference:'Psalm 119:9'},
+      {source_type:'ask_conversation',id:'chat1',summary:'Earlier question'},
+    ],
+  });
+  assert.deepEqual(Array.from(result, e => e.source_id), ['chat1','note1']);
+});
+
+test('follow-up attribution distinguishes current chat and rejects invented memory IDs', async () => {
+  const app = load({OPENAI_API_KEY:'test-only'}, () => ({choices:[{message:{content:JSON.stringify({
+    answer_summary:'Start with Psalm 119:2, your note about focusing on the Lord.',
+    used_memory_ids:['note1','invented'], used_conversation_context:true, source_confidence:'verified',
+  })}}]}));
+  const request = {question:'Which of those two notes?',memory_evidence:[
+    {source_id:'note1',source_type:'bible_note',factual_summary:'Focusing on The Lord',created_at:'2026-10-19'},
+    {source_id:'chat1',source_type:'ask_conversation',factual_summary:'Unrelated',created_at:'2026-10-19'},
+  ],conversation_history:[{role:'assistant',body:'Your notes concern Psalm 119:2 and Psalm 119:9.'}]};
+  const result = await app.createOpenAIProvider(app.getProviderConfig()).generateStructured(app.SYSTEM_RULES,app.buildUserContext(request),request,null);
+  assert.deepEqual(Array.from(result.personal_context_items, e => e.source_type), ['bible_note','current_conversation']);
+  assert.equal(result.source_confidence,'unavailable');
+  assert.match(app.requests[0].body.messages[1].content,/source_id=note1/);
+  assert.match(app.requests[0].body.messages[1].content,/without direct Bible quotations/);
+});
+
+test('verification requires actual verified sources, not generated references or self-ratings', () => {
+  const app = load();
+  assert.equal(app.computeVerificationState([],[],[],[],false,false,false,true),'SOURCES_UNAVAILABLE');
+  assert.equal(app.computeVerificationState([],[],[],[{verified:false}],false,false,false,true),'SOURCES_UNAVAILABLE');
+  assert.equal(app.computeVerificationState([],[],[],[{verified:true}],false,false,false,false),'SCRIPTURE_VERIFIED');
+  assert.equal(app.computeVerificationState([],[{verified:false}],[],[{verified:true}],false,false,false,false),'PARTIALLY_VERIFIED');
 });

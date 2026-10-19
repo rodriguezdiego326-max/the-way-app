@@ -1424,6 +1424,13 @@ function AssistantMessage({
 }: AssistantMessageProps) {
   const [copied, setCopied] = useState(false);
   const [showPersonalContext, setShowPersonalContext] = useState(false);
+  const [scriptureTextStatus, setScriptureTextStatus] = useState<Record<string, boolean>>({});
+  const onScriptureTextStatus = useCallback((reference: string, version: BibleTranslation, available: boolean) => {
+    setScriptureTextStatus((previous) => {
+      const key = `${version}:${reference}`;
+      return previous[key] === available ? previous : { ...previous, [key]: available };
+    });
+  }, []);
   const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
   const activeProposals = response.memory_proposals || [];
   const visibleProposals = activeProposals.filter((_, i) => !dismissedProposals.has(`${itemId}-${i}`));
@@ -1539,7 +1546,7 @@ function AssistantMessage({
               className="flex items-center gap-1.5 text-ivory-600 hover:text-gold-400 transition-colors text-xs no-tap-highlight"
             >
               <Sparkles size={11} />
-              {askLang === 'es' ? 'Contexto personal utilizado' : 'Used your study history'}
+              {askLang === 'es' ? 'Contexto personal utilizado' : 'Personal context used'}
               {showPersonalContext ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
             </button>
             {showPersonalContext && (
@@ -1563,6 +1570,7 @@ function AssistantMessage({
             key={i}
             reference={rec.reference}
             translation={translation}
+            onTextStatus={onScriptureTextStatus}
             onOpenBible={onOpenBible}
           />
         ))}
@@ -1676,9 +1684,13 @@ function AssistantMessage({
              'SOURCES_UNAVAILABLE');
           const showBadge = vState !== 'NO_EXTERNAL_SOURCES_REQUIRED';
           if (!showBadge) return null;
-          const dotColor = vState === 'ALL_SOURCES_VERIFIED' ? 'bg-sage-400' :
+          const scriptureAvailable = response.recommended_scripture.some((rec) => scriptureTextStatus[`${translation}:${rec.reference}`]);
+          const dotColor = scriptureAvailable || vState === 'ALL_SOURCES_VERIFIED' ? 'bg-sage-400' :
             vState === 'PARTIALLY_VERIFIED' ? 'bg-gold-400' : 'bg-ivory-600';
-          const label = vState === 'ALL_SOURCES_VERIFIED' ? t.allSourcesVerified :
+          const label = scriptureAvailable
+            ? (askLang === 'es' ? `Texto bíblico disponible (${translation}); la explicación es de SOLAPATH` : `Scripture text available (${translation}); explanation by SOLAPATH`)
+            : vState === 'SCRIPTURE_VERIFIED' ? (askLang === 'es' ? 'Fuente bíblica verificada' : 'Scripture source verified')
+            : vState === 'ALL_SOURCES_VERIFIED' ? t.allSourcesVerified :
             vState === 'PARTIALLY_VERIFIED' ? t.someSourcesVerified :
             t.sourcesUnavailable;
           return (
