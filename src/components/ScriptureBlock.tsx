@@ -56,7 +56,7 @@ export default function ScriptureBlock({ reference, translation, onOpenBible, on
 
   if (loading) {
     return (
-      <div className="my-3 px-4 py-3 rounded-xl bg-ink-800/40 border border-ink-600/20 animate-pulse">
+      <div className="my-3 px-4 py-3 rounded-xl bg-ink-800/25 border border-ink-600/15 animate-pulse">
         <p className="text-ivory-600 text-xs italic">Loading Scripture...</p>
       </div>
     );
@@ -78,20 +78,20 @@ export default function ScriptureBlock({ reference, translation, onOpenBible, on
   const visibleVerses = shouldCollapse && !expanded ? verses.slice(0, COLLAPSE_THRESHOLD) : verses;
 
   return (
-    <div className="my-3 px-4 py-3 rounded-xl bg-ink-800/30 border border-gold-500/15 border-l-2 border-l-gold-500/40">
+    <div className="my-3.5 px-4 py-3.5 rounded-xl bg-ink-800/25 border border-ink-600/15 border-l-2 border-l-gold-500/35">
       <button
         onClick={() => { vibrate(8); onOpenBible(reference); }}
         className="block w-full text-left"
       >
-        <div className="flex items-center gap-1.5 mb-2">
-          <BookOpen size={12} className="text-gold-400/70 shrink-0" />
-          <p className="text-gold-300 text-xs font-medium font-serif">{displayRef}</p>
-          <span className="text-ivory-600 text-[10px] ml-auto uppercase tracking-wider">{translation}</span>
+        <div className="flex items-center gap-1.5 mb-2.5">
+          <BookOpen size={11} className="text-gold-400/60 shrink-0" />
+          <p className="text-gold-300/90 text-xs font-medium font-serif">{displayRef}</p>
+          <span className="text-ivory-700 text-[9px] ml-auto uppercase tracking-[0.15em]">{translation}</span>
         </div>
         <div className="space-y-1">
           {visibleVerses.map((v) => (
-            <p key={v.verse} className="text-ivory-200 text-[15px] leading-[1.65] font-serif">
-              <sup className="text-gold-400/50 text-[10px] mr-0.5">{v.verse}</sup>
+            <p key={v.verse} className="text-ivory-200 text-[14px] leading-[1.6] font-serif">
+              <sup className="text-gold-400/40 text-[9px] mr-0.5">{v.verse}</sup>
               {v.text}
             </p>
           ))}
@@ -100,18 +100,18 @@ export default function ScriptureBlock({ reference, translation, onOpenBible, on
       {shouldCollapse && (
         <button
           onClick={(e) => { e.stopPropagation(); vibrate(4); setExpanded(!expanded); }}
-          className="flex items-center gap-1 mt-2 text-gold-400/60 text-xs hover:text-gold-300 transition-colors no-tap-highlight"
+          className="flex items-center gap-1 mt-2 text-gold-400/50 text-xs hover:text-gold-300/80 transition-colors no-tap-highlight"
         >
-          {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          {expanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
           {expanded ? 'Show less' : `Show full passage (${verses.length} verses)`}
         </button>
       )}
       <button
         onClick={() => { vibrate(8); onOpenBible(reference); }}
-        className="flex items-center gap-1 mt-2 text-gold-400/60 text-xs hover:text-gold-300 transition-colors no-tap-highlight"
+        className="flex items-center gap-1 mt-2.5 text-gold-400/45 text-xs hover:text-gold-300/70 transition-colors no-tap-highlight"
       >
         <span className="font-medium">Open in Bible</span>
-        <ArrowUpRight size={12} />
+        <ArrowUpRight size={11} />
       </button>
     </div>
   );

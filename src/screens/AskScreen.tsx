@@ -756,11 +756,11 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
           <div className="shrink-0 px-6 pt-4">
             <div className="w-full max-w-lg mx-auto animate-fade-in-up">
               {!keyboardOpen && (
-                <p className="text-ivory-500 text-sm leading-relaxed mb-4">
+                <p className="text-ivory-500 text-sm leading-relaxed mb-5">
                   {t.subtext}
                 </p>
               )}
-              <div className="bg-ink-800/40 border border-ink-600/30 rounded-3xl p-5 shadow-lg shadow-ink-950/40">
+              <div className="bg-ink-800/40 border border-ink-600/25 rounded-3xl p-5 shadow-lg shadow-ink-950/40">
                 <textarea
                   ref={emptyTextareaRef}
                   autoFocus
@@ -768,8 +768,8 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={t.placeholder}
                   aria-label="Ask SOLAPATH a question"
-                  className="w-full bg-transparent text-ivory-100 placeholder:text-ivory-600 text-base leading-relaxed resize-none focus:outline-none overflow-y-auto"
-                  style={{ minHeight: '96px', maxHeight: '140px' }}
+                  className="w-full bg-transparent text-ivory-100 placeholder:text-ivory-600 text-base leading-[1.6] resize-none focus:outline-none overflow-y-auto"
+                  style={{ minHeight: '88px', maxHeight: '132px' }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
@@ -777,7 +777,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
                     }
                   }}
                 />
-                <div className="flex items-center justify-between mt-2 pt-3 border-t border-ink-700/30">
+                <div className="flex items-center justify-between mt-2 pt-3 border-t border-ink-700/25">
                   <p className="text-ivory-600 text-xs">{t.scriptureAuthority}</p>
                   <button
                     onClick={() => { if (input.trim()) startConversation('passage', input.trim()); }}
@@ -792,6 +792,37 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
             </div>
           </div>
 
+          {/* Conversation starters — subtle, only when keyboard closed */}
+          {!keyboardOpen && (
+            <div className="shrink-0 px-6 pt-5 pb-6">
+              <div className="w-full max-w-lg mx-auto space-y-2">
+                {(
+                  askLang === 'es'
+                    ? [
+                        '¿Qué significa este pasaje?',
+                        'Ayúdame a ser consistente en mi estudio bíblico',
+                        '¿Qué he estudiado sobre la oración?',
+                        'Ayúdame a pensar bíblicamente sobre algo que enfrento',
+                      ]
+                    : [
+                        'What does this passage mean?',
+                        'Help me study Scripture consistently',
+                        'What have I studied about prayer?',
+                        'Help me think biblically about something I\'m facing',
+                      ]
+                ).map((starter, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { vibrate(6); startConversation('passage', starter); }}
+                    className="w-full text-left px-4 py-2.5 rounded-xl bg-ink-800/30 border border-ink-600/20 text-ivory-400 text-sm hover:text-ivory-200 hover:border-gold-500/20 transition-all no-tap-highlight"
+                  >
+                    {starter}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex-1 min-h-0" />
         </div>
       )}
@@ -800,40 +831,40 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
       {inConversation && (
         <div className="fixed inset-0 z-[70] bg-ink-950 bg-parchment flex flex-col overflow-hidden">
           {/* Floating top controls */}
-          <header className="flex items-center justify-between px-4 pt-12 safe-top shrink-0 relative z-10">
+          <header className="flex items-center justify-between px-4 pt-11 safe-top shrink-0 relative z-10">
             <button
               onClick={resetConversation}
               aria-label={t.back}
-              className="w-10 h-10 rounded-full bg-ink-800/50 backdrop-blur-sm border border-ink-600/30 flex items-center justify-center text-ivory-300 hover:text-ivory-100 transition-colors no-tap-highlight"
+              className="w-9 h-9 rounded-full bg-ink-800/40 backdrop-blur-sm border border-ink-600/20 flex items-center justify-center text-ivory-400 hover:text-ivory-100 transition-colors no-tap-highlight"
             >
-              <ChevronLeft size={20} />
+              <ChevronLeft size={19} />
             </button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => { vibrate(6); loadConversationList(); setShowChatHistory(true); }}
                 aria-label={t.chatHistory}
-                className="w-10 h-10 rounded-full bg-ink-800/50 backdrop-blur-sm border border-ink-600/30 flex items-center justify-center text-ivory-300 hover:text-ivory-100 transition-colors no-tap-highlight"
+                className="w-9 h-9 rounded-full bg-ink-800/40 backdrop-blur-sm border border-ink-600/20 flex items-center justify-center text-ivory-400 hover:text-ivory-100 transition-colors no-tap-highlight"
               >
-                <MessageSquare size={18} />
+                <MessageSquare size={17} />
               </button>
               <button
                 onClick={() => { setShowTextSizeMenu(!showTextSizeMenu); setShowSettingsMenu(false); }}
                 aria-label={t.textSize}
-                className={`w-10 h-10 rounded-full backdrop-blur-sm border flex items-center justify-center transition-colors no-tap-highlight ${
-                  showTextSizeMenu ? 'bg-gold-500/20 border-gold-500/40 text-gold-300' : 'bg-ink-800/50 border-ink-600/30 text-ivory-300 hover:text-ivory-100'
+                className={`w-9 h-9 rounded-full backdrop-blur-sm border flex items-center justify-center transition-colors no-tap-highlight ${
+                  showTextSizeMenu ? 'bg-gold-500/15 border-gold-500/30 text-gold-300' : 'bg-ink-800/40 border-ink-600/20 text-ivory-400 hover:text-ivory-100'
                 }`}
               >
-                <Type size={18} />
+                <Type size={17} />
               </button>
               <button
                 onClick={() => { setShowSettingsMenu(!showSettingsMenu); setShowTextSizeMenu(false); }}
                 aria-label={t.settings}
-                className={`w-10 h-10 rounded-full backdrop-blur-sm border flex items-center justify-center transition-colors no-tap-highlight ${
-                  showSettingsMenu ? 'bg-gold-500/20 border-gold-500/40 text-gold-300' : 'bg-ink-800/50 border-ink-600/30 text-ivory-300 hover:text-ivory-100'
+                className={`w-9 h-9 rounded-full backdrop-blur-sm border flex items-center justify-center transition-colors no-tap-highlight ${
+                  showSettingsMenu ? 'bg-gold-500/15 border-gold-500/30 text-gold-300' : 'bg-ink-800/40 border-ink-600/20 text-ivory-400 hover:text-ivory-100'
                 }`}
               >
-                <Settings size={18} />
+                <Settings size={17} />
               </button>
             </div>
           </header>
@@ -898,13 +929,13 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
           <div
             ref={scrollRef}
             onScroll={checkNearBottom}
-            className="flex-1 min-h-0 overflow-y-auto px-5 mt-2 pb-44"
+            className="flex-1 min-h-0 overflow-y-auto px-5 mt-1 pb-40"
           >
             {thread.map((item) =>
               item.kind === 'user' ? (
-                <div key={item.id} data-msg-id={item.id} className="flex justify-end mb-6 animate-fade-in-up">
-                  <div className={`max-w-[85%] bg-ink-800/60 border border-ink-600/30 rounded-2xl rounded-br-md px-4 py-3`}>
-                    <p className={`text-ivory-100 ${scale.user} leading-relaxed`}>{item.body}</p>
+                <div key={item.id} data-msg-id={item.id} className="flex justify-end mb-7 animate-fade-in-up">
+                  <div className={`max-w-[80%] bg-ink-800/50 border border-ink-600/25 rounded-2xl rounded-br-md px-4 py-2.5`}>
+                    <p className={`text-ivory-200 ${scale.user} leading-[1.55]`}>{item.body}</p>
                   </div>
                 </div>
               ) : (
@@ -947,9 +978,13 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
             )}
 
             {thinking && (
-              <div className="flex items-center gap-2.5 mb-6 animate-fade-in">
-                <div className="w-1.5 h-1.5 rounded-full bg-gold-400/60 animate-breathe" />
-                <p className="text-ivory-500 text-sm italic">{t.lookingThrough}</p>
+              <div className="flex items-center gap-2 mb-7 animate-fade-in">
+                <div className="flex gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-gold-400/50 animate-breathe" style={{ animationDelay: '0ms' }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-gold-400/40 animate-breathe" style={{ animationDelay: '200ms' }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-gold-400/30 animate-breathe" style={{ animationDelay: '400ms' }} />
+                </div>
+                <p className="text-ivory-600 text-xs">{t.lookingThrough}</p>
               </div>
             )}
 
@@ -965,7 +1000,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
             className="shrink-0 px-4 pb-2"
             style={{ paddingBottom: nativeKeyboardHeight > 0 ? `${nativeKeyboardHeight}px` : undefined }}
           >
-            <div className="bg-ink-800/80 backdrop-blur-md border border-ink-600/40 rounded-2xl p-2.5 max-w-lg mx-auto">
+            <div className="bg-ink-800/70 backdrop-blur-md border border-ink-600/25 rounded-2xl p-2 max-w-lg mx-auto">
               <div className="flex items-end gap-2">
                 <textarea
                   ref={followUpRef}
@@ -986,8 +1021,8 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
                   placeholder={t.followUpPlaceholder}
                   aria-label={t.followUpPlaceholder}
                   rows={1}
-                  className="flex-1 bg-transparent px-3 py-2.5 text-ivory-100 placeholder:text-ivory-600 focus:outline-none text-base leading-relaxed resize-none max-h-[120px] overflow-y-auto"
-                  style={{ minHeight: '48px' }}
+                  className="flex-1 bg-transparent px-3 py-2.5 text-ivory-100 placeholder:text-ivory-600 focus:outline-none text-base leading-[1.55] resize-none max-h-[120px] overflow-y-auto"
+                  style={{ minHeight: '44px' }}
                 />
                 <button
                   onClick={() => {
@@ -1000,9 +1035,9 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
                   }}
                   disabled={!input.trim() || thinking}
                   aria-label="Send follow-up"
-                  className="w-10 h-10 rounded-xl bg-gold-500/20 border border-gold-500/30 flex items-center justify-center disabled:opacity-30 transition-all hover:bg-gold-500/30 shrink-0"
+                  className="w-9 h-9 rounded-xl bg-gold-500/15 border border-gold-500/25 flex items-center justify-center disabled:opacity-25 transition-all hover:bg-gold-500/25 shrink-0"
                 >
-                  <Send size={16} className="text-gold-300" />
+                  <Send size={15} className="text-gold-300" />
                 </button>
               </div>
             </div>
@@ -1039,7 +1074,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
                     {conversationList.map((conv) => (
                       <div
                         key={conv.id}
-                        className={`premium-card p-3.5 flex items-center gap-3 group ${conv.id === conversationId ? 'border-gold-500/30' : ''}`}
+                        className={`premium-card p-3.5 flex items-center gap-3 group transition-colors ${conv.id === conversationId ? 'border-gold-500/30 bg-gold-500/[0.03]' : ''}`}
                       >
                         <button
                           onClick={async () => {
@@ -1049,12 +1084,14 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
                           }}
                           className="flex-1 text-left min-w-0"
                         >
-                          <p className="text-ivory-100 text-sm font-medium truncate">
+                          <p className={`text-sm font-medium truncate ${conv.id === conversationId ? 'text-gold-200' : 'text-ivory-100'}`}>
                             {conv.title || t.newChat}
                           </p>
-                          <p className="text-ivory-600 text-xs mt-0.5 flex items-center gap-1">
+                          <p className="text-ivory-600 text-xs mt-0.5 flex items-center gap-1.5">
                             <Clock size={10} />
                             {new Date(conv.updated_at).toLocaleDateString(askLang === 'es' ? 'es-ES' : 'en-US', { month: 'short', day: 'numeric' })}
+                            {' · '}
+                            {new Date(conv.updated_at).toLocaleTimeString(askLang === 'es' ? 'es-ES' : 'en-US', { hour: 'numeric', minute: '2-digit' })}
                           </p>
                         </button>
                         <div className="flex items-center gap-1 shrink-0">
@@ -1350,32 +1387,32 @@ function FollowUpSuggestions({
   };
 
   return (
-    <div className="mt-5 -mx-5">
+    <div className="mt-4 -mx-5">
       <div
         ref={scrollContainerRef}
         onScroll={onScroll}
-        className="flex gap-3 overflow-x-auto px-5 pb-2 no-scrollbar snap-x snap-mandatory"
+        className="flex gap-2.5 overflow-x-auto px-5 pb-1.5 no-scrollbar snap-x snap-mandatory"
         style={{ scrollbarWidth: 'none' }}
       >
         {suggestions.map((s, i) => (
           <button
             key={i}
             onClick={() => onTap(s)}
-            className="shrink-0 w-[280px] snap-center flex items-center gap-2 px-5 py-3.5 rounded-2xl bg-ink-800/50 border border-ink-600/30 text-ivory-200 text-[15px] hover:border-gold-500/30 hover:text-ivory-100 transition-all no-tap-highlight"
+            className="shrink-0 w-[260px] snap-center flex items-center gap-2 px-4 py-3 rounded-xl bg-ink-800/30 border border-ink-600/20 text-ivory-400 text-[14px] hover:border-gold-500/20 hover:text-ivory-300 transition-all no-tap-highlight leading-snug"
           >
-            <span className="text-left leading-snug flex-1">{s}</span>
-            <ArrowUpRight size={16} className="text-gold-400/60 shrink-0" />
+            <span className="text-left flex-1">{s}</span>
+            <ArrowUpRight size={14} className="text-gold-400/40 shrink-0" />
           </button>
         ))}
       </div>
       {/* Page indicator */}
       {suggestions.length > 1 && (
-        <div className="flex items-center justify-center gap-1.5 mt-2">
+        <div className="flex items-center justify-center gap-1.5 mt-1.5">
           {suggestions.map((_, i) => (
             <div
               key={i}
               className={`rounded-full transition-all duration-300 ${
-                i === activeIndex ? 'w-6 h-1.5 bg-gold-400/60' : 'w-1.5 h-1.5 bg-ivory-700/40'
+                i === activeIndex ? 'w-5 h-1 bg-gold-400/50' : 'w-1 h-1 bg-ivory-700/30'
               }`}
             />
           ))}
@@ -1449,7 +1486,7 @@ function AssistantMessage({
   }
 
   return (
-    <div data-msg-id={itemId} className="mb-8 animate-fade-in-up">
+    <div data-msg-id={itemId} className="mb-7 animate-fade-in-up">
       {/* No dev/development mode indicators in production UI */}
 
       {/* No theological confidence label in ordinary answers */}
@@ -1532,33 +1569,52 @@ function AssistantMessage({
       )}
 
       {/* MAIN RESPONSE — editorial reading directly on page background */}
-      <div className="space-y-5">
+      <div className="space-y-4">
         {/* Answer summary — the centerpiece, large serif reading text */}
-        <div className="space-y-3">
+        <div className="space-y-[0.7em]">
           {renderParagraphs(response.answer_summary, `font-serif ${scale.body} text-ivory-100`, onOpenBible)}
         </div>
 
         {/* Personal context indicator — subtle, only when memory was used */}
         {response.personal_context_items && response.personal_context_items.length > 0 && (
-          <div className="pt-1">
+          <div className="pt-0.5">
             <button
               onClick={() => setShowPersonalContext(!showPersonalContext)}
-              className="flex items-center gap-1.5 text-ivory-600 hover:text-gold-400 transition-colors text-xs no-tap-highlight"
+              className="flex items-center gap-1.5 text-ivory-600 hover:text-gold-400/80 transition-colors text-xs no-tap-highlight"
             >
               <Sparkles size={11} />
-              {askLang === 'es' ? 'Contexto personal utilizado' : 'Personal context used'}
+              {askLang === 'es' ? 'Usé tu historial de estudio' : 'Used your study history'}
               {showPersonalContext ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
             </button>
             {showPersonalContext && (
-              <div className="mt-2 space-y-1 pl-4 border-l border-gold-500/20">
-                {response.personal_context_items.map((item, i) => (
-                  <div key={i} className="text-ivory-600 text-xs">
-                    <span className="text-ivory-500">{item.source_type.replace(/_/g, ' ')}</span>
-                    {item.scripture_reference ? ` — ${item.scripture_reference}` : ''}
-                    {item.topic ? ` — ${item.topic}` : ''}
-                    <p className="text-ivory-600 mt-0.5">{item.factual_summary}</p>
-                  </div>
-                ))}
+              <div className="mt-2.5 space-y-2 pl-3.5 border-l border-gold-500/15">
+                {response.personal_context_items.map((item, i) => {
+                  const friendlyType = askLang === 'es'
+                    ? item.source_type === 'bookmark' || item.source_type === 'bible_bookmark' ? 'Versículo guardado'
+                      : item.source_type === 'highlight' || item.source_type === 'bible_highlight' ? 'Versículo resaltado'
+                      : item.source_type === 'prayer' ? 'Oración'
+                      : item.source_type === 'bible_note' ? 'Nota bíblica'
+                      : item.source_type === 'ask_conversation' ? 'Conversación anterior'
+                      : item.source_type === 'today_walk' ? 'Estudio de hoy'
+                      : item.source_type === 'bible_reading' ? 'Lectura bíblica'
+                      : 'Registro de estudio'
+                    : item.source_type === 'bookmark' || item.source_type === 'bible_bookmark' ? 'Saved verse'
+                      : item.source_type === 'highlight' || item.source_type === 'bible_highlight' ? 'Highlighted verse'
+                      : item.source_type === 'prayer' ? 'Prayer'
+                      : item.source_type === 'bible_note' ? 'Bible note'
+                      : item.source_type === 'ask_conversation' ? 'Previous conversation'
+                      : item.source_type === 'today_walk' ? "Today's study"
+                      : item.source_type === 'bible_reading' ? 'Reading history'
+                      : 'Study record';
+                  return (
+                    <div key={i} className="text-ivory-500 text-xs">
+                      <span className="text-ivory-400 font-medium">{friendlyType}</span>
+                      {item.scripture_reference ? ` — ${item.scripture_reference}` : ''}
+                      {item.topic ? ` — ${item.topic}` : ''}
+                      <p className="text-ivory-600 mt-0.5 leading-relaxed">{item.factual_summary}</p>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1577,7 +1633,7 @@ function AssistantMessage({
 
         {/* Scripture testing flow — rendered as reading sections */}
         {response.scripture_testing_flow && (
-          <div className="space-y-4 pt-2 border-t border-ink-700/20">
+          <div className="space-y-3.5 pt-3 border-t border-ink-700/15">
             {response.scripture_testing_flow.what_scripture_clearly_teaches && (
               <ReadingSection label="What Scripture Clearly Teaches" icon={BookOpen} authority="scripture" content={response.scripture_testing_flow.what_scripture_clearly_teaches} isDemo={response.is_demo} sectionClass={scale.section} />
             )}
@@ -1598,28 +1654,28 @@ function AssistantMessage({
 
         {/* Additional context sections — continuous reading */}
         {response.scripture_context && !response.has_development_content && (
-          <div className="pt-2 border-t border-ink-700/20">
-            <ReadingSection label="Scripture Context" icon={Scroll} authority="explanation" content={response.scripture_context} isDemo={response.is_demo} sectionClass={scale.section} />
+          <div className="pt-3 border-t border-ink-700/15">
+            <ReadingSection label={askLang === 'es' ? 'Contexto bíblico' : 'Scripture Context'} icon={Scroll} authority="explanation" content={response.scripture_context} isDemo={response.is_demo} sectionClass={scale.section} />
           </div>
         )}
 
         {/* Historical theology moved to Sources panel only — not in main answer */}
 
         {response.other_christian_views && !response.has_development_content && (
-          <div className="pt-2 border-t border-ink-700/20">
-            <ReadingSection label="Other Christian Views" icon={AlertCircle} authority="explanation" content={response.other_christian_views} isDemo={response.is_demo} sectionClass={scale.section} />
+          <div className="pt-3 border-t border-ink-700/15">
+            <ReadingSection label={askLang === 'es' ? 'Otras vistas cristianas' : 'Other Christian Views'} icon={AlertCircle} authority="explanation" content={response.other_christian_views} isDemo={response.is_demo} sectionClass={scale.section} />
           </div>
         )}
 
         {response.application && !response.has_development_content && (
-          <div className="pt-2 border-t border-ink-700/20">
-            <ReadingSection label="Application" icon={Lightbulb} authority="application" content={response.application} isDemo={response.is_demo} sectionClass={scale.section} />
+          <div className="pt-3 border-t border-ink-700/15">
+            <ReadingSection label={askLang === 'es' ? 'Aplicación' : 'Application'} icon={Lightbulb} authority="application" content={response.application} isDemo={response.is_demo} sectionClass={scale.section} />
           </div>
         )}
 
         {response.prayer_guidance && !response.has_development_content && (
-          <div className="pt-2 border-t border-ink-700/20">
-            <ReadingSection label="Prayer Guidance" icon={Heart} authority="application" content={response.prayer_guidance} isDemo={response.is_demo} sectionClass={scale.section} />
+          <div className="pt-3 border-t border-ink-700/15">
+            <ReadingSection label={askLang === 'es' ? 'Guía de oración' : 'Prayer Guidance'} icon={Heart} authority="application" content={response.prayer_guidance} isDemo={response.is_demo} sectionClass={scale.section} />
           </div>
         )}
       </div>
@@ -1637,46 +1693,53 @@ function AssistantMessage({
         </div>
       )}
 
-      {/* Action bar — compact chips */}
-      <div className="flex items-center gap-2 mt-5 flex-wrap">
-        <button onClick={onShowBiblicalBasis} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ink-800/40 border border-ink-600/30 text-ivory-300 text-xs font-medium hover:border-gold-500/30 transition-all no-tap-highlight">
-          <FileText size={13} />
+      {/* Action bar — primary evidence, secondary utility, tertiary feedback */}
+      <div className="mt-5 flex items-center gap-1.5 flex-wrap">
+        {/* Primary: evidence actions */}
+        <button onClick={onShowBiblicalBasis} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gold-500/8 border border-gold-500/20 text-gold-300/90 text-xs font-medium hover:bg-gold-500/12 hover:border-gold-500/30 transition-all no-tap-highlight">
+          <FileText size={12} />
           {t.biblicalBasis}
         </button>
-        <button onClick={onShowSources} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ink-800/40 border border-ink-600/30 text-ivory-300 text-xs font-medium hover:border-gold-500/30 transition-all no-tap-highlight">
-          <ShieldCheck size={13} />
+        <button onClick={onShowSources} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gold-500/8 border border-gold-500/20 text-gold-300/90 text-xs font-medium hover:bg-gold-500/12 hover:border-gold-500/30 transition-all no-tap-highlight">
+          <ShieldCheck size={12} />
           {t.sources}
         </button>
-        <button onClick={handleCopy} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ink-800/40 border border-ink-600/30 text-ivory-300 text-xs font-medium hover:border-gold-500/30 transition-all no-tap-highlight">
-          {copied ? <Check size={13} className="text-sage-400" /> : <Copy size={13} />}
+        {/* Divider */}
+        <div className="w-px h-5 bg-ink-600/30 mx-0.5" />
+        {/* Secondary: utility */}
+        <button onClick={handleCopy} className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-ivory-500 text-xs font-medium hover:text-ivory-300 transition-all no-tap-highlight">
+          {copied ? <Check size={12} className="text-sage-400" /> : <Copy size={12} />}
           {copied ? t.copied : t.copy}
         </button>
-        <button onClick={onShare} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ink-800/40 border border-ink-600/30 text-ivory-300 text-xs font-medium hover:border-gold-500/30 transition-all no-tap-highlight">
-          <Share size={13} />
+        <button onClick={onShare} className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-ivory-500 text-xs font-medium hover:text-ivory-300 transition-all no-tap-highlight">
+          <Share size={12} />
           {t.share}
         </button>
+        {/* Divider */}
+        <div className="w-px h-5 bg-ink-600/30 mx-0.5" />
+        {/* Tertiary: feedback */}
         <button
           onClick={() => handleFeedback('up')}
-          className={`flex items-center justify-center w-9 h-9 rounded-lg border transition-all no-tap-highlight ${
-            feedback === 'up' ? 'bg-sage-500/10 border-sage-500/30 text-sage-400' : 'bg-ink-800/40 border-ink-600/30 text-ivory-400 hover:text-ivory-200'
+          className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all no-tap-highlight ${
+            feedback === 'up' ? 'bg-sage-500/10 text-sage-400' : 'text-ivory-600 hover:text-ivory-400'
           }`}
           aria-label="Helpful"
         >
-          <ThumbsUp size={13} />
+          <ThumbsUp size={12} />
         </button>
         <button
           onClick={() => handleFeedback('down')}
-          className={`flex items-center justify-center w-9 h-9 rounded-lg border transition-all no-tap-highlight ${
-            feedback === 'down' ? 'bg-clay-500/10 border-clay-500/30 text-clay-400' : 'bg-ink-800/40 border-ink-600/30 text-ivory-400 hover:text-ivory-200'
+          className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all no-tap-highlight ${
+            feedback === 'down' ? 'bg-clay-500/10 text-clay-400' : 'text-ivory-600 hover:text-ivory-400'
           }`}
           aria-label="Not helpful"
         >
-          <ThumbsDown size={13} />
+          <ThumbsDown size={12} />
         </button>
       </div>
 
       {/* Verification state + concern report */}
-      <div className="mt-3 flex flex-col gap-1">
+      <div className="mt-2.5 flex flex-col gap-1">
         {(() => {
           const vState: VerificationState = response.verification_state ||
             (response.source_confidence === 'verified' ? 'ALL_SOURCES_VERIFIED' :
