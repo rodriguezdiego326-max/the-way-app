@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Sparkles, BookOpen, Clock, ChevronRight, Info, Lock, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { recommendWalk, walkToInsert } from '@/lib/walkEngine';
@@ -7,6 +7,7 @@ import type { Walk, Profile, DailyCheckin } from '@/lib/types';
 import { vibrate } from '@/lib/utils';
 import { getBookDisplayName } from '@/lib/bibleTypes';
 import type { BibleTranslation } from '@/lib/bibleTypes';
+import { Capacitor } from '@capacitor/core';
 
 interface TodayScreenProps {
   profile: Profile | null;
@@ -39,13 +40,16 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp }: Today
   const [walkReason, setWalkReason] = useState<string | null>(null);
   const [scriptureText, setScriptureText] = useState<string | null>(null);
   const [scriptureLoading, setScriptureLoading] = useState(false);
-  const [brandVerse, setBrandVerse] = useState<string | null>(null);
-
+  const [heroVerse, setHeroVerse] = useState<string | null>(null);
+  const [heroLoading, setHeroLoading] = useState(false);
   const [contextText, setContextText] = useState('');
   const [rememberContext, setRememberContext] = useState(false);
   const [contextSaved, setContextSaved] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [walkError, setWalkError] = useState<string | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const contextTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const contextSectionRef = useRef<HTMLDivElement>(null);
 
   const activeTranslation: BibleTranslation = typeof localStorage !== 'undefined' && localStorage.getItem('solapath_translation') === 'RV1909' ? 'RV1909' : 'WEB';
 
@@ -88,13 +92,24 @@ function localizeReference(ref: string, translation: string): string {
     if (todayWalk?.passage_reference) {
       loadScriptureText(todayWalk.passage_reference);
     }
-  }, [todayWalk?.passage_reference]);
+  }, [todayWalk?.passage_reference, activeTranslation]);
 
   useEffect(() => {
-    fetchVerses('Psalm', 119, 105, 105, activeTranslation)
-      .then(({ verses }) => setBrandVerse(verses[0]?.text || null))
-      .catch(() => setBrandVerse(null));
-  }, [activeTranslation]);
+    if (!todayWalk?.passage_reference) return;
+    setHeroLoading(true);
+    setHeroVerse(null);
+    const ref = todayWalk.passage_reference;
+    const parts = ref.match(/^(.+?)\s+(\d+):(\d+)(?:[\u2013-](\d+))?/);
+    if (!parts) { setHeroLoading(false); return; }
+    const book = parts[1];
+    const chapter = parseInt(parts[2]);
+    const verseStart = parseInt(parts[3]);
+    const verseEnd = parts[4] ? parseInt(parts[4]) : verseStart;
+    fetchVerses(book, chapter, verseStart, verseEnd, activeTranslation)
+      .then(({ verses }) => setHeroVerse(verses.map((v) => v.text).join(' ') || null))
+      .catch(() => setHeroVerse(null))
+      .finally(() => setHeroLoading(false));
+  }, [todayWalk?.passage_reference, activeTranslation]);
 
   async function loadOrCreateTodayWalk() {
     setLoading(true);
@@ -243,6 +258,32 @@ function localizeReference(ref: string, translation: string): string {
     onReadInApp(todayWalk);
   }
 
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let handles: Array<() => void> = [];
+    (async () => {
+      try {
+        const { Keyboard } = await import('@capacitor/keyboard');
+        const willShow = await Keyboard.addListener('keyboardWillShow', (info: { keyboardHeight: number }) => {
+          setKeyboardHeight(info.keyboardHeight);
+        });
+        const willHide = await Keyboard.addListener('keyboardWillHide', () => {
+          setKeyboardHeight(0);
+        });
+        handles.push(() => willShow.remove());
+        handles.push(() => willHide.remove());
+      } catch { /* non-critical */ }
+    })();
+    return () => { handles.forEach((h) => h()); };
+  }, []);
+
+  function handleContextFocus() {
+    if (!Capacitor.isNativePlatform()) return;
+    requestAnimationFrame(() => {
+      contextTextareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }
+
   const greeting = getGreeting();
   const name = profile?.display_name;
   const availableTime = profile?.available_time_minutes ?? 7;
@@ -268,13 +309,27 @@ function localizeReference(ref: string, translation: string): string {
           aria-hidden="true"
           className="absolute inset-x-0 bottom-0 h-[330px] w-full object-cover object-center"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-ink-950 via-ink-950/35 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-ink-950/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ink-950 via-ink-950/50 to-ink-950/70" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-ink-950/80 to-transparent" />
         <div className="relative z-10 px-6 pt-3">
-          <blockquote className="max-w-[275px] font-serif text-xl leading-[1.25] text-ivory-100 italic">
-            {brandVerse ? `“${brandVerse}”` : 'Loading Scripture…'}
-          </blockquote>
-          <p className="mt-3 font-serif text-sm italic text-gold-500">Psalm 119:105</p>
+          {heroLoading ? (
+            <p className="max-w-[275px] font-serif text-xl leading-[1.35] text-ivory-300/80 italic">
+              Loading Scripture…
+            </p>
+          ) : heroVerse ? (
+            <blockquote className="max-w-[275px] font-serif text-[1.35rem] leading-[1.4] text-ivory-50 font-medium italic">
+              “{heroVerse}”
+            </blockquote>
+          ) : (
+            <p className="max-w-[275px] font-serif text-xl leading-[1.35] text-ivory-300/70 italic">
+              {todayWalk?.passage_reference || 'Today’s reading'}
+            </p>
+          )}
+          {todayWalk?.passage_reference && (
+            <p className="mt-3 font-serif text-[0.95rem] not-italic text-gold-300 tracking-wide font-medium">
+              {localizeReference(todayWalk.passage_reference, activeTranslation)}
+            </p>
+          )}
         </div>
       </section>
 
@@ -292,7 +347,7 @@ function localizeReference(ref: string, translation: string): string {
             </p>
           </div>
         ) : todayWalk ? (
-          <div className="premium-card bg-ink-800 p-5 overflow-hidden relative shadow-xl shadow-ink-950/10">
+          <div className="premium-card bg-ink-900 p-5 overflow-hidden relative border border-ink-700/60 shadow-lg shadow-ink-950/20">
             <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-gold-500/5 blur-3xl" />
 
             <div className="relative">
@@ -320,16 +375,16 @@ function localizeReference(ref: string, translation: string): string {
               </p>
 
               {scriptureLoading ? (
-                <div className="flex items-center gap-2 mb-4 px-3 py-3 rounded-xl bg-ink-900/40 border border-ink-700/30">
+                <div className="flex items-center gap-2 mb-4 px-3 py-3 rounded-xl bg-ink-850/60 border border-ink-700/40">
                   <Loader2 size={14} className="text-gold-400/60 animate-spin" />
-                  <p className="text-ivory-500 text-xs italic">Loading Scripture...</p>
+                  <p className="text-ivory-400 text-xs italic">Loading Scripture...</p>
                 </div>
               ) : scriptureText ? (
-                <div className="mb-4 px-3 py-3 rounded-xl bg-ink-900/40 border border-gold-500/15">
-                  <p className="font-serif text-[15px] leading-[1.75] text-ivory-200 italic">
+                <div className="mb-4 px-3 py-3 rounded-xl bg-ink-850/60 border border-gold-500/20">
+                  <p className="font-serif text-[15px] leading-[1.7] text-ivory-100 italic">
                     {scriptureText}
                   </p>
-                  <p className="text-gold-400/60 text-[10px] uppercase tracking-wider mt-2">{activeTranslation}</p>
+                  <p className="text-gold-400/70 text-[10px] uppercase tracking-wider mt-2">{activeTranslation}</p>
                 </div>
               ) : null}
 
@@ -366,7 +421,7 @@ function localizeReference(ref: string, translation: string): string {
         )}
       </section>
 
-      <section className="px-6 mt-10 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+      <section ref={contextSectionRef} className="px-6 mt-10 animate-fade-in-up" style={{ animationDelay: '0.4s', paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 16}px` : undefined, transition: 'padding-bottom 0.25s ease-out' }}>
         <h2 className="font-serif text-3xl text-ivory-50 leading-tight mb-5">
           How are you arriving today?
         </h2>
@@ -380,7 +435,7 @@ function localizeReference(ref: string, translation: string): string {
         </div>
         {selectedMood && !contextSaved && (
           <div className="mt-4 animate-fade-in-up">
-            <textarea autoFocus value={contextText} onChange={(e) => setContextText(e.target.value)} placeholder="What's happening today?" className="input-field min-h-[80px] resize-none text-sm" />
+            <textarea ref={contextTextareaRef} autoFocus value={contextText} onChange={(e) => setContextText(e.target.value)} onFocus={handleContextFocus} placeholder="What's happening today?" className="input-field min-h-[80px] resize-none text-sm" />
             <div className="flex items-center gap-3 mt-3">
               <div className="flex items-center gap-2"><Lock size={12} className="text-ivory-600" /><button onClick={() => { vibrate(6); setRememberContext(!rememberContext); }} className={`relative w-11 h-6 rounded-full transition-all duration-300 shrink-0 ${rememberContext ? 'bg-gold-500/40' : 'bg-ink-700'}`}><span className={`absolute top-0.5 w-5 h-5 rounded-full bg-ivory-100 transition-all duration-300 ${rememberContext ? 'left-[22px]' : 'left-0.5'}`} /></button></div>
               <p className="text-ivory-600 text-xs">{rememberContext ? 'SOLAPATH will remember this.' : 'Just for today.'}</p>
