@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Sparkles, BookOpen, Clock, ChevronRight, Info, Lock, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { recommendWalk, walkToInsert } from '@/lib/walkEngine';
-import { fetchVerses } from '@/lib/bibleEngine';
+import { fetchVerses, fetchChapter } from '@/lib/bibleEngine';
 import type { Walk, Profile, DailyCheckin } from '@/lib/types';
 import { vibrate } from '@/lib/utils';
 import { getBookDisplayName } from '@/lib/bibleTypes';
@@ -50,21 +50,31 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp }: Today
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const contextTextareaRef = useRef<HTMLTextAreaElement>(null);
   const contextInteractionRef = useRef<HTMLDivElement>(null);
+  const contextFocusedRef = useRef(false);
 
   const activeTranslation: BibleTranslation = typeof localStorage !== 'undefined' && localStorage.getItem('solapath_translation') === 'RV1909' ? 'RV1909' : 'WEB';
 
 function localizeReference(ref: string, translation: string): string {
-  const parts = ref.match(/^(.+?)\s+(\d+):(\d+)(?:[\u2013-](\d+))?/);
-  if (!parts) return ref;
-  const book = parts[1];
-  const chapter = parts[2];
-  const verseStart = parts[3];
-  const verseEnd = parts[4];
-  const displayBook = getBookDisplayName(book, translation);
-  if (verseEnd) {
-    return `${displayBook} ${chapter}:${verseStart}\u2013${verseEnd}`;
+  const verseParts = ref.match(/^(.+?)\s+(\d+):(\d+)(?:[\u2013-](\d+))?/);
+  if (verseParts) {
+    const book = verseParts[1];
+    const chapter = verseParts[2];
+    const verseStart = verseParts[3];
+    const verseEnd = verseParts[4];
+    const displayBook = getBookDisplayName(book, translation);
+    if (verseEnd) {
+      return `${displayBook} ${chapter}:${verseStart}\u2013${verseEnd}`;
+    }
+    return `${displayBook} ${chapter}:${verseStart}`;
   }
-  return `${displayBook} ${chapter}:${verseStart}`;
+  const chapterParts = ref.match(/^(.+?)\s+(\d+)$/);
+  if (chapterParts) {
+    const book = chapterParts[1];
+    const chapter = chapterParts[2];
+    const displayBook = getBookDisplayName(book, translation);
+    return `${displayBook} ${chapter}`;
+  }
+  return ref;
 }
 
   useEffect(() => {
@@ -75,14 +85,22 @@ function localizeReference(ref: string, translation: string): string {
     setScriptureLoading(true);
     setScriptureText(null);
     try {
-      const parts = ref.match(/^(.+?)\s+(\d+):(\d+)(?:[–-](\d+))?/);
-      if (parts) {
-        const book = parts[1];
-        const chapter = parseInt(parts[2]);
-        const verseStart = parseInt(parts[3]);
-        const verseEnd = parts[4] ? parseInt(parts[4]) : verseStart;
+      const verseParts = ref.match(/^(.+?)\s+(\d+):(\d+)(?:[–-](\d+))?/);
+      if (verseParts) {
+        const book = verseParts[1];
+        const chapter = parseInt(verseParts[2]);
+        const verseStart = parseInt(verseParts[3]);
+        const verseEnd = verseParts[4] ? parseInt(verseParts[4]) : verseStart;
         const result = await fetchVerses(book, chapter, verseStart, verseEnd, activeTranslation);
         setScriptureText(result.verses.map((v) => v.text).join(' '));
+      } else {
+        const chapterParts = ref.match(/^(.+?)\s+(\d+)$/);
+        if (chapterParts) {
+          const book = chapterParts[1];
+          const chapter = parseInt(chapterParts[2]);
+          const chap = await fetchChapter(book, chapter, activeTranslation);
+          setScriptureText(chap.verses.map((v) => v.text).join(' '));
+        }
       }
     } catch { /* non-critical */ }
     setScriptureLoading(false);
@@ -99,16 +117,32 @@ function localizeReference(ref: string, translation: string): string {
     setHeroLoading(true);
     setHeroVerse(null);
     const ref = todayWalk.passage_reference;
-    const parts = ref.match(/^(.+?)\s+(\d+):(\d+)(?:[\u2013-](\d+))?/);
-    if (!parts) { setHeroLoading(false); return; }
-    const book = parts[1];
-    const chapter = parseInt(parts[2]);
-    const verseStart = parseInt(parts[3]);
-    const verseEnd = parts[4] ? parseInt(parts[4]) : verseStart;
-    fetchVerses(book, chapter, verseStart, verseEnd, activeTranslation)
-      .then(({ verses }) => setHeroVerse(verses.map((v) => v.text).join(' ') || null))
-      .catch(() => setHeroVerse(null))
-      .finally(() => setHeroLoading(false));
+    const verseParts = ref.match(/^(.+?)\s+(\d+):(\d+)(?:[\u2013-](\d+))?/);
+    if (verseParts) {
+      const book = verseParts[1];
+      const chapter = parseInt(verseParts[2]);
+      const verseStart = parseInt(verseParts[3]);
+      const verseEnd = verseParts[4] ? parseInt(verseParts[4]) : verseStart;
+      fetchVerses(book, chapter, verseStart, verseEnd, activeTranslation)
+        .then(({ verses }) => setHeroVerse(verses.map((v) => v.text).join(' ') || null))
+        .catch(() => setHeroVerse(null))
+        .finally(() => setHeroLoading(false));
+    } else {
+      const chapterParts = ref.match(/^(.+?)\s+(\d+)$/);
+      if (chapterParts) {
+        const book = chapterParts[1];
+        const chapter = parseInt(chapterParts[2]);
+        fetchChapter(book, chapter, activeTranslation)
+          .then((chap) => {
+            const excerpt = chap.verses.slice(0, 2).map((v) => v.text).join(' ');
+            setHeroVerse(excerpt || null);
+          })
+          .catch(() => setHeroVerse(null))
+          .finally(() => setHeroLoading(false));
+      } else {
+        setHeroLoading(false);
+      }
+    }
   }, [todayWalk?.passage_reference, activeTranslation]);
 
   async function loadOrCreateTodayWalk() {
@@ -266,11 +300,46 @@ function localizeReference(ref: string, translation: string): string {
         const { Keyboard } = await import('@capacitor/keyboard');
         const willShow = await Keyboard.addListener('keyboardWillShow', (info: { keyboardHeight: number }) => {
           setKeyboardHeight(info.keyboardHeight);
+          if (contextFocusedRef.current) {
+            requestAnimationFrame(() => {
+              const el = contextInteractionRef.current;
+              if (!el) return;
+              const vv = window.visualViewport;
+              const viewportHeight = vv ? vv.height : window.innerHeight;
+              const keyboardTop = viewportHeight - info.keyboardHeight;
+              const rect = el.getBoundingClientRect();
+              const wrapperBottom = rect.bottom;
+              const safeMargin = 20;
+              if (wrapperBottom > keyboardTop - safeMargin) {
+                const scrollDelta = wrapperBottom - (keyboardTop - safeMargin);
+                window.scrollBy({ top: scrollDelta, behavior: 'smooth' });
+              }
+            });
+          }
+        });
+        const didShow = await Keyboard.addListener('keyboardDidShow', (info: { keyboardHeight: number }) => {
+          if (contextFocusedRef.current) {
+            requestAnimationFrame(() => {
+              const el = contextInteractionRef.current;
+              if (!el) return;
+              const vv = window.visualViewport;
+              const viewportHeight = vv ? vv.height : window.innerHeight;
+              const keyboardTop = viewportHeight - info.keyboardHeight;
+              const rect = el.getBoundingClientRect();
+              const wrapperBottom = rect.bottom;
+              const safeMargin = 20;
+              if (wrapperBottom > keyboardTop - safeMargin) {
+                const scrollDelta = wrapperBottom - (keyboardTop - safeMargin);
+                window.scrollBy({ top: scrollDelta, behavior: 'smooth' });
+              }
+            });
+          }
         });
         const willHide = await Keyboard.addListener('keyboardWillHide', () => {
           setKeyboardHeight(0);
         });
         handles.push(() => willShow.remove());
+        handles.push(() => didShow.remove());
         handles.push(() => willHide.remove());
       } catch { /* non-critical */ }
     })();
@@ -278,10 +347,11 @@ function localizeReference(ref: string, translation: string): string {
   }, []);
 
   function handleContextFocus() {
-    if (!Capacitor.isNativePlatform()) return;
-    requestAnimationFrame(() => {
-      contextInteractionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
+    contextFocusedRef.current = true;
+  }
+
+  function handleContextBlur() {
+    contextFocusedRef.current = false;
   }
 
   const greeting = getGreeting();
@@ -309,8 +379,9 @@ function localizeReference(ref: string, translation: string): string {
           aria-hidden="true"
           className="absolute inset-x-0 bottom-0 h-[330px] w-full object-cover object-center"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-ink-950/40 via-ink-950/20 to-ink-950/50" />
-        <div className="absolute inset-x-0 bottom-0 h-[200px] bg-gradient-to-t from-ink-950/90 via-ink-950/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ink-950/30 via-ink-950/15 to-ink-950/40" />
+        <div className="absolute inset-x-0 bottom-0 h-[240px] bg-gradient-to-t from-ink-950/95 via-ink-950/55 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-[260px] bg-gradient-to-br from-ink-950/50 via-ink-950/30 to-ink-950/60" />
         <div className="relative z-10 px-6 pt-3">
           {heroLoading ? (
             <p className="max-w-[275px] font-serif text-xl leading-[1.35] text-ivory-300 italic">
@@ -435,7 +506,7 @@ function localizeReference(ref: string, translation: string): string {
         </div>
         {selectedMood && !contextSaved && (
           <div ref={contextInteractionRef} className="mt-4 animate-fade-in-up">
-            <textarea ref={contextTextareaRef} autoFocus value={contextText} onChange={(e) => setContextText(e.target.value)} onFocus={handleContextFocus} placeholder="What's happening today?" className="input-field min-h-[80px] resize-none text-sm" />
+            <textarea ref={contextTextareaRef} autoFocus value={contextText} onChange={(e) => setContextText(e.target.value)} onFocus={handleContextFocus} onBlur={handleContextBlur} placeholder="What's happening today?" className="input-field min-h-[80px] resize-none text-sm" />
             <div className="flex items-center gap-3 mt-3">
               <div className="flex items-center gap-2"><Lock size={12} className="text-ivory-600" /><button onClick={() => { vibrate(6); setRememberContext(!rememberContext); }} className={`relative w-11 h-6 rounded-full transition-all duration-300 shrink-0 ${rememberContext ? 'bg-gold-500/40' : 'bg-ink-700'}`}><span className={`absolute top-0.5 w-5 h-5 rounded-full bg-ivory-100 transition-all duration-300 ${rememberContext ? 'left-[22px]' : 'left-0.5'}`} /></button></div>
               <p className="text-ivory-600 text-xs">{rememberContext ? 'SOLAPATH will remember this.' : 'Just for today.'}</p>
