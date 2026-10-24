@@ -16,7 +16,6 @@ const TAP_GUARD_MS = 400;
 export default function SplashScreen({ onComplete }: SplashScreenProps) {
   const [phase, setPhase] = useState<Phase>('title');
   const completedRef = useRef(false);
-  const mountedRef = useRef(false);
   const tapEnabledRef = useRef(false);
 
   const finish = useCallback(() => {
@@ -31,7 +30,6 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
     const t2 = setTimeout(() => setPhase('covenant'), PHASE_3_AT);
     const t3 = setTimeout(finish, AUTO_HANDOFF_AT);
     const guard = setTimeout(() => { tapEnabledRef.current = true; }, TAP_GUARD_MS);
-    mountedRef.current = true;
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(guard); };
   }, [finish]);
 
@@ -69,13 +67,13 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
         {/* Phase 3 — covenant line */}
         {phase === 'covenant' && !isExiting && (
           <p className="mt-2 font-serif text-base text-ivory-400 tracking-wide animate-fade-in-up">
-            Sola Scriptura &middot; Sola Fide &middot; Sola Gratia
+            Sola Scriptura &middot; Sola Fide &middot; Sola Gratia &middot; Solus Christus &middot; Soli Deo Gloria
           </p>
         )}
       </div>
 
       {/* Subtle skip label — visually secondary */}
-      {mountedRef.current && !isExiting && (
+      {!isExiting && (
         <p className="absolute bottom-10 left-1/2 -translate-x-1/2 text-ivory-600 text-xs tracking-[0.15em] uppercase animate-fade-in no-tap-highlight pointer-events-none">
           Tap to continue
         </p>
