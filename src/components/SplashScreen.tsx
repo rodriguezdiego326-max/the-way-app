@@ -46,7 +46,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
 
   return (
     <div
-      className="app-container relative flex flex-col justify-end overflow-hidden bg-ink-950 cursor-pointer no-tap-highlight"
+      className="fixed inset-0 z-[100] flex min-h-[100dvh] w-screen max-w-none flex-col justify-end overflow-hidden bg-ink-950 cursor-pointer no-tap-highlight"
       onClick={handleTap}
       style={{ transition: `opacity ${CROSSFADE_MS}ms ease-out`, opacity: isExiting ? 0 : 1 }}
     >
@@ -54,19 +54,25 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
         src="/assets/solapath-scenic-emblem.png"
         alt=""
         aria-hidden="true"
-        className="absolute inset-0 h-full w-full object-cover"
+        className="absolute inset-0 h-full w-full scale-[1.14] object-cover object-center origin-bottom"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-ink-950/5 via-transparent to-ink-950/90" />
-      <div className="absolute inset-x-0 bottom-0 h-[48%] bg-gradient-to-t from-ink-950/80 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-b from-ink-950/10 via-transparent to-ink-950/85" />
 
-      <div className="relative z-10 px-7 pb-20 text-center safe-bottom">
-        <h1 className="font-serif text-5xl text-ivory-50 tracking-[0.12em] drop-shadow-lg animate-fade-in-up">
+      <div className="relative z-10 px-7 pb-20 pt-[env(safe-area-inset-top,0px)] text-center safe-bottom">
+        <h1 className="font-serif text-5xl font-medium text-ivory-50 tracking-[0.12em] drop-shadow-lg animate-fade-in-up">
           SOLAPATH
         </h1>
         {phase !== 'title' && !isExiting && (
-          <p className="mt-3 font-serif text-xl text-ivory-100 italic tracking-wide drop-shadow-md animate-fade-in-up">
-            Scripture for the road ahead.
-          </p>
+          <>
+            <div className="mx-auto mt-3 mb-2 flex items-center justify-center gap-3 text-gold-200/90">
+              <span className="h-px w-10 bg-gold-200/60" />
+              <span className="text-lg">✦</span>
+              <span className="h-px w-10 bg-gold-200/60" />
+            </div>
+            <p className="font-serif text-xl text-ivory-100 italic tracking-wide drop-shadow-md animate-fade-in-up">
+              Scripture for the road ahead.
+            </p>
+          </>
         )}
         {phase === 'solas' && !isExiting && (
           <p className="mx-auto mt-5 max-w-sm font-serif text-xs leading-6 text-ivory-200/90 tracking-wide animate-fade-in-up">

@@ -6,6 +6,7 @@ import { fetchVerses } from '@/lib/bibleEngine';
 import type { Walk, Profile, DailyCheckin } from '@/lib/types';
 import { vibrate } from '@/lib/utils';
 import { getBookDisplayName } from '@/lib/bibleTypes';
+import type { BibleTranslation } from '@/lib/bibleTypes';
 
 interface TodayScreenProps {
   profile: Profile | null;
@@ -38,6 +39,7 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp }: Today
   const [walkReason, setWalkReason] = useState<string | null>(null);
   const [scriptureText, setScriptureText] = useState<string | null>(null);
   const [scriptureLoading, setScriptureLoading] = useState(false);
+  const [brandVerse, setBrandVerse] = useState<string | null>(null);
 
   const [contextText, setContextText] = useState('');
   const [rememberContext, setRememberContext] = useState(false);
@@ -45,7 +47,7 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp }: Today
   const [regenerating, setRegenerating] = useState(false);
   const [walkError, setWalkError] = useState<string | null>(null);
 
-  const activeTranslation = typeof localStorage !== 'undefined' ? (localStorage.getItem('solapath_translation') || 'WEB') : 'WEB';
+  const activeTranslation: BibleTranslation = typeof localStorage !== 'undefined' && localStorage.getItem('solapath_translation') === 'RV1909' ? 'RV1909' : 'WEB';
 
 function localizeReference(ref: string, translation: string): string {
   const parts = ref.match(/^(.+?)\s+(\d+):(\d+)(?:[\u2013-](\d+))?/);
@@ -87,6 +89,12 @@ function localizeReference(ref: string, translation: string): string {
       loadScriptureText(todayWalk.passage_reference);
     }
   }, [todayWalk?.passage_reference]);
+
+  useEffect(() => {
+    fetchVerses('PSA', 119, 105, 105, activeTranslation)
+      .then(({ verses }) => setBrandVerse(verses[0]?.text || null))
+      .catch(() => setBrandVerse(null));
+  }, [activeTranslation]);
 
   async function loadOrCreateTodayWalk() {
     setLoading(true);
@@ -241,111 +249,39 @@ function localizeReference(ref: string, translation: string): string {
 
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28">
-      <header className="px-6 pt-14 safe-top">
-        <p className="ui-label animate-fade-in-down">{greeting}{name ? `, ${name}` : ''}</p>
+      <header className="relative z-10 flex items-start justify-between px-6 pt-10 safe-top">
+        <div>
+          <p className="font-serif text-xl italic text-ivory-200 animate-fade-in-down">{greeting}{name ? `, ${name}` : ''}</p>
+          <h1 className="mt-2 max-w-[260px] font-serif text-5xl font-medium leading-[0.92] tracking-tight text-ivory-50 animate-fade-in-up">
+            Stay on<br />the Path.
+          </h1>
+        </div>
+        <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-full border-2 border-gold-200 bg-gold-100 text-lg font-serif text-ink-50 shadow-sm" aria-label={name ? `${name}'s profile` : 'Your profile'}>
+          {(name || 'S').charAt(0).toUpperCase()}
+        </div>
       </header>
 
-      <section className="px-6 mt-5 animate-fade-in-up">
-        <div className="relative h-32 overflow-hidden rounded-3xl border border-gold-500/15 shadow-lg shadow-ink-950/10">
-          <img
-            src="/assets/solapath-scenic-emblem.png"
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 h-full w-full object-cover object-center"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-ink-950/75 via-ink-950/20 to-transparent" />
-          <div className="relative flex h-full items-end p-5">
-            <h2 className="font-serif text-3xl leading-tight text-ivory-50 drop-shadow-md">
-              Stay on the Path.
-            </h2>
-          </div>
+      <section className="relative -mt-20 min-h-[430px] overflow-hidden pt-52 animate-fade-in-up">
+        <img
+          src="/assets/solapath-scenic-emblem.png"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-x-0 bottom-0 h-[330px] w-full object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-ink-950 via-ink-950/35 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-ink-950/30 to-transparent" />
+        <div className="relative z-10 px-6 pt-3">
+          <blockquote className="max-w-[275px] font-serif text-xl leading-[1.25] text-ivory-100 italic">
+            {brandVerse ? `“${brandVerse}”` : 'Loading Scripture…'}
+          </blockquote>
+          <p className="mt-3 font-serif text-sm italic text-gold-500">Psalm 119:105</p>
         </div>
       </section>
 
-      <section className="px-6 mt-6 fade-stagger">
-        <h2 className="font-serif text-3xl text-ivory-50 leading-tight mb-5">
-          How are you arriving today?
-        </h2>
-        <div className="grid grid-cols-4 gap-2">
-          {moods.map((mood) => (
-            <button
-              key={mood.id}
-              onClick={() => {
-                vibrate(8);
-                setSelectedMood(mood.id);
-                setContextText('');
-                setContextSaved(false);
-                setRememberContext(false);
-              }}
-              className={`mood-chip no-tap-highlight ${
-                selectedMood === mood.id
-                  ? 'bg-gold-500/10 border-gold-500/40'
-                  : ''
-              }`}
-            >
-              <span className={`text-lg ${selectedMood === mood.id ? 'text-gold-300' : 'text-ivory-500'}`}>
-                {mood.icon}
-              </span>
-              <span className={`text-[11px] font-medium ${selectedMood === mood.id ? 'text-ivory-50' : 'text-ivory-400'}`}>
-                {mood.label}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {selectedMood && !contextSaved && (
-          <div className="mt-4 animate-fade-in-up">
-            <textarea
-              autoFocus
-              value={contextText}
-              onChange={(e) => setContextText(e.target.value)}
-              placeholder="What's happening today?"
-              className="input-field min-h-[80px] resize-none text-sm"
-            />
-            <div className="flex items-center gap-3 mt-3">
-              <div className="flex items-center gap-2">
-                <Lock size={12} className="text-ivory-600" />
-                <button
-                  onClick={() => {
-                    vibrate(6);
-                    setRememberContext(!rememberContext);
-                  }}
-                  className={`relative w-11 h-6 rounded-full transition-all duration-300 shrink-0 ${
-                    rememberContext ? 'bg-gold-500/40' : 'bg-ink-700'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 w-5 h-5 rounded-full bg-ivory-100 transition-all duration-300 ${
-                      rememberContext ? 'left-[22px]' : 'left-0.5'
-                    }`}
-                  />
-                </button>
-              </div>
-              <p className="text-ivory-600 text-xs">
-                {rememberContext ? 'SOLAPATH will remember this.' : 'Just for today.'}
-              </p>
-              <div className="flex-1" />
-              <button
-                onClick={saveCheckin}
-                disabled={regenerating}
-                className="btn-secondary px-4 py-2.5 text-sm disabled:opacity-40"
-              >
-                {regenerating ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 size={14} className="animate-spin" />
-                    Finding Scripture...
-                  </span>
-                ) : contextSaved ? 'Saved' : 'Save'}
-              </button>
-            </div>
-          </div>
-        )}
-      </section>
-
-      <section className="px-6 mt-10 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-        <div className="flex items-center gap-2 mb-4">
-          <Sparkles size={14} className="text-gold-400" />
-          <p className="ui-label">Today's Walk</p>
+      <section className="relative z-20 -mt-14 px-5 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+        <div className="flex items-center gap-2 mb-3 px-1">
+          <BookOpen size={15} className="text-gold-500" />
+          <p className="text-xs uppercase tracking-[0.18em] text-ivory-400 font-medium">Today's Reading</p>
         </div>
 
         {loading || regenerating ? (
@@ -356,7 +292,7 @@ function localizeReference(ref: string, translation: string): string {
             </p>
           </div>
         ) : todayWalk ? (
-          <div className="premium-card p-6 overflow-hidden relative">
+          <div className="premium-card bg-ink-800 p-5 overflow-hidden relative shadow-xl shadow-ink-950/10">
             <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-gold-500/5 blur-3xl" />
 
             <div className="relative">
@@ -430,7 +366,31 @@ function localizeReference(ref: string, translation: string): string {
         )}
       </section>
 
-      <section className="px-6 mt-8 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+      <section className="px-6 mt-10 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+        <h2 className="font-serif text-3xl text-ivory-50 leading-tight mb-5">
+          How are you arriving today?
+        </h2>
+        <div className="grid grid-cols-4 gap-2">
+          {moods.map((mood) => (
+            <button key={mood.id} onClick={() => { vibrate(8); setSelectedMood(mood.id); setContextText(''); setContextSaved(false); setRememberContext(false); }} className={`mood-chip no-tap-highlight ${selectedMood === mood.id ? 'bg-gold-500/10 border-gold-500/40' : ''}`}>
+              <span className={`text-lg ${selectedMood === mood.id ? 'text-gold-300' : 'text-ivory-500'}`}>{mood.icon}</span>
+              <span className={`text-[11px] font-medium ${selectedMood === mood.id ? 'text-ivory-50' : 'text-ivory-400'}`}>{mood.label}</span>
+            </button>
+          ))}
+        </div>
+        {selectedMood && !contextSaved && (
+          <div className="mt-4 animate-fade-in-up">
+            <textarea autoFocus value={contextText} onChange={(e) => setContextText(e.target.value)} placeholder="What's happening today?" className="input-field min-h-[80px] resize-none text-sm" />
+            <div className="flex items-center gap-3 mt-3">
+              <div className="flex items-center gap-2"><Lock size={12} className="text-ivory-600" /><button onClick={() => { vibrate(6); setRememberContext(!rememberContext); }} className={`relative w-11 h-6 rounded-full transition-all duration-300 shrink-0 ${rememberContext ? 'bg-gold-500/40' : 'bg-ink-700'}`}><span className={`absolute top-0.5 w-5 h-5 rounded-full bg-ivory-100 transition-all duration-300 ${rememberContext ? 'left-[22px]' : 'left-0.5'}`} /></button></div>
+              <p className="text-ivory-600 text-xs">{rememberContext ? 'SOLAPATH will remember this.' : 'Just for today.'}</p>
+              <div className="flex-1" /><button onClick={saveCheckin} disabled={regenerating} className="btn-secondary px-4 py-2.5 text-sm disabled:opacity-40">{regenerating ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Finding Scripture...</span> : contextSaved ? 'Saved' : 'Save'}</button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="px-6 mt-8 animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
         <div className="flex items-start gap-3 px-1">
           <div className="w-1 h-12 rounded-full bg-gradient-to-b from-gold-400/40 to-transparent shrink-0 mt-1" />
           <div>
