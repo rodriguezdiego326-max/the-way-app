@@ -245,6 +245,23 @@ function localizeReference(ref: string, translation: string): string {
         <p className="ui-label animate-fade-in-down">{greeting}{name ? `, ${name}` : ''}</p>
       </header>
 
+      <section className="px-6 mt-5 animate-fade-in-up">
+        <div className="relative h-32 overflow-hidden rounded-3xl border border-gold-500/15 shadow-lg shadow-ink-950/10">
+          <img
+            src="/assets/solapath-scenic-emblem.png"
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-ink-950/75 via-ink-950/20 to-transparent" />
+          <div className="relative flex h-full items-end p-5">
+            <h2 className="font-serif text-3xl leading-tight text-ivory-50 drop-shadow-md">
+              Stay on the Path.
+            </h2>
+          </div>
+        </div>
+      </section>
+
       <section className="px-6 mt-6 fade-stagger">
         <h2 className="font-serif text-3xl text-ivory-50 leading-tight mb-5">
           How are you arriving today?

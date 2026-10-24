@@ -6,12 +6,13 @@ import { Capacitor } from '@capacitor/core';
 
 interface AuthFormProps {
   onAuthed: () => void;
+  initialMode?: 'signin' | 'signup';
 }
 
-export default function AuthForm({ onAuthed }: AuthFormProps) {
+export default function AuthForm({ onAuthed, initialMode = 'signin' }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [nativeKeyboardHeight, setNativeKeyboardHeight] = useState(0);

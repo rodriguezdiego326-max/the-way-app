@@ -1,16 +1,15 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import BrandMark from '@/components/BrandMark';
 
 interface SplashScreenProps {
   onComplete: () => void;
 }
 
-type Phase = 'title' | 'tagline' | 'covenant' | 'exiting';
+type Phase = 'title' | 'tagline' | 'solas' | 'exiting';
 
-const PHASE_2_AT = 1900;
-const PHASE_3_AT = 3800;
-const AUTO_HANDOFF_AT = 5200;
-const CROSSFADE_MS = 280;
+const TAGLINE_AT = 3000;
+const SOLAS_AT = 6000;
+const AUTO_HANDOFF_AT = 9000;
+const CROSSFADE_MS = 320;
 const TAP_GUARD_MS = 400;
 
 export default function SplashScreen({ onComplete }: SplashScreenProps) {
@@ -26,11 +25,16 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
   }, [onComplete]);
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase('tagline'), PHASE_2_AT);
-    const t2 = setTimeout(() => setPhase('covenant'), PHASE_3_AT);
-    const t3 = setTimeout(finish, AUTO_HANDOFF_AT);
-    const guard = setTimeout(() => { tapEnabledRef.current = true; }, TAP_GUARD_MS);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(guard); };
+    const taglineTimer = setTimeout(() => setPhase('tagline'), TAGLINE_AT);
+    const solasTimer = setTimeout(() => setPhase('solas'), SOLAS_AT);
+    const handoffTimer = setTimeout(finish, AUTO_HANDOFF_AT);
+    const guardTimer = setTimeout(() => { tapEnabledRef.current = true; }, TAP_GUARD_MS);
+    return () => {
+      clearTimeout(taglineTimer);
+      clearTimeout(solasTimer);
+      clearTimeout(handoffTimer);
+      clearTimeout(guardTimer);
+    };
   }, [finish]);
 
   const handleTap = useCallback(() => {
@@ -42,44 +46,39 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
 
   return (
     <div
-      className="app-container flex flex-col items-center justify-center bg-ink-950 bg-parchment overflow-hidden no-tap-highlight cursor-pointer"
+      className="app-container relative flex flex-col justify-end overflow-hidden bg-ink-950 cursor-pointer no-tap-highlight"
       onClick={handleTap}
       style={{ transition: `opacity ${CROSSFADE_MS}ms ease-out`, opacity: isExiting ? 0 : 1 }}
     >
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-72 h-72 rounded-full bg-gold-500/8 blur-3xl" />
-      <div className="relative z-10 flex flex-col items-center gap-5 px-8 text-center">
-        {/* Phase 1 — mark + title */}
-        <div className="flex flex-col items-center gap-5 animate-fade-in">
-          <BrandMark size={84} className="text-gold-400" />
-          <h1 className="font-serif text-5xl text-ivory-50 tracking-[0.15em]">SOLAPATH</h1>
-        </div>
+      <img
+        src="/assets/solapath-scenic-emblem.png"
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-ink-950/5 via-transparent to-ink-950/90" />
+      <div className="absolute inset-x-0 bottom-0 h-[48%] bg-gradient-to-t from-ink-950/80 to-transparent" />
 
-        {/* Phase 2 — divider + tagline */}
+      <div className="relative z-10 px-7 pb-20 text-center safe-bottom">
+        <h1 className="font-serif text-5xl text-ivory-50 tracking-[0.12em] drop-shadow-lg animate-fade-in-up">
+          SOLAPATH
+        </h1>
         {phase !== 'title' && !isExiting && (
-          <div className="flex flex-col items-center gap-4 animate-fade-in-up">
-            <div className="gold-divider w-24" />
-            <p className="font-serif text-xl text-ivory-300 italic tracking-wide">
-              Scripture for the road ahead.
-            </p>
-          </div>
+          <p className="mt-3 font-serif text-xl text-ivory-100 italic tracking-wide drop-shadow-md animate-fade-in-up">
+            Scripture for the road ahead.
+          </p>
         )}
-
-        {/* Phase 3 — covenant line */}
-        {phase === 'covenant' && !isExiting && (
-          <p className="mt-2 font-serif text-base text-ivory-400 tracking-wide animate-fade-in-up">
+        {phase === 'solas' && !isExiting && (
+          <p className="mx-auto mt-5 max-w-sm font-serif text-xs leading-6 text-ivory-200/90 tracking-wide animate-fade-in-up">
             Sola Scriptura &middot; Sola Fide &middot; Sola Gratia &middot; Solus Christus &middot; Soli Deo Gloria
           </p>
         )}
       </div>
-
-      {/* Subtle skip label — visually secondary */}
       {!isExiting && (
-        <p className="absolute bottom-10 left-1/2 -translate-x-1/2 text-ivory-600 text-xs tracking-[0.15em] uppercase animate-fade-in no-tap-highlight pointer-events-none">
+        <p className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 text-xs uppercase tracking-[0.15em] text-ivory-300/75 pointer-events-none">
           Tap to continue
         </p>
       )}
-
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-ink-950 to-transparent" />
     </div>
   );
 }
