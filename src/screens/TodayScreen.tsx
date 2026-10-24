@@ -49,7 +49,7 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp }: Today
   const [walkError, setWalkError] = useState<string | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const contextTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const contextSectionRef = useRef<HTMLDivElement>(null);
+  const contextInteractionRef = useRef<HTMLDivElement>(null);
 
   const activeTranslation: BibleTranslation = typeof localStorage !== 'undefined' && localStorage.getItem('solapath_translation') === 'RV1909' ? 'RV1909' : 'WEB';
 
@@ -280,7 +280,7 @@ function localizeReference(ref: string, translation: string): string {
   function handleContextFocus() {
     if (!Capacitor.isNativePlatform()) return;
     requestAnimationFrame(() => {
-      contextTextareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      contextInteractionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
   }
 
@@ -309,24 +309,24 @@ function localizeReference(ref: string, translation: string): string {
           aria-hidden="true"
           className="absolute inset-x-0 bottom-0 h-[330px] w-full object-cover object-center"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-ink-950 via-ink-950/50 to-ink-950/70" />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-ink-950/80 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ink-950/40 via-ink-950/20 to-ink-950/50" />
+        <div className="absolute inset-x-0 bottom-0 h-[200px] bg-gradient-to-t from-ink-950/90 via-ink-950/40 to-transparent" />
         <div className="relative z-10 px-6 pt-3">
           {heroLoading ? (
-            <p className="max-w-[275px] font-serif text-xl leading-[1.35] text-ivory-300/80 italic">
+            <p className="max-w-[275px] font-serif text-xl leading-[1.35] text-ivory-300 italic">
               Loading Scripture…
             </p>
           ) : heroVerse ? (
-            <blockquote className="max-w-[275px] font-serif text-[1.35rem] leading-[1.4] text-ivory-50 font-medium italic">
+            <blockquote className="max-w-[275px] font-serif text-[1.35rem] leading-[1.4] text-ivory-50 font-medium italic drop-shadow-[0_1px_3px_rgba(31,27,22,0.5)]">
               “{heroVerse}”
             </blockquote>
           ) : (
-            <p className="max-w-[275px] font-serif text-xl leading-[1.35] text-ivory-300/70 italic">
-              {todayWalk?.passage_reference || 'Today’s reading'}
+            <p className="max-w-[275px] font-serif text-xl leading-[1.35] text-ivory-300 italic">
+              Loading Scripture…
             </p>
           )}
           {todayWalk?.passage_reference && (
-            <p className="mt-3 font-serif text-[0.95rem] not-italic text-gold-300 tracking-wide font-medium">
+            <p className="mt-3 font-serif text-[0.95rem] not-italic text-gold-300 tracking-wide font-medium drop-shadow-[0_1px_2px_rgba(31,27,22,0.4)]">
               {localizeReference(todayWalk.passage_reference, activeTranslation)}
             </p>
           )}
@@ -421,7 +421,7 @@ function localizeReference(ref: string, translation: string): string {
         )}
       </section>
 
-      <section ref={contextSectionRef} className="px-6 mt-10 animate-fade-in-up" style={{ animationDelay: '0.4s', paddingBottom: keyboardHeight > 0 ? `${keyboardHeight + 16}px` : undefined, transition: 'padding-bottom 0.25s ease-out' }}>
+      <section className="px-6 mt-10 animate-fade-in-up" style={{ animationDelay: '0.4s', paddingBottom: keyboardHeight > 0 ? `calc(${keyboardHeight}px + env(safe-area-inset-bottom, 0px) + 20px)` : undefined, transition: 'padding-bottom 0.25s ease-out' }}>
         <h2 className="font-serif text-3xl text-ivory-50 leading-tight mb-5">
           How are you arriving today?
         </h2>
@@ -434,7 +434,7 @@ function localizeReference(ref: string, translation: string): string {
           ))}
         </div>
         {selectedMood && !contextSaved && (
-          <div className="mt-4 animate-fade-in-up">
+          <div ref={contextInteractionRef} className="mt-4 animate-fade-in-up">
             <textarea ref={contextTextareaRef} autoFocus value={contextText} onChange={(e) => setContextText(e.target.value)} onFocus={handleContextFocus} placeholder="What's happening today?" className="input-field min-h-[80px] resize-none text-sm" />
             <div className="flex items-center gap-3 mt-3">
               <div className="flex items-center gap-2"><Lock size={12} className="text-ivory-600" /><button onClick={() => { vibrate(6); setRememberContext(!rememberContext); }} className={`relative w-11 h-6 rounded-full transition-all duration-300 shrink-0 ${rememberContext ? 'bg-gold-500/40' : 'bg-ink-700'}`}><span className={`absolute top-0.5 w-5 h-5 rounded-full bg-ivory-100 transition-all duration-300 ${rememberContext ? 'left-[22px]' : 'left-0.5'}`} /></button></div>
