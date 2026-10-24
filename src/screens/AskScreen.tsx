@@ -172,6 +172,7 @@ interface AskScreenProps {
 
 export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOpenBibleReference, initialContext, onContextConsumed, onKeyboardVisibilityChange, activeConversationId, onConversationChange, translation, onTranslationChange }: AskScreenProps) {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [emptyComposerFocused, setEmptyComposerFocused] = useState(false);
   const [vvHeight, setVvHeight] = useState(typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.height : (typeof window !== 'undefined' ? window.innerHeight : 800));
   const [nativeKeyboardHeight, setNativeKeyboardHeight] = useState(0);
   const [thread, setThread] = useState<ThreadItem[]>([]);
@@ -764,6 +765,8 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
                 <textarea
                   ref={emptyTextareaRef}
                   autoFocus
+                  onFocus={() => setEmptyComposerFocused(true)}
+                  onBlur={() => setEmptyComposerFocused(false)}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={t.placeholder}
@@ -792,8 +795,8 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
             </div>
           </div>
 
-          {/* Conversation starters — subtle, only when keyboard closed */}
-          {!keyboardOpen && (
+          {/* Conversation starters — hidden while typing to stay clear of the keyboard */}
+          {!keyboardOpen && !emptyComposerFocused && (
             <div className="shrink-0 px-6 pt-5 pb-6">
               <div className="w-full max-w-lg mx-auto space-y-2">
                 {(

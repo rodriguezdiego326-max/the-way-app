@@ -25,7 +25,7 @@ import ReleaseGateScreen from '@/screens/ReleaseGateScreen';
 import ProductionStatusScreen from '@/screens/ProductionStatusScreen';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import AuthForm from '@/components/AuthForm';
-import { BookOpen } from 'lucide-react';
+import BrandMark from '@/components/BrandMark';
 import type { BibleTranslation } from '@/lib/bibleTypes';
 
 function getInitialTranslation(): BibleTranslation {
@@ -344,7 +344,7 @@ export default function App() {
       <ErrorBoundary>
         <div className="app-container bg-ink-950 bg-parchment min-h-screen flex flex-col items-center justify-center px-6">
           <div className="w-16 h-16 rounded-2xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center mx-auto mb-6 animate-pulse">
-            <BookOpen size={28} className="text-gold-300" />
+            <BrandMark size={64} className="text-gold-400" />
           </div>
           <h1 className="font-serif text-3xl text-ivory-50 tracking-tight mb-2">SOLAPATH</h1>
           <p className="text-ivory-500 text-sm">Loading...</p>
@@ -360,11 +360,11 @@ export default function App() {
           <div className="min-h-screen flex flex-col items-center justify-center px-6 py-20">
             <div className="w-full max-w-sm animate-fade-in">
               <div className="text-center mb-8">
-                <div className="w-16 h-16 rounded-2xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center mx-auto mb-6">
-                  <BookOpen size={28} className="text-gold-300" />
+                <div className="mb-5 flex justify-center">
+                  <BrandMark size={64} className="text-gold-400" />
                 </div>
                 <h1 className="font-serif text-3xl text-ivory-50 tracking-tight mb-2">SOLAPATH</h1>
-                <p className="text-ivory-500 text-sm">Scripture for the road ahead</p>
+                <p className="text-ivory-500 text-sm">Scripture for the road ahead.</p>
               </div>
               <AuthForm onAuthed={() => { setShowAuth(false); loadProfile(); }} />
             </div>
