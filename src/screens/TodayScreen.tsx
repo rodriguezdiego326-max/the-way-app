@@ -91,7 +91,7 @@ function localizeReference(ref: string, translation: string): string {
   }, [todayWalk?.passage_reference]);
 
   useEffect(() => {
-    fetchVerses('PSA', 119, 105, 105, activeTranslation)
+    fetchVerses('Psalm', 119, 105, 105, activeTranslation)
       .then(({ verses }) => setBrandVerse(verses[0]?.text || null))
       .catch(() => setBrandVerse(null));
   }, [activeTranslation]);
