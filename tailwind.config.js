@@ -4,71 +4,71 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Standard blue (for marking palette)
+        // Standard blue (for marking palette) — preserved
         blue: {
           300: '#6890e0',
           400: '#4870c8',
           500: '#3050a8',
         },
-        // Standard red (for marking palette)
+        // Standard red (for marking palette) — preserved
         red: {
           300: '#e87060',
           400: '#d04838',
           500: '#b83020',
         },
-        // Standard purple (for marking palette)
+        // Standard purple (for marking palette) — preserved
         purple: {
           300: '#c890e0',
           400: '#a868d0',
           500: '#8848b8',
         },
-        // Deep charcoal / near-black backgrounds
+        // Warm parchment / cream backgrounds (daylight theme)
         ink: {
-          950: '#0a0908',
-          900: '#100e0c',
-          850: '#16130f',
-          800: '#1c1814',
-          750: '#221d18',
-          700: '#2a241e',
-          600: '#3a322a',
-          500: '#4a4036',
+          950: '#EDE7D9', // main app background — warm parchment
+          900: '#F5F0E5', // surface — lighter cream
+          850: '#F8F4EC', // elevated surface
+          800: '#FBF8F1', // cards / inputs — near-white cream
+          750: '#E5DDC9', // subtle surface variant
+          700: '#D6CDBA', // borders
+          600: '#C0B59C', // medium borders
+          500: '#A89E85', // strong borders / muted surfaces
         },
-        // Warm ivory text
+        // Warm dark text (daylight theme)
         ivory: {
-          50: '#faf7f0',
-          100: '#f5f0e6',
-          200: '#ebe3d4',
-          300: '#d9cfba',
-          400: '#c4b89e',
-          500: '#a89e85',
-          600: '#8a7f68',
+          50: '#1F1B16', // primary text — dark warm brown
+          100: '#2A241E', // body text
+          200: '#3D362E', // secondary text
+          300: '#5A4F44', // muted text
+          400: '#756B5C', // ghost buttons
+          500: '#8E8273', // labels
+          600: '#A89E8C', // placeholder text
         },
-        // Restrained warm gold accents
+        // Warm gold accents — darkened for light-bg contrast
         gold: {
-          50: '#fbf6e9',
-          100: '#f5e9c8',
-          200: '#e9d49b',
-          300: '#dcbf6e',
-          400: '#cda847',
-          500: '#b8912f',
-          600: '#9a7527',
-          700: '#7a5a20',
-          800: '#5c4419',
+          50: '#FAF3E0',
+          100: '#F0E0B8',
+          200: '#E0C880',
+          300: '#B8912F', // scripture refs — readable on cream
+          400: '#9A7820', // primary accent
+          500: '#7A5A20', // darker accent / borders
+          600: '#5E4419', // button gradient end
+          700: '#4A3513',
+          800: '#3A2A0F',
         },
-        // Secondary — muted sage (for quiet, peaceful accents)
+        // Secondary — muted sage (darkened for light bg)
         sage: {
-          300: '#a8c4a5',
-          400: '#8ba888',
-          500: '#6f906c',
-          600: '#587356',
+          300: '#7A9E77',
+          400: '#5E8B5B',
+          500: '#4A7548',
+          600: '#3A5E38',
         },
-        // Accent — soft terracotta (warm, earthy)
+        // Accent — soft terracotta (darkened for light bg)
         clay: {
-          400: '#c89b7a',
-          500: '#b5825c',
-          600: '#9a6b48',
+          400: '#A87858',
+          500: '#8E5F3E',
+          600: '#7A4E30',
         },
-        // Expanded marking palette
+        // Expanded marking palette — preserved
         amber: {
           300: '#f0c350',
           400: '#e6b020',
@@ -104,10 +104,10 @@ export default {
           400: '#30a8a0',
           500: '#208880',
         },
-        // Semantic
-        success: '#6f906c',
-        warning: '#d4a542',
-        error: '#c4756a',
+        // Semantic — darkened for light bg
+        success: '#4A7548',
+        warning: '#B08820',
+        error: '#A8584E',
       },
       fontFamily: {
         serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
@@ -158,8 +158,8 @@ export default {
         },
       },
       backgroundImage: {
-        'parchment': "radial-gradient(ellipse at top, rgba(205,168,71,0.04) 0%, transparent 60%), radial-gradient(ellipse at bottom, rgba(205,168,71,0.02) 0%, transparent 50%)",
-        'warm-radial': 'radial-gradient(ellipse at center top, rgba(205,168,71,0.06) 0%, transparent 70%)',
+        'parchment': "radial-gradient(ellipse at top, rgba(154,120,32,0.07) 0%, transparent 60%), radial-gradient(ellipse at bottom, rgba(154,120,32,0.04) 0%, transparent 50%)",
+        'warm-radial': 'radial-gradient(ellipse at center top, rgba(154,120,32,0.06) 0%, transparent 70%)',
       },
     },
   },
