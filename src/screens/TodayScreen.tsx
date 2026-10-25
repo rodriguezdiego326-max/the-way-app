@@ -329,7 +329,7 @@ function localizeReference(ref: string, translation: string): string {
   // AI is the servant. Scripture is the authority.
   // ============================================================
   async function handleReflectWithSolapath() {
-    if (!todayWalk || !isSubstantiveReflection(contextText)) return;
+    if (!todayWalk || !hasSavedReflection) return;
     vibrate(12);
     setReflecting(true);
     setReflectionError(null);
@@ -345,7 +345,7 @@ function localizeReference(ref: string, translation: string): string {
 
     try {
       const result = await generateReflectionResponse({
-        reflection: contextText.trim(),
+        reflection: savedReflectionBody,
         context: ctx,
         profile,
         theologicalDepth: profile?.theological_depth || 'simple',
@@ -354,7 +354,7 @@ function localizeReference(ref: string, translation: string): string {
 
       const persisted = await saveReflectionAndResponse(
         todayWalk.id,
-        contextText.trim(),
+        savedReflectionBody,
         result,
         ctx,
         activeTranslation,
@@ -386,7 +386,7 @@ function localizeReference(ref: string, translation: string): string {
     vibrate(10);
     const handoff: AskHandoffContext = {
       passageReference: todayWalk.passage_reference,
-      userReflection: contextText.trim(),
+      userReflection: savedReflectionBody,
       priorResponseSummary: reflectionResponse.answer_summary,
       language: activeTranslation === 'RV1909' ? 'es' : 'en',
     };
@@ -489,9 +489,12 @@ function localizeReference(ref: string, translation: string): string {
     passageAnchor: reflLang === 'es' ? 'Pasaje de hoy' : 'Today\'s passage',
   };
 
-  const hasSubstantiveText = isSubstantiveReflection(contextText);
-  const canShowReflectAction = contextSaved && hasSubstantiveText && !reflecting && !reflectionResponse;
-  const hasQuestion = hasSubstantiveText && reflectionContainsQuestion(contextText);
+  // Canonical visibility derives from the persisted reflection row, not the
+  // transient textarea. This keeps the Reflect action and saved reflection
+  // visible after Save, across rerenders, and after force-close/reopen.
+  const savedReflectionBody = savedReflection?.body ?? '';
+  const hasSavedReflection = isSubstantiveReflection(savedReflectionBody);
+  const hasQuestion = hasSavedReflection && reflectionContainsQuestion(savedReflectionBody);
 
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen nav-safe-padding">
@@ -654,8 +657,10 @@ function localizeReference(ref: string, translation: string): string {
       {/* ============================================================ */}
       {/* Reflection Intelligence (Build 78)                           */}
       {/* AI is the servant. Scripture is the authority.              */}
+      {/* Visibility keys off the persisted savedReflection row, not  */}
+      {/* the transient textarea, so it survives Save/rerender/reload.*/}
       {/* ============================================================ */}
-      {contextSaved && hasSubstantiveText && (
+      {hasSavedReflection && (
         <section ref={reflectionSectionRef} className="px-6 mt-8 animate-fade-in-up">
           {/* Reflect with SOLAPATH — subtle, intentional activation */}
           {!reflectionResponse && !reflecting && (
@@ -708,7 +713,7 @@ function localizeReference(ref: string, translation: string): string {
                   {reflStrings.yourReflection}
                 </p>
                 <p className="text-ivory-200 text-sm leading-relaxed font-serif italic">
-                  “{contextText.trim()}”
+                  “{savedReflectionBody}”
                 </p>
               </div>
 
