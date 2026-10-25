@@ -38,6 +38,7 @@ import SourceViewer from '@/components/SourceViewer';
 import BiblicalBasis from '@/components/BiblicalBasis';
 import MemoryProposalCard from '@/components/MemoryProposalCard';
 import { fetchIntelligenceResponse, retrieveStudyMemoryEvidence } from '@/lib/intelligenceService';
+import { isAskHandoffContext, buildHandoffPrompt } from '@/lib/askHandoff';
 import type { AskIntent, Profile, Walk } from '@/lib/types';
 import type { StructuredTheologicalResponse, VerificationState, StudyMemoryEvidence, PersonalContextItem, PersonalClaim } from '@/lib/intelligenceTypes';
 import ScriptureBlock from '@/components/ScriptureBlock';
@@ -161,7 +162,7 @@ interface AskScreenProps {
   profile: Profile | null;
   onStartWalk: (walk: Walk) => void;
   onOpenBibleReference: (book: string, chapter: number, verseStart: number | null, verseEnd: number | null) => void;
-  initialContext?: string | null;
+  initialContext?: string | AskHandoffContext | null;
   onContextConsumed?: () => void;
   onKeyboardVisibilityChange?: (visible: boolean) => void;
   activeConversationId?: string | null;
@@ -481,7 +482,11 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
 
   useEffect(() => {
     if (initialContext && !conversationId && !conversationStarted) {
-      startConversation('passage', `Help me understand ${initialContext}`);
+      if (isAskHandoffContext(initialContext)) {
+        startConversation('passage', buildHandoffPrompt(initialContext));
+      } else {
+        startConversation('passage', `Help me understand ${initialContext}`);
+      }
       onContextConsumed?.();
     }
   }, [initialContext]);

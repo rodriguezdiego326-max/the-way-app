@@ -27,6 +27,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import WelcomeScreen from '@/components/WelcomeScreen';
 import BrandMark from '@/components/BrandMark';
 import type { BibleTranslation } from '@/lib/bibleTypes';
+import type { AskHandoffContext } from '@/lib/askHandoff';
 
 function getInitialTranslation(): BibleTranslation {
   if (typeof localStorage === 'undefined') return 'WEB';
@@ -165,7 +166,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
-  const [askContext, setAskContext] = useState<string | null>(null);
+  const [askContext, setAskContext] = useState<string | AskHandoffContext | null>(null);
   const [activeAskConversationId, setActiveAskConversationId] = useState<string | null>(null);
   const [askKeyboardOpen, setAskKeyboardOpen] = useState(false);
   const [activeChurchId, setActiveChurchId] = useState<string | null>(null);
@@ -760,6 +761,10 @@ export default function App() {
           profile={profile}
           onStartWalk={handleStartWalk}
           onReadInApp={handleReadInApp}
+          onContinueInAsk={(handoff) => {
+            setActiveTab('ask');
+            setAskContext(handoff);
+          }}
         />
       )}
       {activeTab === 'bible' && <BibleScreen onStartWalk={handleStartWalk} translation={globalTranslation} onTranslationChange={handleTranslationChange} onAskScripture={(b, c, vs, ve) => {

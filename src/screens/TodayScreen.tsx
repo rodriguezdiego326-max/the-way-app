@@ -1,18 +1,30 @@
 import { useState, useEffect, useRef } from 'react';
-import { Sparkles, BookOpen, Clock, ChevronRight, Info, Lock, Loader2 } from 'lucide-react';
+import { Sparkles, BookOpen, Clock, ChevronRight, Info, Lock, Loader2, ArrowRight, RotateCw, Quote } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { recommendWalk, walkToInsert } from '@/lib/walkEngine';
 import { fetchVerses, fetchChapter } from '@/lib/bibleEngine';
-import type { Walk, Profile, DailyCheckin } from '@/lib/types';
+import type { Walk, Profile, DailyCheckin, WalkReflection } from '@/lib/types';
 import { vibrate } from '@/lib/utils';
 import { getBookDisplayName } from '@/lib/bibleTypes';
 import type { BibleTranslation } from '@/lib/bibleTypes';
 import { Capacitor } from '@capacitor/core';
+import {
+  isSubstantiveReflection,
+  reflectionContainsQuestion,
+  generateReflectionResponse,
+  saveReflectionAndResponse,
+  saveUserReflection,
+  loadWalkReflection,
+  type ReflectionContext,
+} from '@/lib/reflectionEngine';
+import type { StructuredTheologicalResponse } from '@/lib/intelligenceTypes';
+import type { AskHandoffContext } from '@/lib/askHandoff';
 
 interface TodayScreenProps {
   profile: Profile | null;
   onStartWalk: (walk: Walk) => void;
   onReadInApp: (walk: Walk) => void;
+  onContinueInAsk?: (handoff: AskHandoffContext) => void;
 }
 
 const moods = [
@@ -33,7 +45,7 @@ function getGreeting() {
   return 'Good evening';
 }
 
-export default function TodayScreen({ profile, onStartWalk, onReadInApp }: TodayScreenProps) {
+export default function TodayScreen({ profile, onStartWalk, onReadInApp, onContinueInAsk }: TodayScreenProps) {
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [todayWalk, setTodayWalk] = useState<Walk | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,9 +60,18 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp }: Today
   const [regenerating, setRegenerating] = useState(false);
   const [walkError, setWalkError] = useState<string | null>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Reflection Intelligence state (Build 78)
+  const [savedReflection, setSavedReflection] = useState<WalkReflection | null>(null);
+  const [reflecting, setReflecting] = useState(false);
+  const [reflectionResponse, setReflectionResponse] = useState<StructuredTheologicalResponse | null>(null);
+  const [reflectionError, setReflectionError] = useState<string | null>(null);
+  const [reflectionPromptUsed, setReflectionPromptUsed] = useState<string | null>(null);
+
   const contextTextareaRef = useRef<HTMLTextAreaElement>(null);
   const contextInteractionRef = useRef<HTMLDivElement>(null);
   const contextFocusedRef = useRef(false);
+  const reflectionSectionRef = useRef<HTMLDivElement>(null);
 
   const activeTranslation: BibleTranslation = typeof localStorage !== 'undefined' && localStorage.getItem('solapath_translation') === 'RV1909' ? 'RV1909' : 'WEB';
 
@@ -109,8 +130,29 @@ function localizeReference(ref: string, translation: string): string {
   useEffect(() => {
     if (todayWalk?.passage_reference) {
       loadScriptureText(todayWalk.passage_reference);
+      // Also load any existing reflection + AI response for this walk
+      loadExistingReflection(todayWalk.id);
+    } else {
+      setSavedReflection(null);
+      setReflectionResponse(null);
+      setReflectionError(null);
+      setReflectionPromptUsed(null);
     }
-  }, [todayWalk?.passage_reference, activeTranslation]);
+  }, [todayWalk?.id, todayWalk?.passage_reference, activeTranslation]);
+
+  async function loadExistingReflection(walkId: string) {
+    try {
+      const existing = await loadWalkReflection(walkId);
+      setSavedReflection(existing);
+      if (existing?.ai_response) {
+        const structured = existing.ai_response.structured as StructuredTheologicalResponse | null;
+        if (structured) {
+          setReflectionResponse(structured);
+          setReflectionPromptUsed(existing.ai_response.reflection_prompt || null);
+        }
+      }
+    } catch { /* non-critical */ }
+  }
 
   useEffect(() => {
     if (!todayWalk?.passage_reference) return;
@@ -268,10 +310,87 @@ function localizeReference(ref: string, translation: string): string {
       });
     }
 
+    // Persist the user's reflection separately on walk_reflections (no AI response yet).
+    if (todayWalk && isSubstantiveReflection(contextText)) {
+      try {
+        const saved = await saveUserReflection(todayWalk.id, contextText.trim());
+        if (saved) setSavedReflection(saved);
+      } catch { /* non-critical — reflection still saved in daily_checkins */ }
+    }
+
     setContextSaved(true);
     setTimeout(() => setContextSaved(false), 1500);
 
     await updateWalkRecommendation(selectedMood, contextText.trim());
+  }
+
+  // ============================================================
+  // Reflection Intelligence (Build 78)
+  // AI is the servant. Scripture is the authority.
+  // ============================================================
+  async function handleReflectWithSolapath() {
+    if (!todayWalk || !isSubstantiveReflection(contextText)) return;
+    vibrate(12);
+    setReflecting(true);
+    setReflectionError(null);
+    setReflectionResponse(null);
+
+    const ctx: ReflectionContext = {
+      passageReference: todayWalk.passage_reference,
+      passageText: scriptureText,
+      readingObjective: todayWalk.reading_objective,
+      observationPrompt: todayWalk.observation_prompt,
+      reflectionQuestion: null,
+    };
+
+    try {
+      const result = await generateReflectionResponse({
+        reflection: contextText.trim(),
+        context: ctx,
+        profile,
+        theologicalDepth: profile?.theological_depth || 'simple',
+        translation: activeTranslation,
+      });
+
+      const persisted = await saveReflectionAndResponse(
+        todayWalk.id,
+        contextText.trim(),
+        result,
+        ctx,
+        activeTranslation,
+      );
+
+      setReflectionResponse(result.response);
+      setReflectionPromptUsed(result.reflectionPrompt);
+      if (persisted) setSavedReflection(persisted);
+
+      // Scroll the response into view after render
+      requestAnimationFrame(() => {
+        reflectionSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    } catch (err) {
+      // User's saved reflection must remain safe — never erased on failure.
+      setReflectionError(err instanceof Error ? err.message : 'Could not generate a reflection. Please try again.');
+    } finally {
+      setReflecting(false);
+    }
+  }
+
+  function handleRetryReflection() {
+    setReflectionError(null);
+    handleReflectWithSolapath();
+  }
+
+  function handleContinueInAsk() {
+    if (!todayWalk || !reflectionResponse || !onContinueInAsk) return;
+    vibrate(10);
+    const handoff: AskHandoffContext = {
+      passageReference: todayWalk.passage_reference,
+      userReflection: contextText.trim(),
+      priorResponseSummary: reflectionResponse.answer_summary,
+      language: activeTranslation === 'RV1909' ? 'es' : 'en',
+    };
+    onContinueInAsk(handoff);
   }
 
   function handleStartWalk() {
@@ -357,6 +476,22 @@ function localizeReference(ref: string, translation: string): string {
   const greeting = getGreeting();
   const name = profile?.display_name;
   const availableTime = profile?.available_time_minutes ?? 7;
+
+  // Reflection Intelligence display strings (follow active translation language)
+  const reflLang = activeTranslation === 'RV1909' ? 'es' : 'en';
+  const reflStrings = {
+    reflectAction: reflLang === 'es' ? 'Reflexionar con SOLAPATH' : 'Reflect with SOLAPATH',
+    continueInAsk: reflLang === 'es' ? 'Continuar en Preguntar' : 'Continue in Ask',
+    thinking: reflLang === 'es' ? 'Reflexionando…' : 'Reflecting…',
+    errorRetry: reflLang === 'es' ? 'Reintentar' : 'Retry',
+    yourReflection: reflLang === 'es' ? 'Tu reflexión' : 'Your reflection',
+    solapathReflection: reflLang === 'es' ? 'Reflexión de SOLAPATH' : 'SOLAPATH reflection',
+    passageAnchor: reflLang === 'es' ? 'Pasaje de hoy' : 'Today\'s passage',
+  };
+
+  const hasSubstantiveText = isSubstantiveReflection(contextText);
+  const canShowReflectAction = contextSaved && hasSubstantiveText && !reflecting && !reflectionResponse;
+  const hasQuestion = hasSubstantiveText && reflectionContainsQuestion(contextText);
 
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen nav-safe-padding">
@@ -515,6 +650,116 @@ function localizeReference(ref: string, translation: string): string {
           </div>
         )}
       </section>
+
+      {/* ============================================================ */}
+      {/* Reflection Intelligence (Build 78)                           */}
+      {/* AI is the servant. Scripture is the authority.              */}
+      {/* ============================================================ */}
+      {contextSaved && hasSubstantiveText && (
+        <section ref={reflectionSectionRef} className="px-6 mt-8 animate-fade-in-up">
+          {/* Reflect with SOLAPATH — subtle, intentional activation */}
+          {!reflectionResponse && !reflecting && (
+            <button
+              onClick={handleReflectWithSolapath}
+              className="w-full premium-card p-4 flex items-center gap-3 text-left no-tap-highlight hover:border-gold-500/40 transition-all duration-300 group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center shrink-0">
+                <Sparkles size={17} className="text-gold-300" />
+              </div>
+              <div className="flex-1">
+                <p className="text-ivory-100 font-medium text-sm">{reflStrings.reflectAction}</p>
+                <p className="text-ivory-600 text-xs mt-0.5">
+                  {hasQuestion
+                    ? (reflLang === 'es' ? 'SOLAPATH puede ayudarte con esta pregunta.' : 'SOLAPATH can help with your question.')
+                    : (reflLang === 'es' ? 'Una reflexión anclada en el pasaje de hoy.' : 'A reflection anchored in today\'s passage.')}
+                </p>
+              </div>
+              <ChevronRight size={16} className="text-ivory-600 group-hover:text-gold-300 transition-colors shrink-0" />
+            </button>
+          )}
+
+          {/* Loading — quiet SOLAPATH treatment, no provider/model names */}
+          {reflecting && (
+            <div className="premium-card p-5 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center shrink-0">
+                <Loader2 size={16} className="text-gold-300 animate-spin" />
+              </div>
+              <p className="text-ivory-400 text-sm italic">{reflStrings.thinking}</p>
+            </div>
+          )}
+
+          {/* Failure — user's saved reflection stays safe, retry available */}
+          {reflectionError && !reflecting && (
+            <div className="premium-card p-5">
+              <p className="text-ivory-400 text-sm leading-relaxed mb-3">{reflectionError}</p>
+              <button onClick={handleRetryReflection} className="btn-secondary text-sm">
+                <RotateCw size={14} />
+                {reflStrings.errorRetry}
+              </button>
+            </div>
+          )}
+
+          {/* Response — user reflection + SOLAPATH reflection, visually distinguished */}
+          {reflectionResponse && !reflecting && (
+            <div className="flex flex-col gap-4">
+              {/* User reflection */}
+              <div className="premium-card p-5">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-ivory-600 font-medium mb-2">
+                  {reflStrings.yourReflection}
+                </p>
+                <p className="text-ivory-200 text-sm leading-relaxed font-serif italic">
+                  “{contextText.trim()}”
+                </p>
+              </div>
+
+              {/* SOLAPATH reflection */}
+              <div className="premium-card p-5 border-gold-500/20">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-7 h-7 rounded-lg bg-gold-500/10 border border-gold-500/20 flex items-center justify-center shrink-0">
+                    <Sparkles size={13} className="text-gold-300" />
+                  </div>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-gold-400/80 font-medium">
+                    {reflStrings.solapathReflection}
+                  </p>
+                </div>
+
+                {/* Passage anchor label */}
+                {todayWalk?.passage_reference && (
+                  <p className="text-gold-300/80 text-xs mb-3 font-medium tracking-wide">
+                    {reflStrings.passageAnchor}: {localizeReference(todayWalk.passage_reference, activeTranslation)}
+                  </p>
+                )}
+
+                <p className="text-ivory-100 text-[15px] leading-[1.7] font-serif">
+                  {reflectionResponse.answer_summary}
+                </p>
+
+                {/* Inline Scripture references in brass accents */}
+                {reflectionResponse.inline_references && reflectionResponse.inline_references.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-1.5">
+                    {reflectionResponse.inline_references.map((ref, i) => (
+                      <span key={i} className="px-2 py-1 rounded-lg bg-gold-500/10 border border-gold-500/20 text-gold-200 text-[11px] font-medium">
+                        {ref.display_text}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Continue in Ask — secondary action */}
+                {onContinueInAsk && (
+                  <button
+                    onClick={handleContinueInAsk}
+                    className="mt-5 w-full btn-secondary text-sm"
+                  >
+                    {reflStrings.continueInAsk}
+                    <ArrowRight size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="px-6 mt-8 animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
         <div className="flex items-start gap-3 px-1">

@@ -126,12 +126,22 @@ export interface Walk {
   created_at: string;
 }
 
+export interface WalkReflectionAIResponse {
+  answer_summary: string;
+  passage_reference: string;
+  reflection_prompt: string;
+  response_language: 'en' | 'es';
+  generated_at: string;
+  structured: unknown;
+}
+
 export interface WalkReflection {
   id: string;
   walk_id: string;
   body: string;
   input_mode: 'text' | 'voice';
   created_at: string;
+  ai_response: WalkReflectionAIResponse | null;
 }
 
 export interface Prayer {
