@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Sparkles, BookOpen, Clock, ChevronRight, Info, Lock, Loader2, ArrowRight, RotateCw, Quote } from 'lucide-react';
+import { Sparkles, BookOpen, Clock, ChevronRight, Info, Lock, Loader2, ArrowRight, RotateCw, Quote, Pencil, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { recommendWalk, walkToInsert } from '@/lib/walkEngine';
 import { fetchVerses, fetchChapter } from '@/lib/bibleEngine';
@@ -14,6 +14,7 @@ import {
   generateReflectionResponse,
   saveReflectionAndResponse,
   saveUserReflection,
+  replaceUserReflection,
   loadWalkReflection,
   type ReflectionContext,
 } from '@/lib/reflectionEngine';
@@ -67,6 +68,10 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp, onConti
   const [reflectionResponse, setReflectionResponse] = useState<StructuredTheologicalResponse | null>(null);
   const [reflectionError, setReflectionError] = useState<string | null>(null);
   const [reflectionPromptUsed, setReflectionPromptUsed] = useState<string | null>(null);
+  // Edit mode (Build 80) — lets the user replace their saved reflection body.
+  const [editingReflection, setEditingReflection] = useState(false);
+  const [editText, setEditText] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const contextTextareaRef = useRef<HTMLTextAreaElement>(null);
   const contextInteractionRef = useRef<HTMLDivElement>(null);
@@ -393,6 +398,47 @@ function localizeReference(ref: string, translation: string): string {
     onContinueInAsk(handoff);
   }
 
+  function handleStartEditReflection() {
+    if (!hasSavedReflection) return;
+    vibrate(8);
+    setEditText(savedReflectionBody);
+    setEditingReflection(true);
+  }
+
+  function handleCancelEdit() {
+    vibrate(6);
+    setEditingReflection(false);
+    setEditText('');
+  }
+
+  async function handleSaveEditedReflection() {
+    if (!todayWalk || !isSubstantiveReflection(editText)) return;
+    vibrate(10);
+    setSavingEdit(true);
+    try {
+      const updated = await replaceUserReflection(todayWalk.id, editText);
+      if (updated) {
+        setSavedReflection(updated);
+        const hadAI = !!reflectionResponse;
+        // If body materially changed, replaceUserReflection cleared ai_response
+        // server-side; mirror that locally so the stale response is gone.
+        if (hadAI && !updated.ai_response) {
+          setReflectionResponse(null);
+          setReflectionPromptUsed(null);
+        }
+        requestAnimationFrame(() => {
+          reflectionSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+      setEditingReflection(false);
+      setEditText('');
+    } catch {
+      // Leave edit mode open so the user's edits aren't lost on a transient error.
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
   function handleStartWalk() {
     if (!todayWalk) return;
     vibrate(15);
@@ -487,6 +533,10 @@ function localizeReference(ref: string, translation: string): string {
     yourReflection: reflLang === 'es' ? 'Tu reflexión' : 'Your reflection',
     solapathReflection: reflLang === 'es' ? 'Reflexión de SOLAPATH' : 'SOLAPATH reflection',
     passageAnchor: reflLang === 'es' ? 'Pasaje de hoy' : 'Today\'s passage',
+    editReflection: reflLang === 'es' ? 'Editar reflexión' : 'Edit reflection',
+    cancel: reflLang === 'es' ? 'Cancelar' : 'Cancel',
+    save: reflLang === 'es' ? 'Guardar' : 'Save',
+    editPlaceholder: reflLang === 'es' ? 'Reescribe tu reflexión...' : 'Rewrite your reflection...',
   };
 
   // Canonical visibility derives from the persisted reflection row, not the
@@ -662,8 +712,44 @@ function localizeReference(ref: string, translation: string): string {
       {/* ============================================================ */}
       {hasSavedReflection && (
         <section ref={reflectionSectionRef} className="px-6 mt-8 animate-fade-in-up">
+          {/* Edit mode — rewrite or replace the saved reflection */}
+          {editingReflection && (
+            <div className="premium-card p-5 mb-4">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-ivory-600 font-medium mb-3">
+                {reflStrings.editReflection}
+              </p>
+              <textarea
+                autoFocus
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                placeholder={reflStrings.editPlaceholder}
+                className="input-field min-h-[100px] resize-none text-sm"
+              />
+              <div className="flex items-center gap-3 mt-3">
+                <button
+                  onClick={handleCancelEdit}
+                  disabled={savingEdit}
+                  className="btn-secondary px-4 py-2.5 text-sm disabled:opacity-40"
+                >
+                  <X size={14} />
+                  {reflStrings.cancel}
+                </button>
+                <div className="flex-1" />
+                <button
+                  onClick={handleSaveEditedReflection}
+                  disabled={savingEdit || !isSubstantiveReflection(editText)}
+                  className="btn-primary px-4 py-2.5 text-sm disabled:opacity-40"
+                >
+                  {savingEdit ? (
+                    <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />{reflStrings.save}</span>
+                  ) : reflStrings.save}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Reflect with SOLAPATH — subtle, intentional activation */}
-          {!reflectionResponse && !reflecting && (
+          {!editingReflection && !reflectionResponse && !reflecting && (
             <button
               onClick={handleReflectWithSolapath}
               className="w-full premium-card p-4 flex items-center gap-3 text-left no-tap-highlight hover:border-gold-500/40 transition-all duration-300 group"
@@ -683,8 +769,22 @@ function localizeReference(ref: string, translation: string): string {
             </button>
           )}
 
+          {/* Edit reflection — available whenever a saved reflection is shown
+              and no SOLAPATH response is on screen, so the user can revise
+              before reflecting. Also reachable from the user-reflection card
+              when a response is present. */}
+          {!editingReflection && !reflectionResponse && !reflecting && (
+            <button
+              onClick={handleStartEditReflection}
+              className="mt-2 w-full flex items-center justify-center gap-1.5 text-ivory-500 hover:text-gold-300 transition-colors no-tap-highlight text-xs"
+            >
+              <Pencil size={12} />
+              {reflStrings.editReflection}
+            </button>
+          )}
+
           {/* Loading — quiet SOLAPATH treatment, no provider/model names */}
-          {reflecting && (
+          {!editingReflection && reflecting && (
             <div className="premium-card p-5 flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center shrink-0">
                 <Loader2 size={16} className="text-gold-300 animate-spin" />
@@ -694,7 +794,7 @@ function localizeReference(ref: string, translation: string): string {
           )}
 
           {/* Failure — user's saved reflection stays safe, retry available */}
-          {reflectionError && !reflecting && (
+          {!editingReflection && reflectionError && !reflecting && (
             <div className="premium-card p-5">
               <p className="text-ivory-400 text-sm leading-relaxed mb-3">{reflectionError}</p>
               <button onClick={handleRetryReflection} className="btn-secondary text-sm">
@@ -705,13 +805,22 @@ function localizeReference(ref: string, translation: string): string {
           )}
 
           {/* Response — user reflection + SOLAPATH reflection, visually distinguished */}
-          {reflectionResponse && !reflecting && (
+          {!editingReflection && reflectionResponse && !reflecting && (
             <div className="flex flex-col gap-4">
               {/* User reflection */}
               <div className="premium-card p-5">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-ivory-600 font-medium mb-2">
-                  {reflStrings.yourReflection}
-                </p>
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-ivory-600 font-medium">
+                    {reflStrings.yourReflection}
+                  </p>
+                  <button
+                    onClick={handleStartEditReflection}
+                    className="flex items-center gap-1 text-[11px] text-ivory-500 hover:text-gold-300 transition-colors no-tap-highlight"
+                  >
+                    <Pencil size={11} />
+                    {reflStrings.editReflection}
+                  </button>
+                </div>
                 <p className="text-ivory-200 text-sm leading-relaxed font-serif italic">
                   “{savedReflectionBody}”
                 </p>

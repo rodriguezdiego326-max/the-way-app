@@ -201,6 +201,46 @@ export async function saveUserReflection(walkId: string, reflection: string): Pr
   return created as WalkReflection | null;
 }
 
+// Replace the user's reflection body on the existing walk_reflection row.
+// Unlike saveUserReflection (which only fills an empty body), this always
+// overwrites body. When the body materially changes, the prior ai_response
+// becomes stale and is cleared so a fresh Reflect action can generate again.
+export async function replaceUserReflection(
+  walkId: string,
+  newBody: string,
+): Promise<WalkReflection | null> {
+  const trimmed = newBody.trim();
+  const { data: existing } = await supabase
+    .from('walk_reflections')
+    .select('id, body, ai_response')
+    .eq('walk_id', walkId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) {
+    const bodyChanged = (existing.body ?? '').trim() !== trimmed;
+    const patch: { body: string; ai_response?: null } = { body: trimmed };
+    if (bodyChanged) patch.ai_response = null;
+    const { data: updated, error } = await supabase
+      .from('walk_reflections')
+      .update(patch)
+      .eq('id', existing.id)
+      .select('*')
+      .maybeSingle();
+    if (error) throw error;
+    return updated as WalkReflection | null;
+  }
+
+  const { data: created, error } = await supabase
+    .from('walk_reflections')
+    .insert({ walk_id: walkId, body: trimmed, input_mode: 'text' })
+    .select('*')
+    .maybeSingle();
+  if (error) throw error;
+  return created as WalkReflection | null;
+}
+
 // Load the most recent walk_reflection for a given walk (with AI response if present).
 export async function loadWalkReflection(walkId: string): Promise<WalkReflection | null> {
   const { data, error } = await supabase
