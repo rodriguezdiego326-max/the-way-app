@@ -205,18 +205,38 @@ export async function saveUserReflection(walkId: string, reflection: string): Pr
 // Unlike saveUserReflection (which only fills an empty body), this always
 // overwrites body. When the body materially changes, the prior ai_response
 // becomes stale and is cleared so a fresh Reflect action can generate again.
+// Updates by the known reflection row id when provided, so a same-day
+// duplicate walk can't cause the update to miss the row the user is editing.
 export async function replaceUserReflection(
   walkId: string,
   newBody: string,
+  reflectionId?: string,
 ): Promise<WalkReflection | null> {
   const trimmed = newBody.trim();
-  const { data: existing } = await supabase
-    .from('walk_reflections')
-    .select('id, body, ai_response')
-    .eq('walk_id', walkId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+
+  let existing: { id: string; body: string | null; ai_response: unknown } | null = null;
+
+  if (reflectionId) {
+    const { data, error } = await supabase
+      .from('walk_reflections')
+      .select('id, body, ai_response')
+      .eq('id', reflectionId)
+      .maybeSingle();
+    if (error) throw error;
+    existing = data as { id: string; body: string | null; ai_response: unknown } | null;
+  }
+
+  if (!existing) {
+    const { data, error } = await supabase
+      .from('walk_reflections')
+      .select('id, body, ai_response')
+      .eq('walk_id', walkId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    existing = data as { id: string; body: string | null; ai_response: unknown } | null;
+  }
 
   if (existing) {
     const bodyChanged = (existing.body ?? '').trim() !== trimmed;

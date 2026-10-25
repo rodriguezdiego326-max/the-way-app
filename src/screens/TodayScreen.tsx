@@ -77,6 +77,11 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp, onConti
   const contextInteractionRef = useRef<HTMLDivElement>(null);
   const contextFocusedRef = useRef(false);
   const reflectionSectionRef = useRef<HTMLDivElement>(null);
+  // Stale-load guard: when an edit (or AI generation) just persisted a row,
+  // a later async loadExistingReflection for a *different* walk_id must not
+  // clobber the freshly saved savedReflection. We record the walk id of the
+  // most recent successful persistence and skip stale fetches that don't match.
+  const savedReflectionWalkIdRef = useRef<string | null>(null);
 
   const activeTranslation: BibleTranslation = typeof localStorage !== 'undefined' && localStorage.getItem('solapath_translation') === 'RV1909' ? 'RV1909' : 'WEB';
 
@@ -135,9 +140,14 @@ function localizeReference(ref: string, translation: string): string {
   useEffect(() => {
     if (todayWalk?.passage_reference) {
       loadScriptureText(todayWalk.passage_reference);
-      // Also load any existing reflection + AI response for this walk
+      // Reset the stale-load guard when we switch to a walk that isn't the one
+      // we just persisted, so normal hydration is allowed again.
+      if (savedReflectionWalkIdRef.current && savedReflectionWalkIdRef.current !== todayWalk.id) {
+        savedReflectionWalkIdRef.current = null;
+      }
       loadExistingReflection(todayWalk.id);
     } else {
+      savedReflectionWalkIdRef.current = null;
       setSavedReflection(null);
       setReflectionResponse(null);
       setReflectionError(null);
@@ -146,8 +156,19 @@ function localizeReference(ref: string, translation: string): string {
   }, [todayWalk?.id, todayWalk?.passage_reference, activeTranslation]);
 
   async function loadExistingReflection(walkId: string) {
+    // Skip stale fetches that would overwrite a row we just persisted for a
+    // different (e.g. duplicate same-day) walk. The guard is cleared once the
+    // fetch matches the most recent persisted walk id.
+    if (savedReflectionWalkIdRef.current && savedReflectionWalkIdRef.current !== walkId) {
+      return;
+    }
     try {
       const existing = await loadWalkReflection(walkId);
+      // A same-load concurrent fetch may still have started before the guard
+      // was set; re-check after the await to avoid clobbering a fresh save.
+      if (savedReflectionWalkIdRef.current && savedReflectionWalkIdRef.current !== walkId) {
+        return;
+      }
       setSavedReflection(existing);
       if (existing?.ai_response) {
         const structured = existing.ai_response.structured as StructuredTheologicalResponse | null;
@@ -367,7 +388,10 @@ function localizeReference(ref: string, translation: string): string {
 
       setReflectionResponse(result.response);
       setReflectionPromptUsed(result.reflectionPrompt);
-      if (persisted) setSavedReflection(persisted);
+      if (persisted) {
+        savedReflectionWalkIdRef.current = persisted.walk_id;
+        setSavedReflection(persisted);
+      }
 
       // Scroll the response into view after render
       requestAnimationFrame(() => {
@@ -415,25 +439,45 @@ function localizeReference(ref: string, translation: string): string {
     if (!todayWalk || !isSubstantiveReflection(editText)) return;
     vibrate(10);
     setSavingEdit(true);
+    setReflectionError(null);
     try {
-      const updated = await replaceUserReflection(todayWalk.id, editText);
-      if (updated) {
-        setSavedReflection(updated);
-        const hadAI = !!reflectionResponse;
-        // If body materially changed, replaceUserReflection cleared ai_response
-        // server-side; mirror that locally so the stale response is gone.
-        if (hadAI && !updated.ai_response) {
-          setReflectionResponse(null);
-          setReflectionPromptUsed(null);
-        }
-        requestAnimationFrame(() => {
-          reflectionSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
+      const updated = await replaceUserReflection(
+        todayWalk.id,
+        editText,
+        savedReflection?.id,
+      );
+      if (!updated) {
+        // No row updated and no error thrown — treat as a save failure so the
+        // user's edits aren't silently discarded and the old body isn't shown.
+        setReflectionError(
+          reflLang === 'es'
+            ? 'No se pudo guardar la reflexión. Inténtalo de nuevo.'
+            : 'Could not save the reflection. Please try again.',
+        );
+        return;
+      }
+      // Mark this walk id so the post-save load effect can't clobber the row
+      // we just persisted with a stale fetch (see loadExistingReflection).
+      savedReflectionWalkIdRef.current = updated.walk_id;
+      setSavedReflection(updated);
+      if (!updated.ai_response) {
+        setReflectionResponse(null);
+        setReflectionPromptUsed(null);
       }
       setEditingReflection(false);
       setEditText('');
-    } catch {
+      requestAnimationFrame(() => {
+        reflectionSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    } catch (err) {
       // Leave edit mode open so the user's edits aren't lost on a transient error.
+      setReflectionError(
+        err instanceof Error
+          ? err.message
+          : (reflLang === 'es'
+              ? 'No se pudo guardar la reflexión. Inténtalo de nuevo.'
+              : 'Could not save the reflection. Please try again.'),
+      );
     } finally {
       setSavingEdit(false);
     }
