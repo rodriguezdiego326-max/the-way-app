@@ -623,7 +623,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
   // ============================================================
 
   return (
-    <div className={`app-container bg-ink-950 bg-parchment min-h-screen ${chapterMarkingMode ? 'pb-72' : 'pb-28'}`}>
+    <div className={`app-container bg-ink-950 bg-parchment min-h-screen ${chapterMarkingMode ? 'pb-72' : 'nav-safe-padding'}`}>
       {/* HEADER */}
       <header className="px-6 pt-14 safe-top sticky top-0 z-20 bg-ink-950/95 backdrop-blur-md border-b border-ink-700/20">
         <div className="flex items-center justify-between">

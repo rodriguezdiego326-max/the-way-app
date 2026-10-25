@@ -359,7 +359,7 @@ function localizeReference(ref: string, translation: string): string {
   const availableTime = profile?.available_time_minutes ?? 7;
 
   return (
-    <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28">
+    <div className="app-container bg-ink-950 bg-parchment min-h-screen nav-safe-padding">
       <header className="relative z-10 flex items-start justify-between px-6 pt-10 safe-top">
         <div>
           <p className="font-serif text-xl italic text-ivory-200 animate-fade-in-down">{greeting}{name ? `, ${name}` : ''}</p>

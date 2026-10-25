@@ -535,7 +535,7 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
 
   // MAIN VIEW
   return (
-    <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28">
+    <div className="app-container bg-ink-950 bg-parchment min-h-screen nav-safe-padding">
       <header className="px-6 pt-14 safe-top">
         <div className="flex items-center justify-between">
           <div>

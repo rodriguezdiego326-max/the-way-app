@@ -136,6 +136,6 @@
     padding-top: env(safe-area-inset-top, 0px);
   }
   .nav-safe-padding {
-    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px) + 20px);
   }
 }

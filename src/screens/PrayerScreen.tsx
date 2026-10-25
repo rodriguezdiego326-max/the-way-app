@@ -186,7 +186,7 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
 
   // Main prayer list
   return (
-    <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28">
+    <div className="app-container bg-ink-950 bg-parchment min-h-screen nav-safe-padding">
       <header className="px-6 pt-14 safe-top">
         <p className="ui-label animate-fade-in-down">Prayer</p>
         <h1 className="font-serif text-4xl text-ivory-50 mt-2 tracking-tight">Pray</h1>
