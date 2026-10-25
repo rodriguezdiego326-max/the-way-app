@@ -45,7 +45,7 @@ export function pickDemoWalk(date = new Date()): DemoWalk {
   return demoWalks[dayOfYear % demoWalks.length];
 }
 
-export function walkToInsert(walk: DemoWalk): Omit<Walk, 'id' | 'created_at' | 'started_at' | 'finished_at'> {
+export function walkToInsert(walk: DemoWalk): Omit<Walk, 'id' | 'created_at' | 'started_at' | 'finished_at' | 'walk_date'> {
   return {
     passage_reference: walk.passage_reference,
     reading_objective: walk.reading_objective,

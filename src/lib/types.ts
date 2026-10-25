@@ -124,6 +124,7 @@ export interface Walk {
   started_at: string | null;
   finished_at: string | null;
   created_at: string;
+  walk_date: string | null;
 }
 
 export interface WalkReflectionAIResponse {

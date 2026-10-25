@@ -427,13 +427,14 @@ export async function recommendWalk(
   return pickByDate(mediumWalks, date);
 }
 
-export function walkToInsert(walk: WalkRecommendation): Omit<Walk, 'id' | 'created_at' | 'started_at' | 'finished_at'> {
+export function walkToInsert(walk: WalkRecommendation, walkDate: string): Omit<Walk, 'id' | 'created_at' | 'started_at' | 'finished_at'> {
   return {
     passage_reference: walk.passage_reference,
     reading_objective: walk.reading_objective,
     observation_prompt: walk.observation_prompt,
     estimated_minutes: walk.estimated_minutes,
     status: 'pending',
+    walk_date: walkDate,
   };
 }
 

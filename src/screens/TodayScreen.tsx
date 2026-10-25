@@ -213,21 +213,24 @@ function localizeReference(ref: string, translation: string): string {
     }
   }, [todayWalk?.passage_reference, activeTranslation]);
 
+  function localDateKey(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
   async function loadOrCreateTodayWalk() {
     setLoading(true);
     setWalkError(null);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const walkDate = localDateKey(new Date());
 
+    // Query by canonical walk_date — not created_at DESC.
     const { data: existing, error: existingErr } = await supabase
       .from('walks')
       .select('*')
-      .gte('created_at', today.toISOString())
-      .lt('created_at', tomorrow.toISOString())
-      .order('created_at', { ascending: false })
-      .limit(1);
+      .eq('walk_date', walkDate)
+      .maybeSingle();
 
     if (existingErr) {
       setWalkError('Something went wrong loading your walk. Please try again.');
@@ -235,8 +238,8 @@ function localizeReference(ref: string, translation: string): string {
       return;
     }
 
-    if (existing && existing.length > 0) {
-      setTodayWalk(existing[0] as Walk);
+    if (existing) {
+      setTodayWalk(existing as Walk);
       setLoading(false);
       return;
     }
@@ -250,13 +253,31 @@ function localizeReference(ref: string, translation: string): string {
     const rec = await recommendWalk(profile, (recentWalks as Walk[]) || [], new Date(), contextText || null, selectedMood);
     setWalkReason(rec.reason);
 
+    // Atomic insert: if a concurrent call already inserted for this day,
+    // the unique constraint fires and we re-read the canonical row.
     const { data: created, error: createErr } = await supabase
       .from('walks')
-      .insert(walkToInsert(rec))
+      .insert(walkToInsert(rec, walkDate))
       .select('*')
-      .single();
+      .maybeSingle();
 
     if (createErr) {
+ // Unique violation — a concurrent call won the race. Re-read.
+      if (createErr.code === '23505') {
+ const { data: retry, error: retryErr } = await supabase
+   .from('walks')
+   .select('*')
+   .eq('walk_date', walkDate)
+   .maybeSingle();
+ if (retryErr || !retry) {
+   setWalkError('Something went wrong loading your walk. Please try again.');
+   setLoading(false);
+   return;
+ }
+ setTodayWalk(retry as Walk);
+ setLoading(false);
+ return;
+      }
       setWalkError('We couldn\'t create your walk for today. Please try again.');
       setLoading(false);
       return;
@@ -303,12 +324,22 @@ function localizeReference(ref: string, translation: string): string {
         setTodayWalk(updated as Walk);
       }
     } else {
-      const { data: created } = await supabase
+      const walkDate = localDateKey(new Date());
+      const { data: existing } = await supabase
         .from('walks')
-        .insert(walkToInsert(rec))
         .select('*')
-        .single();
-      if (created) setTodayWalk(created as Walk);
+        .eq('walk_date', walkDate)
+        .maybeSingle();
+      if (existing) {
+        setTodayWalk(existing as Walk);
+      } else {
+        const { data: created } = await supabase
+          .from('walks')
+          .insert(walkToInsert(rec, walkDate))
+          .select('*')
+          .maybeSingle();
+        if (created) setTodayWalk(created as Walk);
+      }
     }
     setRegenerating(false);
   }
