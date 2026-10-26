@@ -181,11 +181,6 @@ export async function generateReflectionResponse(
   args: GenerateReflectionResponseArgs,
 ): Promise<GenerateReflectionResponseResult> {
   const { reflection, context, profile, theologicalDepth, translation } = args;
-  // The edge function checks response_language === 'Spanish' for its Spanish
-  // code paths, and buildUserContext passes the value through to the model
-  // with "Write the answer_summary ... in {response_language}". Sending 'es'
-  // produces "Write in es" (a code, not a language name) and fails the
-  // 'Spanish' check. Send the full language name instead.
   const responseLanguage = translation === 'RV1909' ? 'Spanish' : 'English';
   const reflectionPrompt = buildReflectionPrompt(reflection, context, translation);
 
@@ -195,34 +190,52 @@ export async function generateReflectionResponse(
     reflectionPrompt,
     profile,
     theologicalDepth,
-    [], // no prior conversation history — Today reflection is a single turn
+    [],
     `today-reflection-${context.passageReference}`,
     responseLanguage,
     studyMemoryEvidence,
   );
 
-  // Primary-passage validation: if the response centered a different passage
-  // while ignoring the assigned Today passage, retry once with a corrective
-  // prompt. Do not create an infinite retry loop.
-  if (!responseCentersAssignedPassage(response.answer_summary, context.passageReference)) {
-    const correctivePrompt = buildCorrectiveReflectionPrompt(
-      reflection,
-      context,
-      translation,
-      reflectionPrompt,
-      response.answer_summary,
+  // Combined validation: both passage grounding AND language must pass.
+  // A response is not accepted if only one passes.
+  const passageOk = responseCentersAssignedPassage(response.answer_summary, context.passageReference);
+  const spanishNeeded = responseLanguage === 'Spanish';
+  const spanishOk = !spanishNeeded || isPredominantlySpanish(response.answer_summary);
+
+  if (passageOk && spanishOk) {
+    return { response, reflectionPrompt };
+  }
+
+  // Build a corrective prompt that addresses whichever validation failed.
+  // A single retry — no infinite loop.
+  let correctivePrompt: string;
+  if (!passageOk && !spanishOk) {
+    // Both failed: use passage correction (which also re-asserts Spanish via
+    // the original prompt's Spanish instruction)
+    correctivePrompt = buildCorrectiveReflectionPrompt(
+      reflection, context, translation, reflectionPrompt, response.answer_summary,
     );
-    const correctiveMemoryEvidence = await retrieveStudyMemoryEvidence(correctivePrompt, profile);
-    response = await fetchIntelligenceResponse(
-      correctivePrompt,
-      profile,
-      theologicalDepth,
-      [],
-      `today-reflection-${context.passageReference}`,
-      responseLanguage,
-      correctiveMemoryEvidence,
+  } else if (!passageOk) {
+    correctivePrompt = buildCorrectiveReflectionPrompt(
+      reflection, context, translation, reflectionPrompt, response.answer_summary,
+    );
+  } else {
+    // Only Spanish failed
+    correctivePrompt = buildSpanishCorrectionPrompt(
+      reflection, context, reflectionPrompt, response.answer_summary,
     );
   }
+
+  const correctiveMemoryEvidence = await retrieveStudyMemoryEvidence(correctivePrompt, profile);
+  response = await fetchIntelligenceResponse(
+    correctivePrompt,
+    profile,
+    theologicalDepth,
+    [],
+    `today-reflection-${context.passageReference}`,
+    responseLanguage,
+    correctiveMemoryEvidence,
+  );
 
   return { response, reflectionPrompt };
 }
@@ -372,6 +385,78 @@ export async function updateUserReflectionById(
   }
 
   return verifiedRow;
+}
+
+// Check whether a Today Walk's passage is locked.
+// A walk's passage_reference becomes immutable once the user has meaningfully
+// interacted with it — either by writing a substantive reflection or by
+// receiving an AI response. This prevents mood/check-in/translation changes
+// from silently replacing the passage beneath existing user content.
+export async function isWalkPassageLocked(walkId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('walk_reflections')
+    .select('id, body, ai_response')
+    .eq('walk_id', walkId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return false;
+  const row = data as { body: string | null; ai_response: unknown };
+  if (isSubstantiveReflection(row.body)) return true;
+  if (row.ai_response !== null) return true;
+  return false;
+}
+
+// Validate that an answer_summary is predominantly Spanish.
+// Uses common Spanish function words and sentence markers. Does NOT reject
+// Bible book names, proper nouns, or short English source titles.
+function isPredominantlySpanish(text: string): boolean {
+  const lower = text.toLowerCase();
+  const spanishMarkers = [
+    ' que ', ' de ', ' en ', ' es ', ' por ', ' con ', ' para ', ' una ', ' un ',
+    ' el ', ' la ', ' los ', ' las ', ' se ', ' no ', ' sí ', ' cuando ',
+    ' porque ', ' como ', ' pero ', ' también ', ' esto ', ' esta ', ' estos ',
+    ' estas ', ' todo ', ' toda ', ' todos ', ' todas ', ' puedes ', ' puede ',
+    ' somos ', ' estamos ', ' estoy ', ' está ', ' están ', ' ha ', ' han ',
+    ' su ', ' sus ', ' nuestro ', ' nuestra ', ' nuestros ', ' nuestras ',
+    ' más ', ' muy ', ' entonces ', ' así ', ' cada ', ' sobre ', ' entre ',
+    ' desde ', ' hasta ', ' sin ', ' incluso ', ' siempre ', ' nunca ',
+    ' respuesta ', ' pasaje ', ' escritura ', ' dios ', ' señor ', ' jesús ',
+    ' cristo ', ' fe ', ' vida ', ' hoy ', ' palabra ',
+  ];
+  let spanishCount = 0;
+  for (const marker of spanishMarkers) {
+    if (lower.includes(marker)) spanishCount++;
+  }
+  // Common English function words that would indicate English prose
+  const englishMarkers = [
+    ' the ', ' you ', ' is ', ' are ', ' and ', ' but ', ' with ', ' for ',
+    ' that ', ' this ', ' have ', ' has ', ' will ', ' can ', ' not ',
+    ' your ', ' our ', ' their ', ' what ', ' when ', ' because ',
+  ];
+  let englishCount = 0;
+  for (const marker of englishMarkers) {
+    if (lower.includes(marker)) englishCount++;
+  }
+  // Substantive Spanish prose should trigger several markers
+  return spanishCount >= 4 && spanishCount > englishCount;
+}
+
+// Build a corrective prompt for Spanish language retry.
+// Preserves the assigned passage constraint.
+function buildSpanishCorrectionPrompt(
+  reflection: string,
+  ctx: ReflectionContext,
+  originalPrompt: string,
+  priorAnswer: string,
+): string {
+  const correction = `CORRECCIÓN DE IDIOMA: Tu respuesta anterior no estaba en español. Reescribe la respuesta completa en español latinoamericano natural. No traduzcas mecánicamente del inglés. Preserva el pasaje asignado: ${ctx.passageReference}. Mantén las citas bíblicas en RV1909. Devuelve la respuesta completa en español.`;
+  return [
+    correction,
+    `Respuesta anterior (idioma incorrecto): ${priorAnswer}`,
+    '',
+    originalPrompt,
+  ].join('\n\n');
 }
 
 // Load the most recent walk_reflection for a given walk (with AI response if present).

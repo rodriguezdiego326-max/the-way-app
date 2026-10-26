@@ -16,6 +16,7 @@ import {
   saveUserReflection,
   updateUserReflectionById,
   loadWalkReflection,
+  isWalkPassageLocked,
   type ReflectionContext,
 } from '@/lib/reflectionEngine';
 import type { StructuredTheologicalResponse } from '@/lib/intelligenceTypes';
@@ -169,6 +170,24 @@ function localizeReference(ref: string, translation: string): string {
       if (savedReflectionWalkIdRef.current && savedReflectionWalkIdRef.current !== walkId) {
         return;
       }
+      // Consistency check: if the persisted AI response was generated for a
+      // different passage than the walk's current passage, it is stale.
+      // Clear it from the database and don't render it.
+      if (existing?.ai_response && todayWalk) {
+        const storedPassage = existing.ai_response.passage_reference;
+        if (storedPassage && storedPassage !== todayWalk.passage_reference) {
+          try {
+            await supabase
+              .from('walk_reflections')
+              .update({ ai_response: null })
+              .eq('id', existing.id);
+          } catch { /* non-critical */ }
+          setSavedReflection({ ...existing, ai_response: null });
+          setReflectionResponse(null);
+          setReflectionPromptUsed(null);
+          return;
+        }
+      }
       setSavedReflection(existing);
       if (existing?.ai_response) {
         const structured = existing.ai_response.structured as StructuredTheologicalResponse | null;
@@ -292,6 +311,27 @@ function localizeReference(ref: string, translation: string): string {
   async function updateWalkRecommendation(mood: string, context: string) {
     setRegenerating(true);
 
+    // Passage lock: once the user has a substantive reflection or AI response
+    // on this walk, the passage is immutable. Mood/check-in/translation changes
+    // must NOT replace the passage beneath existing user content.
+    if (todayWalk) {
+      const locked = await isWalkPassageLocked(todayWalk.id);
+      if (locked) {
+        // Still update the recommendation reason for UI feedback, but do NOT
+        // overwrite passage_reference, reading_objective, observation_prompt,
+        // or estimated_minutes on the locked walk.
+        const { data: recentWalks } = await supabase
+          .from('walks')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(10);
+        const rec = await recommendWalk(profile, (recentWalks as Walk[]) || [], new Date(), context || null, mood);
+        setWalkReason(rec.reason);
+        setRegenerating(false);
+        return;
+      }
+    }
+
     const { data: recentWalks } = await supabase
       .from('walks')
       .select('*')
@@ -391,6 +431,36 @@ function localizeReference(ref: string, translation: string): string {
     setReflecting(true);
     setReflectionError(null);
     setReflectionResponse(null);
+
+    // Pre-generation consistency check: verify the saved reflection belongs
+    // to THIS walk and that any persisted AI response matches the current
+    // passage. If the AI response was generated for a different passage
+    // (e.g. due to a prior passage mutation), invalidate it.
+    if (savedReflection?.walk_id && savedReflection.walk_id !== todayWalk.id) {
+      setReflectionError(
+        reflLang === 'es'
+          ? 'La reflexión guardada no coincide con el walk de hoy. Recarga e inténtalo de nuevo.'
+          : 'The saved reflection does not match today\'s walk. Please reload and try again.',
+      );
+      setReflecting(false);
+      return;
+    }
+
+    if (savedReflection?.ai_response) {
+      const storedPassage = savedReflection.ai_response.passage_reference;
+      if (storedPassage && storedPassage !== todayWalk.passage_reference) {
+        // Stale AI response from a different passage — clear it.
+        try {
+          await supabase
+            .from('walk_reflections')
+            .update({ ai_response: null })
+            .eq('id', savedReflection.id);
+        } catch { /* non-critical — we just won't use the stale response */ }
+        setSavedReflection({ ...savedReflection, ai_response: null });
+        setReflectionResponse(null);
+        setReflectionPromptUsed(null);
+      }
+    }
 
     const ctx: ReflectionContext = {
       passageReference: todayWalk.passage_reference,
