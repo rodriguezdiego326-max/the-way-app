@@ -63,20 +63,21 @@ export function reflectionContainsQuestion(text: string): boolean {
 }
 
 // Build the prompt sent to the intelligence layer.
-// The passage is the first interpretive anchor; the user's reflection
+// The Today passage is the PRIMARY interpretive anchor — the response
+// must center it, not substitute another passage. The user's reflection
 // is treated honestly as journal content, not a generic Ask question.
 function buildReflectionPrompt(reflection: string, ctx: ReflectionContext, translation: BibleTranslation): string {
   const lang = translation === 'RV1909' ? 'es' : 'en';
   const passageHeader = lang === 'es'
-    ? `Pasaje de hoy: ${ctx.passageReference}`
-    : `Today's passage: ${ctx.passageReference}`;
+    ? `Pasaje asignado de hoy: ${ctx.passageReference}`
+    : `Today's assigned passage: ${ctx.passageReference}`;
   const anchor = lang === 'es'
-    ? 'Ancla tu respuesta primeramente en este pasaje. No comiences buscando escritura no relacionada.'
-    : 'Anchor your response first in this passage. Do not begin by searching unrelated Scripture.';
+    ? `Estás respondiendo dentro del Walk de Today, no en Ask general. El pasaje asignado de hoy es ${ctx.passageReference}. Tu respuesta DEBE interpretar y aplicar ese pasaje primero y tratarlo como el contexto bíblico principal. No sustituyas otro pasaje como respuesta principal. Puedes mencionar pasajes complementarios brevemente, pero ${ctx.passageReference} debe ser el centro de tu respuesta. No comiences buscando escritura no relacionada.`
+    : `You are responding inside Today's Walk, not general Ask. The assigned Today passage is ${ctx.passageReference}. Your response MUST interpret and apply that passage first and treat it as the primary biblical context. Do not substitute another passage as the main answer. You may mention complementary passages briefly, but ${ctx.passageReference} must be the center of your response. Do not begin by searching unrelated Scripture.`;
   const passageTextLabel = lang === 'es' ? 'Texto del pasaje' : 'Passage text';
   const reflectionLabel = lang === 'es' ? 'Lo que escribió el usuario' : 'What the user wrote';
   const instruction = lang === 'es'
-    ? 'Esto es una reflexión personal de Today, no una pregunta genérica de Ask. Responde con tono humano conversacional, sin sermón automático. Si hay una pregunta, respóndela directamente. Si es solo una reflexión, reconócela brevemente y conecta el pasaje con lo que escribió. No inventes escritura ni autentiques revelación privada.'
+    ? 'Esto es una reflexión personal de Today, no una pregunta genérica de Ask. Responde con tono humano conversacional, sin sermón automático. Si hay una pregunta, respóndela directamente. Si es solo una reflexión, reconócela brevemente y conecta el pasaje con lo que escribió. No inventes escritura ni autentiques revelación privada. Escribe en español latinoamericano natural y conversacional, no en prosa académica formal. Usa oraciones naturales, contracciones comunes del español hablado donde aplique, y un tono cálido sin lenguaje de manual.'
     : 'This is a personal reflection from Today, not a generic Ask question. Respond in a human conversational tone, without automatic sermonizing. If there is a question, answer it directly. If it is only a reflection, acknowledge it briefly and connect the passage to what they wrote. Do not invent Scripture or authenticate private revelation.';
 
   const parts: string[] = [
@@ -91,16 +92,106 @@ function buildReflectionPrompt(reflection: string, ctx: ReflectionContext, trans
   return parts.join('\n\n');
 }
 
+// Build a corrective prompt that re-asserts the assigned passage constraint
+// after a validation failure. Used for the single retry attempt.
+function buildCorrectiveReflectionPrompt(
+  reflection: string,
+  ctx: ReflectionContext,
+  translation: BibleTranslation,
+  originalPrompt: string,
+  priorAnswer: string,
+): string {
+  const lang = translation === 'RV1909' ? 'es' : 'en';
+  const correction = lang === 'es'
+    ? `CORRECCIÓN: Tu respuesta anterior centró un pasaje distinto a ${ctx.passageReference}. Debes volver a intentarlo. El pasaje asignado de hoy es ${ctx.passageReference}. Tu respuesta DEBE interpretar y aplicar ${ctx.passageReference} como el pasaje principal. No sustituyas otro pasaje. La respuesta del usuario está conectada a este pasaje específico — responde desde este pasaje.`
+    : `CORRECTION: Your previous response centered a passage other than ${ctx.passageReference}. You must try again. The assigned Today passage is ${ctx.passageReference}. Your response MUST interpret and apply ${ctx.passageReference} as the primary passage. Do not substitute another passage. The user's reflection is connected to this specific passage — respond from this passage.`;
+  const priorLabel = lang === 'es' ? 'Respuesta anterior (incorrecta)' : 'Previous response (incorrect)';
+  return [
+    correction,
+    `${priorLabel}: ${priorAnswer}`,
+    '',
+    originalPrompt,
+  ].join('\n\n');
+}
+
+// Check whether the generated response centers the assigned passage.
+// Returns false if the answer_summary prominently features a different
+// passage reference while ignoring the assigned one.
+function responseCentersAssignedPassage(
+  answerSummary: string,
+  assignedReference: string,
+): boolean {
+  const assignedNorm = normalizePassageRef(assignedReference);
+  if (!assignedNorm) return true; // cannot validate, allow through
+  const answerLower = answerSummary.toLowerCase();
+  const assignedLower = assignedNorm.toLowerCase();
+
+  // Does the answer mention the assigned passage?
+  const mentionsAssigned = answerLower.includes(assignedLower) ||
+    answerLower.includes(assignedReference.toLowerCase());
+
+  // Extract all passage-like references from the answer
+  const refPattern = /(?:1\s*|2\s*|3\s*)?(?:genesis|exodus|leviticus|numbers|deuteronomy|joshua|judges|ruth|1\s*samuel|2\s*samuel|1\s*kings|2\s*kings|1\s*chronicles|2\s*chronicles|ezra|nehemiah|esther|job|psalm|psalms|proverbs|ecclesiastes|song\s*of\s*songs|isaiah|jeremiah|lamentations|ezekiel|daniel|hosea|joel|amos|obadiah|jonah|micah|nahum|habakkuk|zephaniah|haggai|zechariah|malachi|matthew|mark|luke|john|acts|romans|1\s*corinthians|2\s*corinthians|galatians|ephesians|philippians|colossians|1\s*thessalonians|2\s*thessalonians|1\s*timothy|2\s*timothy|titus|philemon|hebrews|james|1\s*peter|2\s*peter|1\s*john|2\s*john|3\s*john|jude|revelation|génesis|éxodo|levítico|números|deuteronomio|josué|jueces|rut|samuel|reyes|crónicas|esdras|nehemías|ester|salmos|proverbios|eclesiastés|cantares|isaías|jeremías|lamentaciones|ezequiel|daniel|oseas|abdías|jonás|miqueas|sofonías|hageo|zacarías|malaquías|mateo|marcos|lucas|juan|hechos|romanos|corintios|gálatas|efesios|filipenses|colosenses|tesalonicenses|timoteo|tito|filemón|hebreos|santiago|pedro|apocalipsis)\s+\d+:\d+(?:-\d+)?/gi;
+  const foundRefs = answerLower.match(refPattern) || [];
+
+  // Normalize found refs for comparison
+  const otherRefs = foundRefs
+    .map((r) => r.replace(/\s+/g, ' ').trim())
+    .filter((r) => !r.includes(assignedLower) && !r.includes(assignedReference.toLowerCase()));
+
+  // If the answer doesn't mention the assigned passage AND mentions other passages, it's not grounded
+  if (!mentionsAssigned && otherRefs.length > 0) {
+    return false;
+  }
+
+  return true;
+}
+
+// Normalize a passage reference for comparison (handles English/Spanish book names)
+function normalizePassageRef(ref: string): string | null {
+  const match = ref.trim().match(/^(.+?)\s+(\d+):(\d+)(?:-(\d+))?$/);
+  if (!match) return null;
+  const lower = match[1].toLowerCase().trim();
+  const SPANISH_TO_ENG: Record<string, string> = {
+    'mateo': 'matthew', 'marcos': 'mark', 'lucas': 'luke', 'juan': 'john',
+    'hechos': 'acts', 'romanos': 'romans', 'corintios': 'corinthians',
+    'gálatas': 'galatians', 'galatas': 'galatians', 'efesios': 'ephesians',
+    'filipenses': 'philippians', 'colosenses': 'colossians',
+    'tesalonicenses': 'thessalonians', 'timoteo': 'timothy', 'filemón': 'philemon',
+    'filemon': 'philemon', 'hebreos': 'hebrews', 'santiago': 'james',
+    'pedro': 'peter', 'apocalipsis': 'revelation', 'salmos': 'psalm',
+    'proverbios': 'proverbs', 'salmo': 'psalm', 'génesis': 'genesis',
+    'éxodo': 'exodus', 'levítico': 'leviticus', 'números': 'numbers',
+    'deuteronomio': 'deuteronomy', 'josué': 'joshua', 'jueces': 'judges',
+    'rut': 'ruth', 'reyes': 'kings', 'crónicas': 'chronicles',
+    'esdras': 'ezra', 'nehemías': 'nehemiah', 'ester': 'esther',
+    'isaías': 'isaiah', 'jeremías': 'jeremiah', 'ezequiel': 'ezekiel',
+    'daniel': 'daniel', 'oseas': 'hosea', 'joel': 'joel', 'amos': 'amos',
+    'abdías': 'obadiah', 'jonás': 'jonah', 'miqueas': 'micah',
+    'nahum': 'nahum', 'habacuc': 'habakkuk', 'sofonías': 'zephaniah',
+    'hageo': 'haggai', 'zacarías': 'zechariah', 'malaquías': 'malachi',
+    'cantares': 'song of solomon', 'eclesiastés': 'ecclesiastes',
+  };
+  const canonicalBook = SPANISH_TO_ENG[lower] || lower;
+  const versePart = match[4] ? `${match[2]}:${match[3]}-${match[4]}` : `${match[2]}:${match[3]}`;
+  return `${canonicalBook} ${versePart}`;
+}
+
 export async function generateReflectionResponse(
   args: GenerateReflectionResponseArgs,
 ): Promise<GenerateReflectionResponseResult> {
   const { reflection, context, profile, theologicalDepth, translation } = args;
-  const responseLanguage = translation === 'RV1909' ? 'es' : 'en';
+  // The edge function checks response_language === 'Spanish' for its Spanish
+  // code paths, and buildUserContext passes the value through to the model
+  // with "Write the answer_summary ... in {response_language}". Sending 'es'
+  // produces "Write in es" (a code, not a language name) and fails the
+  // 'Spanish' check. Send the full language name instead.
+  const responseLanguage = translation === 'RV1909' ? 'Spanish' : 'English';
   const reflectionPrompt = buildReflectionPrompt(reflection, context, translation);
 
   const studyMemoryEvidence = await retrieveStudyMemoryEvidence(reflectionPrompt, profile);
 
-  const response = await fetchIntelligenceResponse(
+  let response = await fetchIntelligenceResponse(
     reflectionPrompt,
     profile,
     theologicalDepth,
@@ -109,6 +200,29 @@ export async function generateReflectionResponse(
     responseLanguage,
     studyMemoryEvidence,
   );
+
+  // Primary-passage validation: if the response centered a different passage
+  // while ignoring the assigned Today passage, retry once with a corrective
+  // prompt. Do not create an infinite retry loop.
+  if (!responseCentersAssignedPassage(response.answer_summary, context.passageReference)) {
+    const correctivePrompt = buildCorrectiveReflectionPrompt(
+      reflection,
+      context,
+      translation,
+      reflectionPrompt,
+      response.answer_summary,
+    );
+    const correctiveMemoryEvidence = await retrieveStudyMemoryEvidence(correctivePrompt, profile);
+    response = await fetchIntelligenceResponse(
+      correctivePrompt,
+      profile,
+      theologicalDepth,
+      [],
+      `today-reflection-${context.passageReference}`,
+      responseLanguage,
+      correctiveMemoryEvidence,
+    );
+  }
 
   return { response, reflectionPrompt };
 }
