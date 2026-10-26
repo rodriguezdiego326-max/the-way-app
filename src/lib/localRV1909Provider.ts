@@ -57,7 +57,13 @@ export const localRV1909Provider: BibleProvider = {
     const data = await loadBook(book);
     const ch = data.chapters.find((c) => c.chapter === chapter);
     if (!ch) throw new Error(`Chapter ${chapter} not found in ${book} (RV1909)`);
-    return { book, chapter, translation: 'RV1909' as BibleTranslation, verses: ch.verses };
+    // Strip trailing source metadata (e.g. "Romanos < 8 > Public Domain")
+    // that appears appended to the last verse of each chapter in the dataset.
+    const verses = ch.verses.map((v) => ({
+      ...v,
+      text: v.text.replace(/\s+[A-Za-zÁ-ú]+\s*<\s*\d+\s*>\s*Public Domain\s*$/i, '').trimEnd(),
+    }));
+    return { book, chapter, translation: 'RV1909' as BibleTranslation, verses };
   },
 
   async getVerses(translation: BibleTranslation, book: string, chapter: number, verseStart: number, verseEnd: number): Promise<BibleVerse[]> {

@@ -210,7 +210,9 @@ function localizeReference(ref: string, translation: string): string {
       const chapter = parseInt(verseParts[2]);
       const verseStart = parseInt(verseParts[3]);
       const verseEnd = verseParts[4] ? parseInt(verseParts[4]) : verseStart;
-      fetchVerses(book, chapter, verseStart, verseEnd, activeTranslation)
+      // Hero excerpt: show only the first 1-2 verses, not the full range.
+      const heroEnd = Math.min(verseStart + 1, verseEnd);
+      fetchVerses(book, chapter, verseStart, heroEnd, activeTranslation)
         .then(({ verses }) => setHeroVerse(verses.map((v) => v.text).join(' ') || null))
         .catch(() => setHeroVerse(null))
         .finally(() => setHeroLoading(false));
