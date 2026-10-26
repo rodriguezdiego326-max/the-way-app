@@ -14,7 +14,7 @@ import {
   generateReflectionResponse,
   saveReflectionAndResponse,
   saveUserReflection,
-  replaceUserReflection,
+  updateUserReflectionById,
   loadWalkReflection,
   type ReflectionContext,
 } from '@/lib/reflectionEngine';
@@ -468,30 +468,24 @@ function localizeReference(ref: string, translation: string): string {
 
   async function handleSaveEditedReflection() {
     if (!todayWalk || !isSubstantiveReflection(editText)) return;
+    const reflectionId = savedReflection?.id;
+    if (!reflectionId) {
+      setReflectionError(
+        reflLang === 'es'
+          ? 'No se encontró la reflexión guardada. Recarga e inténtalo de nuevo.'
+          : 'Could not find the saved reflection. Please reload and try again.',
+      );
+      return;
+    }
     vibrate(10);
     setSavingEdit(true);
     setReflectionError(null);
     try {
-      const updated = await replaceUserReflection(
-        todayWalk.id,
-        editText,
-        savedReflection?.id,
-      );
-      if (!updated) {
-        // No row updated and no error thrown — treat as a save failure so the
-        // user's edits aren't silently discarded and the old body isn't shown.
-        setReflectionError(
-          reflLang === 'es'
-            ? 'No se pudo guardar la reflexión. Inténtalo de nuevo.'
-            : 'Could not save the reflection. Please try again.',
-        );
-        return;
-      }
-      // Mark this walk id so the post-save load effect can't clobber the row
-      // we just persisted with a stale fetch (see loadExistingReflection).
-      savedReflectionWalkIdRef.current = updated.walk_id;
-      setSavedReflection(updated);
-      if (!updated.ai_response) {
+      const verified = await updateUserReflectionById(reflectionId, editText);
+      // Only update UI state after read-back verification succeeds.
+      savedReflectionWalkIdRef.current = verified.walk_id;
+      setSavedReflection(verified);
+      if (!verified.ai_response) {
         setReflectionResponse(null);
         setReflectionPromptUsed(null);
       }
@@ -501,7 +495,7 @@ function localizeReference(ref: string, translation: string): string {
         reflectionSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     } catch (err) {
-      // Leave edit mode open so the user's edits aren't lost on a transient error.
+      // Fail-closed: keep edit mode open, preserve editText and old AI state.
       setReflectionError(
         err instanceof Error
           ? err.message
@@ -802,6 +796,7 @@ function localizeReference(ref: string, translation: string): string {
               />
               <div className="flex items-center gap-3 mt-3">
                 <button
+                  type="button"
                   onClick={handleCancelEdit}
                   disabled={savingEdit}
                   className="btn-secondary px-4 py-2.5 text-sm disabled:opacity-40"
@@ -811,6 +806,7 @@ function localizeReference(ref: string, translation: string): string {
                 </button>
                 <div className="flex-1" />
                 <button
+                  type="button"
                   onClick={handleSaveEditedReflection}
                   disabled={savingEdit || !isSubstantiveReflection(editText)}
                   className="btn-primary px-4 py-2.5 text-sm disabled:opacity-40"

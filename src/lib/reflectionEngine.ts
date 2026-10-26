@@ -201,64 +201,63 @@ export async function saveUserReflection(walkId: string, reflection: string): Pr
   return created as WalkReflection | null;
 }
 
-// Replace the user's reflection body on the existing walk_reflection row.
-// Unlike saveUserReflection (which only fills an empty body), this always
-// overwrites body. When the body materially changes, the prior ai_response
-// becomes stale and is cleared so a fresh Reflect action can generate again.
-// Updates by the known reflection row id when provided, so a same-day
-// duplicate walk can't cause the update to miss the row the user is editing.
-export async function replaceUserReflection(
-  walkId: string,
+// Strict update-by-id: updates exactly one reflection row by its known id.
+// No walk_id fallback, no insert fallback. Performs a read-back SELECT after
+// the UPDATE and verifies the persisted body matches the requested body.
+// When body materially changes, also verifies ai_response was cleared to null.
+// Throws on any mismatch so the caller can keep edit mode open and surface
+// an error instead of showing a false success state.
+export async function updateUserReflectionById(
+  reflectionId: string,
   newBody: string,
-  reflectionId?: string,
-): Promise<WalkReflection | null> {
+): Promise<WalkReflection> {
   const trimmed = newBody.trim();
 
-  let existing: { id: string; body: string | null; ai_response: unknown } | null = null;
-
-  if (reflectionId) {
-    const { data, error } = await supabase
-      .from('walk_reflections')
-      .select('id, body, ai_response')
-      .eq('id', reflectionId)
-      .maybeSingle();
-    if (error) throw error;
-    existing = data as { id: string; body: string | null; ai_response: unknown } | null;
-  }
-
-  if (!existing) {
-    const { data, error } = await supabase
-      .from('walk_reflections')
-      .select('id, body, ai_response')
-      .eq('walk_id', walkId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (error) throw error;
-    existing = data as { id: string; body: string | null; ai_response: unknown } | null;
-  }
-
-  if (existing) {
-    const bodyChanged = (existing.body ?? '').trim() !== trimmed;
-    const patch: { body: string; ai_response?: null } = { body: trimmed };
-    if (bodyChanged) patch.ai_response = null;
-    const { data: updated, error } = await supabase
-      .from('walk_reflections')
-      .update(patch)
-      .eq('id', existing.id)
-      .select('*')
-      .maybeSingle();
-    if (error) throw error;
-    return updated as WalkReflection | null;
-  }
-
-  const { data: created, error } = await supabase
+  const { data: existing, error: selectErr } = await supabase
     .from('walk_reflections')
-    .insert({ walk_id: walkId, body: trimmed, input_mode: 'text' })
-    .select('*')
+    .select('id, body, ai_response')
+    .eq('id', reflectionId)
     .maybeSingle();
-  if (error) throw error;
-  return created as WalkReflection | null;
+  if (selectErr) throw selectErr;
+  if (!existing) {
+    throw new Error('Reflection row not found. Please reload and try again.');
+  }
+
+  const existingRow = existing as { id: string; body: string | null; ai_response: unknown };
+  const bodyChanged = (existingRow.body ?? '').trim() !== trimmed;
+
+  const patch: { body: string; ai_response?: null } = { body: trimmed };
+  if (bodyChanged) patch.ai_response = null;
+
+  const { error: updateErr } = await supabase
+    .from('walk_reflections')
+    .update(patch)
+    .eq('id', reflectionId);
+  if (updateErr) throw updateErr;
+
+  // Read-back verification: fresh SELECT by id to confirm the database
+  // actually persisted the new body (and cleared ai_response if changed).
+  const { data: verified, error: readbackErr } = await supabase
+    .from('walk_reflections')
+    .select('*')
+    .eq('id', reflectionId)
+    .maybeSingle();
+  if (readbackErr) throw readbackErr;
+  if (!verified) {
+    throw new Error('Reflection could not be verified after save. Please try again.');
+  }
+
+  const verifiedRow = verified as WalkReflection;
+
+  if (verifiedRow.body?.trim() !== trimmed) {
+    throw new Error('Saved reflection did not match. Please try again.');
+  }
+
+  if (bodyChanged && verifiedRow.ai_response !== null) {
+    throw new Error('Previous response could not be cleared. Please try again.');
+  }
+
+  return verifiedRow;
 }
 
 // Load the most recent walk_reflection for a given walk (with AI response if present).
