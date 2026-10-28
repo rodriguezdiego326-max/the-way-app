@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Sparkles, BookOpen, Clock, ChevronRight, Info, Lock, Loader2, ArrowRight, RotateCw, Quote, Pencil, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { recommendWalk, walkToInsert } from '@/lib/walkEngine';
@@ -54,8 +54,10 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp, onConti
   const [walkReason, setWalkReason] = useState<string | null>(null);
   const [scriptureText, setScriptureText] = useState<string | null>(null);
   const [scriptureLoading, setScriptureLoading] = useState(false);
-  const [heroVerse, setHeroVerse] = useState<string | null>(null);
+  const [heroVerses, setHeroVerses] = useState<string[] | null>(null);
+  const [heroShowsTwo, setHeroShowsTwo] = useState(true);
   const [heroLoading, setHeroLoading] = useState(false);
+  const heroScriptureRef = useRef<HTMLDivElement>(null);
   const [contextText, setContextText] = useState('');
   const [rememberContext, setRememberContext] = useState(false);
   const [contextSaved, setContextSaved] = useState(false);
@@ -199,10 +201,17 @@ function localizeReference(ref: string, translation: string): string {
     } catch { /* non-critical */ }
   }
 
+  useLayoutEffect(() => {
+    const el = heroScriptureRef.current;
+    if (!el || !heroVerses || heroVerses.length < 2 || !heroShowsTwo) return;
+    if (el.scrollHeight - el.clientHeight > 1) setHeroShowsTwo(false);
+  }, [heroVerses, heroShowsTwo]);
+
   useEffect(() => {
     if (!todayWalk?.passage_reference) return;
     setHeroLoading(true);
-    setHeroVerse(null);
+    setHeroVerses(null);
+    setHeroShowsTwo(true);
     const ref = todayWalk.passage_reference;
     const verseParts = ref.match(/^(.+?)\s+(\d+):(\d+)(?:[\u2013-](\d+))?/);
     if (verseParts) {
@@ -210,11 +219,13 @@ function localizeReference(ref: string, translation: string): string {
       const chapter = parseInt(verseParts[2]);
       const verseStart = parseInt(verseParts[3]);
       const verseEnd = verseParts[4] ? parseInt(verseParts[4]) : verseStart;
-      // Hero excerpt: show only the first 1-2 verses, not the full range.
       const heroEnd = Math.min(verseStart + 1, verseEnd);
       fetchVerses(book, chapter, verseStart, heroEnd, activeTranslation)
-        .then(({ verses }) => setHeroVerse(verses.map((v) => v.text).join(' ') || null))
-        .catch(() => setHeroVerse(null))
+        .then(({ verses }) => {
+          const texts = verses.slice(0, 2).map((v) => v.text).filter(Boolean);
+          setHeroVerses(texts.length ? texts : null);
+        })
+        .catch(() => setHeroVerses(null))
         .finally(() => setHeroLoading(false));
     } else {
       const chapterParts = ref.match(/^(.+?)\s+(\d+)$/);
@@ -223,10 +234,10 @@ function localizeReference(ref: string, translation: string): string {
         const chapter = parseInt(chapterParts[2]);
         fetchChapter(book, chapter, activeTranslation)
           .then((chap) => {
-            const excerpt = chap.verses.slice(0, 2).map((v) => v.text).join(' ');
-            setHeroVerse(excerpt || null);
+            const texts = chap.verses.slice(0, 2).map((v) => v.text).filter(Boolean);
+            setHeroVerses(texts.length ? texts : null);
           })
-          .catch(() => setHeroVerse(null))
+          .catch(() => setHeroVerses(null))
           .finally(() => setHeroLoading(false));
       } else {
         setHeroLoading(false);
@@ -701,30 +712,27 @@ function localizeReference(ref: string, translation: string): string {
         </div>
       </header>
 
-      <section className="relative -mt-20 min-h-[430px] overflow-hidden pt-52 animate-fade-in-up">
+      <section className="relative -mt-20 h-[440px] overflow-hidden animate-fade-in-up">
         <img
           src="/assets/solapath-scenic-emblem.png"
           alt=""
           aria-hidden="true"
-          className="absolute inset-x-0 bottom-0 h-[330px] w-full object-cover object-center"
+          className="absolute inset-0 h-full w-full object-cover object-center"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-ink-950/30 via-ink-950/15 to-ink-950/40" />
-        <div className="absolute inset-x-0 bottom-0 h-[240px] bg-gradient-to-t from-ink-950/95 via-ink-950/55 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 h-[260px] bg-gradient-to-br from-ink-950/50 via-ink-950/30 to-ink-950/60" />
-        <div className="relative z-10 px-6 pt-3">
-          {heroLoading ? (
-            <p className="max-w-[275px] font-serif text-xl leading-[1.35] text-ivory-300 italic">
-              Loading Scripture…
-            </p>
-          ) : heroVerse ? (
-            <blockquote className="max-w-[275px] font-serif text-[1.35rem] leading-[1.4] text-ivory-50 font-medium italic drop-shadow-[0_1px_3px_rgba(31,27,22,0.5)]">
-              “{heroVerse}”
-            </blockquote>
-          ) : (
-            <p className="max-w-[275px] font-serif text-xl leading-[1.35] text-ivory-300 italic">
-              Loading Scripture…
-            </p>
-          )}
+        <div className="absolute inset-x-0 bottom-0 h-[260px] bg-gradient-to-t from-ink-950/95 via-ink-950/55 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 flex flex-col px-6 pb-6">
+          <div ref={heroScriptureRef} className="max-h-[200px] overflow-hidden">
+            {heroLoading || !heroVerses ? (
+              <p className="max-w-[300px] font-serif text-lg leading-[1.45] text-ivory-300 italic">
+                Loading Scripture…
+              </p>
+            ) : (
+              <blockquote className="font-serif text-[1.15rem] leading-[1.45] text-ivory-50 font-medium italic drop-shadow-[0_1px_3px_rgba(31,27,22,0.5)]">
+                “{(heroShowsTwo ? heroVerses : heroVerses.slice(0, 1)).join(' ')}”
+              </blockquote>
+            )}
+          </div>
           {todayWalk?.passage_reference && (
             <p className="mt-3 font-serif text-[0.95rem] not-italic text-gold-300 tracking-wide font-medium drop-shadow-[0_1px_2px_rgba(31,27,22,0.4)]">
               {localizeReference(todayWalk.passage_reference, activeTranslation)}
@@ -733,7 +741,7 @@ function localizeReference(ref: string, translation: string): string {
         </div>
       </section>
 
-      <section className="relative z-20 -mt-14 px-5 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+      <section className="relative z-20 mt-8 px-5 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
         <div className="flex items-center gap-2 mb-3 px-1">
           <BookOpen size={15} className="text-gold-500" />
           <p className="text-xs uppercase tracking-[0.18em] text-ivory-400 font-medium">Today's Reading</p>
