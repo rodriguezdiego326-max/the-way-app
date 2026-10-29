@@ -695,7 +695,7 @@ function localizeReference(ref: string, translation: string): string {
 
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen nav-safe-padding">
-      <header className="relative z-10 flex items-start justify-between px-6 pt-10 safe-top">
+      <header className="relative z-10 flex items-start justify-between px-6 pt-10 pb-6 safe-top">
         <div>
           <p className="font-serif text-xl italic text-ivory-200 animate-fade-in-down">{greeting}{name ? `, ${name}` : ''}</p>
           <h1 className="mt-2 max-w-[260px] font-serif text-5xl font-medium leading-[0.92] tracking-tight text-ivory-50 animate-fade-in-up">
@@ -707,7 +707,7 @@ function localizeReference(ref: string, translation: string): string {
         </div>
       </header>
 
-      <section className="relative -mt-20 h-[440px] overflow-hidden animate-fade-in-up">
+      <section className="relative h-[440px] overflow-hidden animate-fade-in-up">
         <img
           src="/assets/solapath-scenic-hero.png"
           alt=""
