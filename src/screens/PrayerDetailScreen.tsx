@@ -1,15 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, BookOpen, Calendar, Plus, Clock, Check, Heart, ChevronRight } from 'lucide-react';
+import { X, BookOpen, Calendar, Plus, Clock, Check, Heart, ChevronRight, Pencil } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { vibrate, formatRelative, formatDate } from '@/lib/utils';
 import { createLegacyEvent } from '@/lib/legacyEngine';
+import { getPrayerCopy, getPrayerLang } from '@/lib/prayerCopy';
+import PrayerEditor from '@/components/PrayerEditor';
 import type { Prayer, PrayerStatus, PrayerUpdate, Profile } from '@/lib/types';
 
-const statusConfig: Record<PrayerStatus, { label: string; color: string; bg: string; border: string }> = {
-  praying: { label: 'Praying', color: 'text-gold-300', bg: 'bg-gold-500/10', border: 'border-gold-500/30' },
-  waiting: { label: 'Waiting', color: 'text-ivory-300', bg: 'bg-ink-700/50', border: 'border-ink-600/40' },
-  answered: { label: 'Answered', color: 'text-sage-400', bg: 'bg-sage-500/10', border: 'border-sage-500/30' },
-  closed: { label: 'Closed · Continuing to Trust', color: 'text-ivory-500', bg: 'bg-ink-800/40', border: 'border-ink-700/40' },
+const statusConfig: Record<PrayerStatus, { color: string; bg: string; border: string }> = {
+  praying: { color: 'text-gold-300', bg: 'bg-gold-500/10', border: 'border-gold-500/30' },
+  waiting: { color: 'text-ivory-300', bg: 'bg-ink-700/50', border: 'border-ink-600/40' },
+  answered: { color: 'text-sage-400', bg: 'bg-sage-500/10', border: 'border-sage-500/30' },
+  closed: { color: 'text-ivory-500', bg: 'bg-ink-800/40', border: 'border-ink-700/40' },
 };
 
 type UpdateType = 'update' | 'reflection';
@@ -34,7 +36,9 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
   const [editorText, setEditorText] = useState('');
   const [viewportHeight, setViewportHeight] = useState(typeof window !== 'undefined' ? window.innerHeight : 800);
   const [saving, setSaving] = useState(false);
+  const [showPrayerEditor, setShowPrayerEditor] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const copy = getPrayerCopy(getPrayerLang());
 
   const loadUpdates = useCallback(async () => {
     setLoading(true);
@@ -110,7 +114,7 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
     const userId = prayer.user_id || profile?.id || '';
     if (!userId) {
       setSaving(false);
-      setEditorError('Could not identify user. Please try again.');
+      setEditorError(copy.identifyError);
       return;
     }
 
@@ -125,7 +129,7 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
       setSaving(false);
 
       if (updateError || !data) {
-        setEditorError('Could not save. Please try again.');
+        setEditorError(copy.saveError);
         return;
       }
 
@@ -145,7 +149,7 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
       setSaving(false);
 
       if (insertError || !data) {
-        setEditorError('Could not save. Please try again.');
+        setEditorError(copy.saveError);
         return;
       }
 
@@ -179,6 +183,7 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
   }
 
   const cfg = statusConfig[prayer.status];
+  const cfgLabel = copy.status[prayer.status];
   const reflectionUpdates = updates.filter((u) => (u.update_type || 'update') === 'reflection');
   const reflection = reflectionUpdates.length > 0 ? reflectionUpdates[reflectionUpdates.length - 1] : undefined;
   const otherUpdates = updates.filter((u) => (u.update_type || 'update') !== 'reflection');
@@ -195,7 +200,7 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
           <button onClick={onClose} className="btn-ghost">
             <X size={20} />
           </button>
-          <p className="ui-label">Prayer</p>
+          <p className="ui-label">{copy.prayerLabel}</p>
           <span className="w-10" />
         </header>
 
@@ -204,7 +209,7 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
           <div className="animate-fade-in-up">
             {/* Status badge */}
             <span className={`inline-block px-3 py-1.5 rounded-full ${cfg.bg} ${cfg.border} border ${cfg.color} text-xs font-medium mb-4`}>
-              {cfg.label}
+              {cfgLabel}
             </span>
 
             {/* Title */}
@@ -226,15 +231,20 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
             )}
 
             {/* Date started */}
-            <div className="flex items-center gap-2 text-ivory-600 text-xs mb-6">
-              <Calendar size={12} />
-              <span>Started {formatDate(prayer.started_at)}</span>
+            <div className="flex items-center justify-between gap-2 text-ivory-600 text-xs mb-6">
+              <div className="flex items-center gap-2">
+                <Calendar size={12} />
+                <span>{copy.started(formatDate(prayer.started_at))}</span>
+              </div>
+              <button onClick={() => { vibrate(6); setShowPrayerEditor(true); }} className="btn-ghost text-xs text-gold-300 flex items-center gap-1.5">
+                <Pencil size={12} /> {copy.editPrayer}
+              </button>
             </div>
 
             <div className="gold-divider mb-6" />
 
             {/* Update Status */}
-            <p className="ui-label mb-3">Update Status</p>
+            <p className="ui-label mb-3">{copy.updateStatus}</p>
             <div className="flex flex-wrap gap-2 mb-6">
               {(Object.keys(statusConfig) as PrayerStatus[]).map((s) => {
                 const sc = statusConfig[s];
@@ -249,7 +259,7 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
                         : 'bg-ink-800/40 border-ink-700/40 text-ivory-500'
                     }`}
                   >
-                    {sc.label}
+                    {copy.status[s]}
                   </button>
                 );
               })}
@@ -258,12 +268,12 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
             <div className="gold-divider mb-6" />
 
             {/* How is God at work — display mode */}
-            <p className="ui-label mb-3">How is God at work in this?</p>
+            <p className="ui-label mb-3">{copy.godAtWork}</p>
             {reflection ? (
               <div className="premium-card p-4 mb-3">
                 <div className="flex items-center gap-2 mb-2">
                   <Heart size={12} className="text-gold-400/70" />
-                  <span className="text-[10px] uppercase tracking-wider font-medium text-gold-400/70">Reflection</span>
+                  <span className="text-[10px] uppercase tracking-wider font-medium text-gold-400/70">{copy.reflection}</span>
                   <span className="text-ivory-600 text-xs ml-auto">{formatDate(reflection.created_at)}</span>
                 </div>
                 <p className="text-ivory-300 text-sm leading-relaxed">{reflection.body}</p>
@@ -271,14 +281,14 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
                   onClick={() => { vibrate(6); openEditExisting(reflection); }}
                   className="btn-ghost text-xs mt-3"
                 >
-                  Edit Reflection
+                  {copy.editReflection}
                 </button>
               </div>
             ) : (
               <div className="mb-3">
-                <p className="text-ivory-600 text-sm italic mb-2">No reflection added yet.</p>
+                <p className="text-ivory-600 text-sm italic mb-2">{copy.noReflection}</p>
                 <button onClick={() => { vibrate(6); openEditor('reflection'); }} className="btn-secondary text-sm">
-                  <Plus size={15} /> Add Reflection
+                  <Plus size={15} /> {copy.addReflection}
                 </button>
               </div>
             )}
@@ -287,9 +297,9 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
 
             {/* Updates */}
             <div className="flex items-center justify-between mb-3">
-              <p className="ui-label">Updates</p>
+              <p className="ui-label">{copy.updatesHeading}</p>
               {otherUpdates.length > 0 && (
-                <span className="text-ivory-600 text-xs">{otherUpdates.length} {otherUpdates.length === 1 ? 'entry' : 'entries'}</span>
+                <span className="text-ivory-600 text-xs">{copy.entryCount(otherUpdates.length)}</span>
               )}
             </div>
 
@@ -300,14 +310,14 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
                 ))}
               </div>
             ) : otherUpdates.length === 0 ? (
-              <p className="text-ivory-600 text-sm italic mb-6">No updates yet. Add one as you see God at work.</p>
+              <p className="text-ivory-600 text-sm italic mb-6">{copy.noUpdates}</p>
             ) : (
               <div className="flex flex-col gap-3 mb-6">
                 {otherUpdates.map((u) => (
                   <div key={u.id} className="premium-card p-4 animate-fade-in">
                     <div className="flex items-center gap-2 mb-2">
                       <Clock size={12} className="text-ivory-500" />
-                      <span className="text-[10px] uppercase tracking-wider font-medium text-ivory-500">Update</span>
+                      <span className="text-[10px] uppercase tracking-wider font-medium text-ivory-500">{copy.update}</span>
                       <span className="text-ivory-600 text-xs ml-auto">{formatDate(u.created_at)}</span>
                     </div>
                     <p className="text-ivory-300 text-sm leading-relaxed">{u.body}</p>
@@ -318,7 +328,7 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
 
             {/* Add Update button */}
             <button onClick={() => openEditor('update')} className="btn-secondary text-sm mb-4">
-              <Plus size={15} /> Add Update
+              <Plus size={15} /> {copy.addUpdate}
             </button>
           </div>
         </div>
@@ -333,15 +343,15 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
           {/* Header */}
           <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
             <button onClick={() => { setShowEditor(false); setEditorError(null); setEditingRowId(null); }} className="btn-ghost text-sm">
-              <X size={18} /> Cancel
+              <X size={18} /> {copy.cancel}
             </button>
-            <p className="ui-label">{editorType === 'reflection' ? 'Reflection' : 'Update'}</p>
+            <p className="ui-label">{editorType === 'reflection' ? copy.reflection : copy.update}</p>
             <button
               onClick={saveUpdate}
               disabled={!editorText.trim() || saving}
               className="btn-ghost text-sm text-gold-300 disabled:opacity-30"
             >
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? copy.saving : copy.save}
             </button>
           </header>
 
@@ -354,7 +364,7 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
                   editorType === 'update' ? 'bg-gold-500/15 text-gold-300 border border-gold-500/30' : 'text-ivory-500 border border-transparent'
                 }`}
               >
-                Update
+                {copy.updateTab}
               </button>
               <button
                 onClick={() => { vibrate(4); setEditorType('reflection'); }}
@@ -362,7 +372,7 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
                   editorType === 'reflection' ? 'bg-gold-500/15 text-gold-300 border border-gold-500/30' : 'text-ivory-500 border border-transparent'
                 }`}
               >
-                Reflection
+                {copy.reflectionTab}
               </button>
             </div>
           </div>
@@ -373,8 +383,8 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
               autoFocus
               value={editorText}
               onChange={(e) => setEditorText(e.target.value)}
-              placeholder={editorType === 'reflection' ? 'How is God at work in this?' : 'What is happening with this prayer?'}
-              aria-label={editorType === 'reflection' ? 'Add a reflection' : 'Add an update'}
+              placeholder={editorType === 'reflection' ? copy.reflectionPlaceholder : copy.updatePlaceholder}
+              aria-label={editorType === 'reflection' ? copy.addReflectionLabel : copy.addUpdateLabel}
               className="w-full h-full bg-ink-800/40 border border-ink-600/30 rounded-2xl p-4 text-ivory-100 placeholder:text-ivory-600 text-sm leading-relaxed focus:outline-none resize-none overflow-y-auto"
             />
           </div>
@@ -389,6 +399,20 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
           {/* Safe area */}
           <div className="shrink-0 safe-bottom" />
         </div>
+      )}
+
+      {showPrayerEditor && (
+        <PrayerEditor
+          prayer={prayer}
+          copy={copy}
+          viewportHeight={viewportHeight}
+          onSaved={(saved) => {
+            setPrayer(saved);
+            onPrayerChanged(saved);
+            setShowPrayerEditor(false);
+          }}
+          onCancel={() => setShowPrayerEditor(false)}
+        />
       )}
     </>
   );

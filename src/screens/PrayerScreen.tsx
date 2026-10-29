@@ -4,18 +4,20 @@ import { supabase } from '@/lib/supabase';
 import { vibrate, formatRelative, formatDate } from '@/lib/utils';
 import { createLegacyEvent } from '@/lib/legacyEngine';
 import PrayerDetailScreen from '@/screens/PrayerDetailScreen';
+import { getPrayerCopy, getPrayerLang } from '@/lib/prayerCopy';
 import type { Prayer, PrayerStatus, Profile } from '@/lib/types';
 
 type Tab = 'active' | 'faithfulness';
 
-const statusConfig: Record<PrayerStatus, { label: string; color: string; bg: string; border: string }> = {
-  praying: { label: 'Praying', color: 'text-gold-300', bg: 'bg-gold-500/10', border: 'border-gold-500/30' },
-  waiting: { label: 'Waiting', color: 'text-ivory-300', bg: 'bg-ink-700/50', border: 'border-ink-600/40' },
-  answered: { label: 'Answered', color: 'text-sage-400', bg: 'bg-sage-500/10', border: 'border-sage-500/30' },
-  closed: { label: 'Closed · Continuing to Trust', color: 'text-ivory-500', bg: 'bg-ink-800/40', border: 'border-ink-700/40' },
+const statusConfig: Record<PrayerStatus, { color: string; bg: string; border: string }> = {
+  praying: { color: 'text-gold-300', bg: 'bg-gold-500/10', border: 'border-gold-500/30' },
+  waiting: { color: 'text-ivory-300', bg: 'bg-ink-700/50', border: 'border-ink-600/40' },
+  answered: { color: 'text-sage-400', bg: 'bg-sage-500/10', border: 'border-sage-500/30' },
+  closed: { color: 'text-ivory-500', bg: 'bg-ink-800/40', border: 'border-ink-700/40' },
 };
 
 export default function PrayerScreen({ profile }: { profile?: Profile | null }) {
+  const copy = getPrayerCopy(getPrayerLang());
   const [tab, setTab] = useState<Tab>('active');
   const [prayers, setPrayers] = useState<Prayer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,7 +82,7 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
     setSaving(false);
 
     if (error || !data) {
-      setSaveError('Could not save prayer. Please try again.');
+      setSaveError(copy.saveErrorNew);
       return;
     }
 
@@ -133,39 +135,39 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
           <button onClick={() => setShowNew(false)} className="btn-ghost">
             <X size={20} />
           </button>
-          <p className="ui-label">New Prayer</p>
+          <p className="ui-label">{copy.newPrayer}</p>
           <span className="w-10" />
         </header>
 
         <div className="flex-1 overflow-y-auto px-6 py-6 animate-fade-in min-h-0">
           <div className="flex flex-col gap-5">
             <div>
-              <label className="text-sm text-ivory-400 mb-2 block">Title</label>
+              <label className="text-sm text-ivory-400 mb-2 block">{copy.titleLabel}</label>
               <input
                 autoFocus
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="What are you praying for?"
+                placeholder={copy.titlePlaceholder}
                 className="input-field"
               />
             </div>
             <div>
-              <label className="text-sm text-ivory-400 mb-2 block">Description (optional)</label>
+              <label className="text-sm text-ivory-400 mb-2 block">{copy.descriptionLabel}</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe the request, the context, who is involved..."
+                placeholder={copy.descriptionPlaceholder}
                 className="input-field min-h-[120px] resize-none"
               />
             </div>
             <div>
-              <label className="text-sm text-ivory-400 mb-2 block">Related Scripture (optional)</label>
+              <label className="text-sm text-ivory-400 mb-2 block">{copy.scriptureLabel}</label>
               <input
                 type="text"
                 value={scripture}
                 onChange={(e) => setScripture(e.target.value)}
-                placeholder="e.g. Philippians 4:6–7"
+                placeholder={copy.scripturePlaceholder}
                 className="input-field"
               />
             </div>
@@ -177,7 +179,7 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
             <p className="text-error text-sm mb-3 text-center">{saveError}</p>
           )}
           <button onClick={createPrayer} disabled={!title.trim() || saving} className="btn-primary w-full disabled:opacity-40">
-            {saving ? 'Saving...' : 'Begin Praying'}
+            {saving ? copy.saving : copy.beginPraying}
           </button>
         </div>
       </div>
@@ -188,8 +190,8 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen nav-safe-padding">
       <header className="px-6 pt-14 safe-top">
-        <p className="ui-label animate-fade-in-down">Prayer</p>
-        <h1 className="font-serif text-4xl text-ivory-50 mt-2 tracking-tight">Pray</h1>
+        <p className="ui-label animate-fade-in-down">{copy.prayerLabel}</p>
+        <h1 className="font-serif text-4xl text-ivory-50 mt-2 tracking-tight">{copy.pageTitle}</h1>
       </header>
 
       {/* Tabs */}
@@ -200,7 +202,7 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
             tab === 'active' ? 'bg-ink-800/60 text-ivory-50 border border-ink-600/40' : 'text-ivory-500'
           }`}
         >
-          Active Prayers
+          {copy.tabActive}
         </button>
         <button
           onClick={() => setTab('faithfulness')}
@@ -208,7 +210,7 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
             tab === 'faithfulness' ? 'bg-ink-800/60 text-ivory-50 border border-ink-600/40' : 'text-ivory-500'
           }`}
         >
-          God's Faithfulness
+          {copy.tabFaithfulness}
         </button>
       </div>
 
@@ -225,13 +227,13 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
               <div className="w-16 h-16 rounded-2xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center mb-6">
                 <Heart size={24} className="text-gold-300" />
               </div>
-              <h3 className="font-serif text-2xl text-ivory-50 mb-2">No prayers yet</h3>
+              <h3 className="font-serif text-2xl text-ivory-50 mb-2">{copy.noPrayersTitle}</h3>
               <p className="text-ivory-500 text-sm max-w-xs leading-relaxed mb-6">
-                Bring your requests before God. SOLAPATH will walk with you as you pray, wait, and remember His faithfulness.
+                {copy.noPrayersBody}
               </p>
               <button onClick={() => setShowNew(true)} className="btn-primary">
                 <Plus size={18} />
-                Begin a Prayer
+                {copy.beginPrayer}
               </button>
             </div>
           ) : (
@@ -252,7 +254,7 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
                       </div>
                       <div className="flex items-center gap-3 mt-2">
                         <span className={`px-2.5 py-1 rounded-full ${cfg.bg} ${cfg.border} border ${cfg.color} text-[11px] font-medium`}>
-                          {cfg.label}
+                          {copy.status[prayer.status]}
                         </span>
                         {prayer.related_scripture && (
                           <span className="text-gold-300/70 text-xs flex items-center gap-1">
@@ -268,7 +270,7 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
                       {count > 0 && (
                         <div className="flex items-center gap-1.5 mt-2">
                           <div className="w-1.5 h-1.5 rounded-full bg-gold-400/50" />
-                          <span className="text-ivory-600 text-xs">{count} {count === 1 ? 'update' : 'updates'}</span>
+                          <span className="text-ivory-600 text-xs">{copy.updateCount(count)}</span>
                         </div>
                       )}
                     </button>
@@ -277,7 +279,7 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
               </div>
               <button onClick={() => setShowNew(true)} className="btn-secondary w-full mt-4">
                 <Plus size={18} />
-                Add Prayer
+                {copy.addPrayer}
               </button>
             </>
           )}
@@ -290,23 +292,23 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
             <div className="w-14 h-14 rounded-2xl bg-sage-500/10 border border-sage-500/20 flex items-center justify-center mx-auto mb-5">
               <Check size={24} className="text-sage-400" />
             </div>
-            <h3 className="font-serif text-2xl text-ivory-50 mb-3">God's Faithfulness</h3>
+            <h3 className="font-serif text-2xl text-ivory-50 mb-3">{copy.faithfulnessTitle}</h3>
             <p className="text-ivory-400 text-sm leading-relaxed max-w-xs mx-auto mb-4">
-              A timeline of prayers, reflections, Scripture, and outcomes — a record of how God has been faithful across your life.
+              {copy.faithfulnessBody}
             </p>
             <p className="text-ivory-600 text-xs italic">
-              This will populate as you record prayers and mark them answered or closed. Every answered prayer and every season of waiting becomes part of your faithfulness timeline.
+              {copy.faithfulnessNote}
             </p>
           </div>
 
           {prayers.filter((p) => p.status === 'answered').length > 0 && (
             <div className="mt-6">
-              <p className="ui-label mb-3">Answered Prayers</p>
+              <p className="ui-label mb-3">{copy.answeredPrayers}</p>
               <div className="flex flex-col gap-3">
                 {prayers.filter((p) => p.status === 'answered').map((p) => (
                   <div key={p.id} className="premium-card p-4">
                     <h4 className="font-serif text-lg text-ivory-50">{p.title}</h4>
-                    <p className="text-sage-400 text-xs mt-1">Answered · {formatDate(p.closed_at || p.updated_at)}</p>
+                    <p className="text-sage-400 text-xs mt-1">{copy.answeredOn(formatDate(p.closed_at || p.updated_at))}</p>
                   </div>
                 ))}
               </div>
