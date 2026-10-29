@@ -21,6 +21,7 @@ import {
 } from '@/lib/reflectionEngine';
 import type { StructuredTheologicalResponse } from '@/lib/intelligenceTypes';
 import type { AskHandoffContext } from '@/lib/askHandoff';
+import { getTodayCopy } from '@/lib/todayCopy';
 
 interface TodayScreenProps {
   profile: Profile | null;
@@ -30,22 +31,15 @@ interface TodayScreenProps {
 }
 
 const moods = [
-  { id: 'joyful', label: 'Joyful', icon: '☀' },
-  { id: 'steady', label: 'Steady', icon: '◐' },
-  { id: 'anxious', label: 'Anxious', icon: '◈' },
-  { id: 'weary', label: 'Weary', icon: '◌' },
-  { id: 'heavy', label: 'Heavy', icon: '●' },
-  { id: 'grieving', label: 'Grieving', icon: '✕' },
-  { id: 'angry', label: 'Angry', icon: '▲' },
-  { id: 'unsure', label: 'Unsure', icon: '?' },
+  { id: 'joyful', icon: '☀' },
+  { id: 'steady', icon: '◐' },
+  { id: 'anxious', icon: '◈' },
+  { id: 'weary', icon: '◌' },
+  { id: 'heavy', icon: '●' },
+  { id: 'grieving', icon: '✕' },
+  { id: 'angry', icon: '▲' },
+  { id: 'unsure', icon: '?' },
 ];
-
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  return 'Good evening';
-}
 
 export default function TodayScreen({ profile, onStartWalk, onReadInApp, onContinueInAsk }: TodayScreenProps) {
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
@@ -671,7 +665,6 @@ function localizeReference(ref: string, translation: string): string {
     contextFocusedRef.current = false;
   }
 
-  const greeting = getGreeting();
   const name = profile?.display_name;
   const availableTime = profile?.available_time_minutes ?? 7;
 
@@ -690,6 +683,8 @@ function localizeReference(ref: string, translation: string): string {
     save: reflLang === 'es' ? 'Guardar' : 'Save',
     editPlaceholder: reflLang === 'es' ? 'Reescribe tu reflexión...' : 'Rewrite your reflection...',
   };
+  const copy = getTodayCopy(reflLang);
+  const greeting = copy.greeting(new Date().getHours());
 
   // Canonical visibility derives from the persisted reflection row, not the
   // transient textarea. This keeps the Reflect action and saved reflection
@@ -704,7 +699,7 @@ function localizeReference(ref: string, translation: string): string {
         <div>
           <p className="font-serif text-xl italic text-ivory-200 animate-fade-in-down">{greeting}{name ? `, ${name}` : ''}</p>
           <h1 className="mt-2 max-w-[260px] font-serif text-5xl font-medium leading-[0.92] tracking-tight text-ivory-50 animate-fade-in-up">
-            Stay on<br />the Path.
+            {copy.titleLines[0]}<br />{copy.titleLines[1]}
           </h1>
         </div>
         <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-full border-2 border-gold-200 bg-gold-100 text-lg font-serif text-ink-50 shadow-sm" aria-label={name ? `${name}'s profile` : 'Your profile'}>
@@ -714,10 +709,10 @@ function localizeReference(ref: string, translation: string): string {
 
       <section className="relative -mt-20 h-[440px] overflow-hidden animate-fade-in-up">
         <img
-          src="/assets/solapath-scenic-emblem.png"
+          src="/assets/solapath-scenic-hero.png"
           alt=""
           aria-hidden="true"
-          className="absolute -top-[25%] -left-[4%] h-[125%] w-[108%] max-w-none object-cover object-center"
+          className="absolute inset-0 h-full w-full object-cover object-center"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-ink-950/30 via-ink-950/15 to-ink-950/40" />
         <div className="absolute inset-x-0 bottom-0 h-[260px] bg-gradient-to-t from-ink-950/95 via-ink-950/55 to-transparent" />
@@ -725,7 +720,7 @@ function localizeReference(ref: string, translation: string): string {
           <div ref={heroScriptureRef} className="max-h-[200px] overflow-hidden">
             {heroLoading || !heroVerses ? (
               <p className="max-w-[300px] font-serif text-lg leading-[1.45] text-ivory-300 italic">
-                Loading Scripture…
+                {copy.loadingScripture}
               </p>
             ) : (
               <blockquote className="font-serif text-[1.15rem] leading-[1.45] text-ivory-50 font-medium italic drop-shadow-[0_1px_3px_rgba(31,27,22,0.5)]">
@@ -744,14 +739,14 @@ function localizeReference(ref: string, translation: string): string {
       <section className="relative z-20 mt-8 px-5 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
         <div className="flex items-center gap-2 mb-3 px-1">
           <BookOpen size={15} className="text-gold-500" />
-          <p className="text-xs uppercase tracking-[0.18em] text-ivory-400 font-medium">Today's Reading</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-ivory-400 font-medium">{copy.readingLabel}</p>
         </div>
 
         {loading || regenerating ? (
           <div className="premium-card p-6 flex items-center gap-3">
             <Loader2 size={20} className="text-gold-400 animate-spin" />
             <p className="text-ivory-500 text-sm italic">
-              {regenerating ? 'Finding Scripture for today...' : 'Loading your walk...'}
+              {regenerating ? copy.findingScripture : copy.loadingWalk}
             </p>
           </div>
         ) : todayWalk ? (
@@ -762,7 +757,7 @@ function localizeReference(ref: string, translation: string): string {
               <div className="flex items-center gap-2 mb-1">
                 <BookOpen size={16} className="text-gold-400" />
                 <p className="text-xs uppercase tracking-[0.2em] text-gold-400/80 font-medium">
-                  Open Your Bible
+                  {copy.openBible}
                 </p>
               </div>
 
@@ -772,9 +767,9 @@ function localizeReference(ref: string, translation: string): string {
 
               <div className="flex items-center gap-1.5 text-ivory-500 text-sm mb-4">
                 <Clock size={13} />
-                <span>{todayWalk.estimated_minutes} minutes</span>
+                <span>{copy.minutes(todayWalk.estimated_minutes)}</span>
                 {todayWalk.estimated_minutes !== availableTime && (
-                  <span className="text-ivory-600 ml-1">· adapted to your time</span>
+                  <span className="text-ivory-600 ml-1">{copy.adaptedToTime}</span>
                 )}
               </div>
 
@@ -785,7 +780,7 @@ function localizeReference(ref: string, translation: string): string {
               {scriptureLoading ? (
                 <div className="flex items-center gap-2 mb-4 px-3 py-3 rounded-xl bg-ink-850/60 border border-ink-700/40">
                   <Loader2 size={14} className="text-gold-400/60 animate-spin" />
-                  <p className="text-ivory-400 text-xs italic">Loading Scripture...</p>
+                  <p className="text-ivory-400 text-xs italic">{copy.loadingScripture}</p>
                 </div>
               ) : scriptureText ? (
                 <div className="mb-4 px-3 py-3 rounded-xl bg-ink-850/60 border border-gold-500/20">
@@ -806,10 +801,10 @@ function localizeReference(ref: string, translation: string): string {
               <div className="flex flex-col gap-2.5">
                 <button onClick={handleStartWalk} className="btn-primary w-full">
                   <BookOpen size={18} />
-                  I'm Opening My Bible
+                  {copy.openingBible}
                 </button>
                 <button onClick={handleDiveDeeper} className="btn-secondary w-full">
-                  Dive Deeper in Bible
+                  {copy.diveDeeper}
                   <ChevronRight size={16} />
                 </button>
               </div>
@@ -819,35 +814,35 @@ function localizeReference(ref: string, translation: string): string {
           <div className="premium-card p-6 text-center">
             <p className="text-ivory-400 text-sm">{walkError}</p>
             <button onClick={() => loadOrCreateTodayWalk()} className="btn-secondary mt-3 text-sm">
-              Try Again
+              {copy.tryAgain}
             </button>
           </div>
         ) : (
           <div className="premium-card p-6 text-center">
-            <p className="text-ivory-400 text-sm">No walk available right now.</p>
+            <p className="text-ivory-400 text-sm">{copy.noWalk}</p>
           </div>
         )}
       </section>
 
       <section className="px-6 mt-10 animate-fade-in-up" style={{ animationDelay: '0.4s', paddingBottom: keyboardHeight > 0 ? `calc(${keyboardHeight}px + env(safe-area-inset-bottom, 0px) + 20px)` : undefined, transition: 'padding-bottom 0.25s ease-out' }}>
         <h2 className="font-serif text-3xl text-ivory-50 leading-tight mb-5">
-          How are you arriving today?
+          {copy.arriving}
         </h2>
         <div className="grid grid-cols-4 gap-2">
           {moods.map((mood) => (
             <button key={mood.id} onClick={() => { vibrate(8); setSelectedMood(mood.id); setContextText(''); setContextSaved(false); setRememberContext(false); }} className={`mood-chip no-tap-highlight ${selectedMood === mood.id ? 'bg-gold-500/10 border-gold-500/40' : ''}`}>
               <span className={`text-lg ${selectedMood === mood.id ? 'text-gold-300' : 'text-ivory-500'}`}>{mood.icon}</span>
-              <span className={`text-[11px] font-medium ${selectedMood === mood.id ? 'text-ivory-50' : 'text-ivory-400'}`}>{mood.label}</span>
+              <span className={`text-[11px] font-medium ${selectedMood === mood.id ? 'text-ivory-50' : 'text-ivory-400'}`}>{copy.moods[mood.id]}</span>
             </button>
           ))}
         </div>
         {selectedMood && !contextSaved && (
           <div ref={contextInteractionRef} className="mt-4 animate-fade-in-up">
-            <textarea ref={contextTextareaRef} autoFocus value={contextText} onChange={(e) => setContextText(e.target.value)} onFocus={handleContextFocus} onBlur={handleContextBlur} placeholder="What's happening today?" className="input-field min-h-[80px] resize-none text-sm" />
+            <textarea ref={contextTextareaRef} autoFocus value={contextText} onChange={(e) => setContextText(e.target.value)} onFocus={handleContextFocus} onBlur={handleContextBlur} placeholder={copy.contextPlaceholder} className="input-field min-h-[80px] resize-none text-sm" />
             <div className="flex items-center gap-3 mt-3">
               <div className="flex items-center gap-2"><Lock size={12} className="text-ivory-600" /><button onClick={() => { vibrate(6); setRememberContext(!rememberContext); }} className={`relative w-11 h-6 rounded-full transition-all duration-300 shrink-0 ${rememberContext ? 'bg-gold-500/40' : 'bg-ink-700'}`}><span className={`absolute top-0.5 w-5 h-5 rounded-full bg-ivory-100 transition-all duration-300 ${rememberContext ? 'left-[22px]' : 'left-0.5'}`} /></button></div>
-              <p className="text-ivory-600 text-xs">{rememberContext ? 'SOLAPATH will remember this.' : 'Just for today.'}</p>
-              <div className="flex-1" /><button onClick={saveCheckin} disabled={regenerating} className="btn-secondary px-4 py-2.5 text-sm disabled:opacity-40">{regenerating ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Finding Scripture...</span> : contextSaved ? 'Saved' : 'Save'}</button>
+              <p className="text-ivory-600 text-xs">{rememberContext ? copy.rememberOn : copy.rememberOff}</p>
+              <div className="flex-1" /><button onClick={saveCheckin} disabled={regenerating} className="btn-secondary px-4 py-2.5 text-sm disabled:opacity-40">{regenerating ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />{copy.findingScriptureInline}</span> : contextSaved ? copy.saved : copy.save}</button>
             </div>
           </div>
         )}
@@ -1031,9 +1026,9 @@ function localizeReference(ref: string, translation: string): string {
           <div className="w-1 h-12 rounded-full bg-gradient-to-b from-gold-400/40 to-transparent shrink-0 mt-1" />
           <div>
             <p className="font-serif text-ivory-300 italic text-sm leading-relaxed">
-              "The Bible is not merely to be read, but to be opened, pondered, and lived."
+              {copy.quote}
             </p>
-            <p className="text-xs text-ivory-600 mt-1.5">— Development content</p>
+            <p className="text-xs text-ivory-600 mt-1.5">{copy.quoteAttribution}</p>
           </div>
         </div>
       </section>
