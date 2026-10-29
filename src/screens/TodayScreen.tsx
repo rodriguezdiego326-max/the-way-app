@@ -22,6 +22,7 @@ import {
 import type { StructuredTheologicalResponse } from '@/lib/intelligenceTypes';
 import type { AskHandoffContext } from '@/lib/askHandoff';
 import { getTodayCopy } from '@/lib/todayCopy';
+import { localizeReadingObjective } from '@/lib/readingObjectiveLocale';
 
 interface TodayScreenProps {
   profile: Profile | null;
@@ -774,7 +775,7 @@ function localizeReference(ref: string, translation: string): string {
               </div>
 
               <p className="text-ivory-300 text-sm leading-relaxed mb-4">
-                {todayWalk.reading_objective}
+                {localizeReadingObjective(todayWalk.reading_objective, reflLang)}
               </p>
 
               {scriptureLoading ? (
