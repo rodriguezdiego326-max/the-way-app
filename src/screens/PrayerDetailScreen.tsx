@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, BookOpen, Calendar, Plus, Clock, Check, Heart, ChevronRight, Pencil } from 'lucide-react';
+import { X, BookOpen, Calendar, Plus, Pencil, Heart } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { vibrate, formatRelative, formatDate } from '@/lib/utils';
+import { vibrate } from '@/lib/utils';
 import { createLegacyEvent } from '@/lib/legacyEngine';
-import { getPrayerCopy, getPrayerLang } from '@/lib/prayerCopy';
+import { formatPrayerDate, getPrayerCopy, getPrayerLang } from '@/lib/prayerCopy';
+import { buildJourneyEvents, type PrayerUpdateRow, type UpdateType } from '@/lib/prayerJourney';
 import PrayerEditor from '@/components/PrayerEditor';
-import type { Prayer, PrayerStatus, PrayerUpdate, Profile } from '@/lib/types';
+import PrayerJourneyTimeline from '@/components/PrayerJourneyTimeline';
+import PrayerMode from '@/components/PrayerMode';
+import type { Prayer, PrayerSession, PrayerStatus, Profile } from '@/lib/types';
 
 const statusConfig: Record<PrayerStatus, { color: string; bg: string; border: string }> = {
   praying: { color: 'text-gold-300', bg: 'bg-gold-500/10', border: 'border-gold-500/30' },
@@ -14,11 +17,8 @@ const statusConfig: Record<PrayerStatus, { color: string; bg: string; border: st
   closed: { color: 'text-ivory-500', bg: 'bg-ink-800/40', border: 'border-ink-700/40' },
 };
 
-type UpdateType = 'update' | 'reflection';
-
-interface PrayerUpdateRow extends PrayerUpdate {
-  update_type?: UpdateType;
-}
+const ACTIVE_STATUSES: PrayerStatus[] = ['praying', 'waiting'];
+const RETURNED_NOTE_THRESHOLD = 3;
 
 interface Props {
   prayer: Prayer;
@@ -30,6 +30,7 @@ interface Props {
 export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onClose, onPrayerChanged }: Props) {
   const [prayer, setPrayer] = useState<Prayer>(initialPrayer);
   const [updates, setUpdates] = useState<PrayerUpdateRow[]>([]);
+  const [sessions, setSessions] = useState<PrayerSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [showEditor, setShowEditor] = useState(false);
   const [editorType, setEditorType] = useState<UpdateType>('update');
@@ -37,23 +38,33 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
   const [viewportHeight, setViewportHeight] = useState(typeof window !== 'undefined' ? window.innerHeight : 800);
   const [saving, setSaving] = useState(false);
   const [showPrayerEditor, setShowPrayerEditor] = useState(false);
+  const [showPrayerMode, setShowPrayerMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const copy = getPrayerCopy(getPrayerLang());
+  const lang = getPrayerLang();
+  const copy = getPrayerCopy(lang);
 
-  const loadUpdates = useCallback(async () => {
+  const loadJourney = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from('prayer_updates')
-      .select('*')
-      .eq('prayer_id', initialPrayer.id)
-      .order('created_at', { ascending: true });
-    setUpdates((data as PrayerUpdateRow[]) || []);
+    const [updatesResult, sessionsResult] = await Promise.all([
+      supabase
+        .from('prayer_updates')
+        .select('*')
+        .eq('prayer_id', initialPrayer.id)
+        .order('created_at', { ascending: true }),
+      supabase
+        .from('prayer_sessions')
+        .select('*')
+        .eq('prayer_id', initialPrayer.id)
+        .order('prayed_at', { ascending: true }),
+    ]);
+    setUpdates((updatesResult.data as PrayerUpdateRow[]) || []);
+    setSessions((sessionsResult.data as PrayerSession[]) || []);
     setLoading(false);
   }, [initialPrayer.id]);
 
   useEffect(() => {
-    loadUpdates();
-  }, [loadUpdates]);
+    loadJourney();
+  }, [loadJourney]);
 
   useEffect(() => {
     const vv = window.visualViewport;
@@ -182,20 +193,25 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
     setShowEditor(true);
   }
 
+  function editReflectionById(id: string) {
+    const row = updates.find((u) => u.id === id);
+    if (row) {
+      vibrate(6);
+      openEditExisting(row);
+    }
+  }
+
   const cfg = statusConfig[prayer.status];
-  const cfgLabel = copy.status[prayer.status];
-  const reflectionUpdates = updates.filter((u) => (u.update_type || 'update') === 'reflection');
-  const reflection = reflectionUpdates.length > 0 ? reflectionUpdates[reflectionUpdates.length - 1] : undefined;
-  const otherUpdates = updates.filter((u) => (u.update_type || 'update') !== 'reflection');
+  const isActive = ACTIVE_STATUSES.includes(prayer.status);
+  const events = buildJourneyEvents(prayer, sessions, updates);
 
   return (
     <>
-      {/* Main Prayer Detail — full-screen overlay */}
+      {/* Prayer Journey — full-screen overlay */}
       <div
         className="fixed inset-0 z-[70] bg-ink-950 bg-parchment flex flex-col"
         style={{ height: `${viewportHeight}px` }}
       >
-        {/* Header */}
         <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
           <button onClick={onClose} className="btn-ghost">
             <X size={20} />
@@ -204,25 +220,20 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
           <span className="w-10" />
         </header>
 
-        {/* Scrollable content */}
         <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
           <div className="animate-fade-in-up">
-            {/* Status badge */}
             <span className={`inline-block px-3 py-1.5 rounded-full ${cfg.bg} ${cfg.border} border ${cfg.color} text-xs font-medium mb-4`}>
-              {cfgLabel}
+              {copy.status[prayer.status]}
             </span>
 
-            {/* Title */}
             <h2 className="font-serif text-3xl text-ivory-50 leading-tight mb-3">
               {prayer.title}
             </h2>
 
-            {/* Description */}
             {prayer.description && (
-              <p className="text-ivory-300 leading-relaxed mb-4">{prayer.description}</p>
+              <p className="text-ivory-300 leading-relaxed mb-4 whitespace-pre-wrap">{prayer.description}</p>
             )}
 
-            {/* Scripture reference */}
             {prayer.related_scripture && (
               <div className="flex items-center gap-2 text-gold-300 text-sm mb-4">
                 <BookOpen size={14} />
@@ -230,31 +241,62 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
               </div>
             )}
 
-            {/* Date started */}
             <div className="flex items-center justify-between gap-2 text-ivory-600 text-xs mb-6">
               <div className="flex items-center gap-2">
                 <Calendar size={12} />
-                <span>{copy.started(formatDate(prayer.started_at))}</span>
+                <span>{copy.started(formatPrayerDate(prayer.started_at, lang))}</span>
               </div>
               <button onClick={() => { vibrate(6); setShowPrayerEditor(true); }} className="btn-ghost text-xs text-gold-300 flex items-center gap-1.5">
                 <Pencil size={12} /> {copy.editPrayer}
               </button>
             </div>
 
+            {isActive && (
+              <button onClick={() => { vibrate(8); setShowPrayerMode(true); }} className="btn-primary w-full mb-6">
+                <Heart size={16} /> {copy.pray}
+              </button>
+            )}
+
             <div className="gold-divider mb-6" />
 
-            {/* Update Status */}
+            <p className="ui-label mb-4">{copy.journeyHeading}</p>
+
+            {!loading && sessions.length >= RETURNED_NOTE_THRESHOLD && (
+              <p className="text-ivory-400 text-sm italic mb-4">{copy.returnedSeveralTimes}</p>
+            )}
+
+            {loading ? (
+              <div className="flex flex-col gap-3">
+                {[1, 2].map((i) => (
+                  <div key={i} className="premium-card h-20 animate-pulse" />
+                ))}
+              </div>
+            ) : (
+              <PrayerJourneyTimeline events={events} copy={copy} lang={lang} onEditReflection={editReflectionById} />
+            )}
+
+            <div className="flex flex-wrap gap-2 mt-6 mb-6">
+              <button onClick={() => openEditor('update')} className="btn-secondary text-sm">
+                <Plus size={15} /> {copy.addUpdate}
+              </button>
+              <button onClick={() => openEditor('reflection')} className="btn-secondary text-sm">
+                <Plus size={15} /> {copy.addReflection}
+              </button>
+            </div>
+
+            <div className="gold-divider mb-6" />
+
             <p className="ui-label mb-3">{copy.updateStatus}</p>
             <div className="flex flex-wrap gap-2 mb-6">
               {(Object.keys(statusConfig) as PrayerStatus[]).map((s) => {
                 const sc = statusConfig[s];
-                const isActive = prayer.status === s;
+                const isCurrent = prayer.status === s;
                 return (
                   <button
                     key={s}
                     onClick={() => changeStatus(s)}
                     className={`px-3 py-2 rounded-xl border text-xs font-medium transition-all no-tap-highlight ${
-                      isActive
+                      isCurrent
                         ? `${sc.bg} ${sc.border} ${sc.color}`
                         : 'bg-ink-800/40 border-ink-700/40 text-ivory-500'
                     }`}
@@ -264,83 +306,16 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
                 );
               })}
             </div>
-
-            <div className="gold-divider mb-6" />
-
-            {/* How is God at work — display mode */}
-            <p className="ui-label mb-3">{copy.godAtWork}</p>
-            {reflection ? (
-              <div className="premium-card p-4 mb-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Heart size={12} className="text-gold-400/70" />
-                  <span className="text-[10px] uppercase tracking-wider font-medium text-gold-400/70">{copy.reflection}</span>
-                  <span className="text-ivory-600 text-xs ml-auto">{formatDate(reflection.created_at)}</span>
-                </div>
-                <p className="text-ivory-300 text-sm leading-relaxed">{reflection.body}</p>
-                <button
-                  onClick={() => { vibrate(6); openEditExisting(reflection); }}
-                  className="btn-ghost text-xs mt-3"
-                >
-                  {copy.editReflection}
-                </button>
-              </div>
-            ) : (
-              <div className="mb-3">
-                <p className="text-ivory-600 text-sm italic mb-2">{copy.noReflection}</p>
-                <button onClick={() => { vibrate(6); openEditor('reflection'); }} className="btn-secondary text-sm">
-                  <Plus size={15} /> {copy.addReflection}
-                </button>
-              </div>
-            )}
-
-            <div className="gold-divider mb-6" />
-
-            {/* Updates */}
-            <div className="flex items-center justify-between mb-3">
-              <p className="ui-label">{copy.updatesHeading}</p>
-              {otherUpdates.length > 0 && (
-                <span className="text-ivory-600 text-xs">{copy.entryCount(otherUpdates.length)}</span>
-              )}
-            </div>
-
-            {loading ? (
-              <div className="flex flex-col gap-3">
-                {[1, 2].map((i) => (
-                  <div key={i} className="premium-card h-20 animate-pulse" />
-                ))}
-              </div>
-            ) : otherUpdates.length === 0 ? (
-              <p className="text-ivory-600 text-sm italic mb-6">{copy.noUpdates}</p>
-            ) : (
-              <div className="flex flex-col gap-3 mb-6">
-                {otherUpdates.map((u) => (
-                  <div key={u.id} className="premium-card p-4 animate-fade-in">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock size={12} className="text-ivory-500" />
-                      <span className="text-[10px] uppercase tracking-wider font-medium text-ivory-500">{copy.update}</span>
-                      <span className="text-ivory-600 text-xs ml-auto">{formatDate(u.created_at)}</span>
-                    </div>
-                    <p className="text-ivory-300 text-sm leading-relaxed">{u.body}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Add Update button */}
-            <button onClick={() => openEditor('update')} className="btn-secondary text-sm mb-4">
-              <Plus size={15} /> {copy.addUpdate}
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Focused Reflection/Update Editor — full-screen above Prayer Detail */}
+      {/* Focused Reflection/Update Editor — full-screen above Prayer Journey */}
       {showEditor && (
         <div
           className="fixed inset-0 z-[80] bg-ink-950 bg-parchment flex flex-col"
           style={{ height: `${viewportHeight}px` }}
         >
-          {/* Header */}
           <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
             <button onClick={() => { setShowEditor(false); setEditorError(null); setEditingRowId(null); }} className="btn-ghost text-sm">
               <X size={18} /> {copy.cancel}
@@ -355,7 +330,6 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
             </button>
           </header>
 
-          {/* Segmented type selector */}
           <div className="shrink-0 px-6 pt-3 pb-2">
             <div className="flex gap-1 p-1 rounded-xl bg-ink-800/60 border border-ink-700/40">
               <button
@@ -377,7 +351,6 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
             </div>
           </div>
 
-          {/* Textarea — fills available space */}
           <div className="flex-1 min-h-0 px-6 pt-2 pb-2">
             <textarea
               autoFocus
@@ -389,16 +362,27 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
             />
           </div>
 
-          {/* Error message */}
           {editorError && (
             <div className="shrink-0 px-6 pb-2">
               <p className="text-error text-sm text-center">{editorError}</p>
             </div>
           )}
 
-          {/* Safe area */}
           <div className="shrink-0 safe-bottom" />
         </div>
+      )}
+
+      {showPrayerMode && (
+        <PrayerMode
+          prayer={prayer}
+          copy={copy}
+          viewportHeight={viewportHeight}
+          onClose={() => setShowPrayerMode(false)}
+          onRecorded={(session) => {
+            setSessions((prev) => [...prev, session]);
+            setShowPrayerMode(false);
+          }}
+        />
       )}
 
       {showPrayerEditor && (

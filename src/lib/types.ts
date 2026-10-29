@@ -145,6 +145,14 @@ export interface WalkReflection {
   ai_response: WalkReflectionAIResponse | null;
 }
 
+export interface PrayerSession {
+  id: string;
+  user_id: string;
+  prayer_id: string;
+  prayed_at: string;
+  created_at: string;
+}
+
 export interface Prayer {
   id: string;
   user_id?: string;

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Plus, Clock, Check, X, ChevronRight, Heart, BookOpen } from 'lucide-react';
+import { Plus, Check, X, ChevronRight, Heart, BookOpen } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { vibrate, formatRelative, formatDate } from '@/lib/utils';
+import { vibrate } from '@/lib/utils';
 import { createLegacyEvent } from '@/lib/legacyEngine';
 import PrayerDetailScreen from '@/screens/PrayerDetailScreen';
-import { getPrayerCopy, getPrayerLang } from '@/lib/prayerCopy';
-import type { Prayer, PrayerStatus, Profile } from '@/lib/types';
+import { formatPrayerDate, getPrayerCopy, getPrayerLang } from '@/lib/prayerCopy';
+import type { Prayer, PrayerSession, PrayerStatus, Profile } from '@/lib/types';
 
 type Tab = 'active' | 'faithfulness';
 
@@ -17,13 +17,15 @@ const statusConfig: Record<PrayerStatus, { color: string; bg: string; border: st
 };
 
 export default function PrayerScreen({ profile }: { profile?: Profile | null }) {
-  const copy = getPrayerCopy(getPrayerLang());
+  const lang = getPrayerLang();
+  const copy = getPrayerCopy(lang);
   const [tab, setTab] = useState<Tab>('active');
   const [prayers, setPrayers] = useState<Prayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [selectedPrayer, setSelectedPrayer] = useState<Prayer | null>(null);
   const [updateCounts, setUpdateCounts] = useState<Record<string, number>>({});
+  const [lastPrayedAt, setLastPrayedAt] = useState<Record<string, string>>({});
 
   // New prayer form
   const [title, setTitle] = useState('');
@@ -47,18 +49,24 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
     setPrayers(prayerList);
     setLoading(false);
 
-    // Load update counts for all prayers
     if (prayerList.length > 0) {
+      const [{ data: updatesData }, { data: sessionsData }] = await Promise.all([
+        supabase.from('prayer_updates').select('prayer_id'),
+        supabase.from('prayer_sessions').select('prayer_id, prayed_at'),
+      ]);
+
       const counts: Record<string, number> = {};
-      const { data: updatesData } = await supabase
-        .from('prayer_updates')
-        .select('prayer_id');
-      if (updatesData) {
-        for (const row of updatesData as { prayer_id: string }[]) {
-          counts[row.prayer_id] = (counts[row.prayer_id] || 0) + 1;
-        }
+      for (const row of (updatesData as { prayer_id: string }[]) || []) {
+        counts[row.prayer_id] = (counts[row.prayer_id] || 0) + 1;
       }
       setUpdateCounts(counts);
+
+      const lastPrayed: Record<string, string> = {};
+      for (const row of (sessionsData as Pick<PrayerSession, 'prayer_id' | 'prayed_at'>[]) || []) {
+        const current = lastPrayed[row.prayer_id];
+        if (!current || row.prayed_at > current) lastPrayed[row.prayer_id] = row.prayed_at;
+      }
+      setLastPrayedAt(lastPrayed);
     }
   }
 
@@ -120,7 +128,7 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
     return (
       <PrayerDetailScreen
         prayer={selectedPrayer}
-        profile={profile}
+        profile={profile ?? null}
         onClose={() => setSelectedPrayer(null)}
         onPrayerChanged={handlePrayerChanged}
       />
@@ -242,6 +250,8 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
                 {prayers.map((prayer) => {
                   const cfg = statusConfig[prayer.status];
                   const count = updateCounts[prayer.id] || 0;
+                  const lastPrayed = lastPrayedAt[prayer.id];
+                  const isActive = prayer.status === 'praying' || prayer.status === 'waiting';
                   return (
                     <button
                       key={prayer.id}
@@ -262,10 +272,19 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
                             {prayer.related_scripture}
                           </span>
                         )}
-                        <span className="text-ivory-600 text-xs flex items-center gap-1 ml-auto">
-                          <Clock size={11} />
-                          {formatRelative(prayer.started_at)}
+                      </div>
+                      <div className="flex items-center justify-between gap-3 mt-3">
+                        <span className="text-ivory-600 text-xs">
+                          {lastPrayed
+                            ? copy.lastPrayed(formatPrayerDate(lastPrayed, lang))
+                            : copy.started(formatPrayerDate(prayer.started_at, lang))}
                         </span>
+                        {isActive && (
+                          <span className="flex items-center gap-1.5 text-gold-300 text-xs font-medium">
+                            <Heart size={11} />
+                            {copy.pray}
+                          </span>
+                        )}
                       </div>
                       {count > 0 && (
                         <div className="flex items-center gap-1.5 mt-2">
@@ -308,7 +327,7 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
                 {prayers.filter((p) => p.status === 'answered').map((p) => (
                   <div key={p.id} className="premium-card p-4">
                     <h4 className="font-serif text-lg text-ivory-50">{p.title}</h4>
-                    <p className="text-sage-400 text-xs mt-1">{copy.answeredOn(formatDate(p.closed_at || p.updated_at))}</p>
+                    <p className="text-sage-400 text-xs mt-1">{copy.answeredOn(formatPrayerDate(p.closed_at || p.updated_at, lang))}</p>
                   </div>
                 ))}
               </div>

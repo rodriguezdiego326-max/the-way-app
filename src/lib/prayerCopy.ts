@@ -32,19 +32,13 @@ export interface PrayerCopy {
   status: { praying: string; waiting: string; answered: string; closed: string };
   started: (date: string) => string;
   updateStatus: string;
-  godAtWork: string;
   reflection: string;
   editReflection: string;
-  noReflection: string;
   addReflection: string;
-  updatesHeading: string;
-  entryCount: (n: number) => string;
   update: string;
-  noUpdates: string;
   addUpdate: string;
   cancel: string;
   save: string;
-  saving: string;
   editPrayer: string;
   editPrayerTitle: string;
   editSaveError: string;
@@ -56,6 +50,26 @@ export interface PrayerCopy {
   addReflectionLabel: string;
   updateTab: string;
   reflectionTab: string;
+  pray: string;
+  journeyHeading: string;
+  journeyBegan: string;
+  journeyPrayed: string;
+  journeyAnswered: string;
+  returnedSeveralTimes: string;
+  lastPrayed: (date: string) => string;
+  modeClose: string;
+  modeRequestLabel: string;
+  modeScriptureLabel: string;
+  modeBeStillTitle: string;
+  modeBeStillBody: string;
+  modeBringTitle: string;
+  modeBringBody: string;
+  modeEntrustTitle: string;
+  modeEntrustBody: string;
+  modeComplete: string;
+  modeRecorded: string;
+  modeSaveError: string;
+  modeRecording: string;
 }
 
 const en: PrayerCopy = {
@@ -73,8 +87,8 @@ const en: PrayerCopy = {
   beginPraying: 'Begin Praying',
   saving: 'Saving...',
   saveErrorNew: 'Could not save prayer. Please try again.',
-  noPrayersTitle: 'No prayers yet',
-  noPrayersBody: 'Bring your requests before God. SOLAPATH will walk with you as you pray, wait, and remember His faithfulness.',
+  noPrayersTitle: 'No active prayers yet.',
+  noPrayersBody: 'Bring something before God and return to it as you continue to pray.',
   beginPrayer: 'Begin a Prayer',
   addPrayer: 'Add Prayer',
   updateCount: (n) => (n === 1 ? '1 update' : `${n} updates`),
@@ -84,32 +98,46 @@ const en: PrayerCopy = {
   answeredPrayers: 'Answered Prayers',
   answeredOn: (date) => `Answered · ${date}`,
   status: { praying: 'Praying', waiting: 'Waiting', answered: 'Answered', closed: 'Closed · Continuing to Trust' },
-  started: (date) => `Started ${date}`,
+  started: (date) => `Praying since ${date}`,
   updateStatus: 'Update Status',
-  godAtWork: 'How is God at work in this?',
   reflection: 'Reflection',
   editReflection: 'Edit Reflection',
-  noReflection: 'No reflection added yet.',
   addReflection: 'Add Reflection',
-  updatesHeading: 'Updates',
-  entryCount: (n) => (n === 1 ? '1 entry' : `${n} entries`),
   update: 'Update',
-  noUpdates: 'No updates yet. Add one as you see God at work.',
   addUpdate: 'Add Update',
   cancel: 'Cancel',
   save: 'Save',
-  saving: 'Saving...',
   editPrayer: 'Edit prayer',
   editPrayerTitle: 'Edit Prayer',
   editSaveError: 'Could not save your changes. Your edits are still here, so please try again.',
   identifyError: 'Could not identify user. Please try again.',
   saveError: 'Could not save. Please try again.',
   updatePlaceholder: 'What is happening with this prayer?',
-  reflectionPlaceholder: 'How is God at work in this?',
+  reflectionPlaceholder: 'What are you learning as you continue to pray?',
   addUpdateLabel: 'Add an update',
   addReflectionLabel: 'Add a reflection',
   updateTab: 'Update',
   reflectionTab: 'Reflection',
+  pray: 'Pray',
+  journeyHeading: 'Prayer Journey',
+  journeyBegan: 'Prayer began',
+  journeyPrayed: 'Prayed',
+  journeyAnswered: 'Prayer answered',
+  returnedSeveralTimes: "You've returned to this prayer several times.",
+  lastPrayed: (date) => `Last prayed ${date}`,
+  modeClose: 'Close',
+  modeRequestLabel: 'Your request',
+  modeScriptureLabel: 'Related Scripture',
+  modeBeStillTitle: 'Be still',
+  modeBeStillBody: 'Take a moment to quiet your heart before God.',
+  modeBringTitle: 'Bring this before God',
+  modeBringBody: 'Pray honestly about what is on your heart.',
+  modeEntrustTitle: 'Entrust the outcome to Him',
+  modeEntrustBody: 'Ask according to God\'s will and rest in His wisdom.',
+  modeComplete: "I've prayed about this",
+  modeRecorded: 'Prayer recorded.',
+  modeSaveError: 'Could not record this prayer. Please try again.',
+  modeRecording: 'Recording...',
 };
 
 const es: PrayerCopy = {
@@ -127,8 +155,8 @@ const es: PrayerCopy = {
   beginPraying: 'Comenzar a orar',
   saving: 'Guardando...',
   saveErrorNew: 'No se pudo guardar la oración. Inténtalo de nuevo.',
-  noPrayersTitle: 'Aún no hay oraciones',
-  noPrayersBody: 'Lleva tus peticiones delante de Dios. SOLAPATH te acompañará mientras oras, esperas y recuerdas Su fidelidad.',
+  noPrayersTitle: 'Aún no tienes oraciones activas.',
+  noPrayersBody: 'Presenta algo delante de Dios y vuelve a ello mientras continúas orando.',
   beginPrayer: 'Comienza una oración',
   addPrayer: 'Agregar oración',
   updateCount: (n) => (n === 1 ? '1 actualización' : `${n} actualizaciones`),
@@ -138,36 +166,62 @@ const es: PrayerCopy = {
   answeredPrayers: 'Oraciones respondidas',
   answeredOn: (date) => `Respondida · ${date}`,
   status: { praying: 'Orando', waiting: 'Esperando', answered: 'Respondida', closed: 'Cerrada · Confiando en Dios' },
-  started: (date) => `Iniciada ${date}`,
+  started: (date) => `Orando desde el ${date}`,
   updateStatus: 'Cambiar estado',
-  godAtWork: '¿Cómo está obrando Dios en esto?',
   reflection: 'Reflexión',
   editReflection: 'Editar reflexión',
-  noReflection: 'Aún no hay reflexión.',
   addReflection: 'Agregar reflexión',
-  updatesHeading: 'Actualizaciones',
-  entryCount: (n) => (n === 1 ? '1 entrada' : `${n} entradas`),
   update: 'Actualización',
-  noUpdates: 'Aún no hay actualizaciones. Agrega una cuando veas a Dios obrar.',
   addUpdate: 'Agregar actualización',
   cancel: 'Cancelar',
   save: 'Guardar',
-  saving: 'Guardando...',
   editPrayer: 'Editar oración',
   editPrayerTitle: 'Editar oración',
   editSaveError: 'No se pudieron guardar los cambios. Tus cambios siguen aquí; inténtalo de nuevo.',
   identifyError: 'No se pudo identificar al usuario. Inténtalo de nuevo.',
   saveError: 'No se pudo guardar. Inténtalo de nuevo.',
   updatePlaceholder: '¿Qué está pasando con esta oración?',
-  reflectionPlaceholder: '¿Cómo está obrando Dios en esto?',
+  reflectionPlaceholder: '¿Qué estás aprendiendo mientras continúas orando?',
   addUpdateLabel: 'Agregar una actualización',
   addReflectionLabel: 'Agregar una reflexión',
   updateTab: 'Actualización',
   reflectionTab: 'Reflexión',
+  pray: 'Orar',
+  journeyHeading: 'Camino de oración',
+  journeyBegan: 'Comenzó la oración',
+  journeyPrayed: 'Oraste',
+  journeyAnswered: 'Oración respondida',
+  returnedSeveralTimes: 'Has vuelto a esta oración varias veces.',
+  lastPrayed: (date) => `Última oración: ${date}`,
+  modeClose: 'Cerrar',
+  modeRequestLabel: 'Tu petición',
+  modeScriptureLabel: 'Escritura relacionada',
+  modeBeStillTitle: 'Quédate en quietud',
+  modeBeStillBody: 'Toma un momento para aquietar tu corazón delante de Dios.',
+  modeBringTitle: 'Preséntalo ante Dios',
+  modeBringBody: 'Ora con sinceridad acerca de lo que hay en tu corazón.',
+  modeEntrustTitle: 'Confía el resultado a Él',
+  modeEntrustBody: 'Pide conforme a la voluntad de Dios y descansa en su sabiduría.',
+  modeComplete: 'He orado por esto',
+  modeRecorded: 'Oración registrada.',
+  modeSaveError: 'No se pudo registrar esta oración. Inténtalo de nuevo.',
+  modeRecording: 'Registrando...',
 };
 
 const COPY: Record<PrayerLang, PrayerCopy> = { en, es };
 
 export function getPrayerCopy(lang: PrayerLang): PrayerCopy {
   return COPY[lang];
+}
+
+export function formatPrayerDate(iso: string | null | undefined, lang: PrayerLang): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const withYear = date.getFullYear() !== new Date().getFullYear();
+  return new Intl.DateTimeFormat(lang === 'es' ? 'es-MX' : 'en-US', {
+    month: 'long',
+    day: 'numeric',
+    ...(withYear ? { year: 'numeric' as const } : {}),
+  }).format(date);
 }
