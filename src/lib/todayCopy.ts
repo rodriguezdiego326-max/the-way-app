@@ -23,7 +23,7 @@ const COPY = {
     save: 'Save',
     saved: 'Saved',
     moods: {
-      joyful: 'Joyful',
+      joyful: 'Joy',
       steady: 'Steady',
       anxious: 'Anxious',
       weary: 'Weary',
@@ -57,8 +57,8 @@ const COPY = {
     save: 'Guardar',
     saved: 'Guardado',
     moods: {
-      joyful: 'Alegre',
-      steady: 'Firme',
+      joyful: 'Gozo',
+      steady: 'Estable',
       anxious: 'Ansioso',
       weary: 'Cansado',
       heavy: 'Agobiado',

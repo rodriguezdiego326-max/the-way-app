@@ -32,14 +32,14 @@ interface TodayScreenProps {
 }
 
 const moods = [
-  { id: 'joyful', icon: '☀' },
-  { id: 'steady', icon: '◐' },
-  { id: 'anxious', icon: '◈' },
-  { id: 'weary', icon: '◌' },
-  { id: 'heavy', icon: '●' },
-  { id: 'grieving', icon: '✕' },
-  { id: 'angry', icon: '▲' },
-  { id: 'unsure', icon: '?' },
+  { id: 'joyful', emoji: '😊' },
+  { id: 'steady', emoji: '😌' },
+  { id: 'anxious', emoji: '😟' },
+  { id: 'weary', emoji: '😮‍💨' },
+  { id: 'heavy', emoji: '😔' },
+  { id: 'grieving', emoji: '😢' },
+  { id: 'angry', emoji: '😠' },
+  { id: 'unsure', emoji: '😕' },
 ];
 
 export default function TodayScreen({ profile, onStartWalk, onReadInApp, onContinueInAsk }: TodayScreenProps) {
@@ -832,7 +832,7 @@ function localizeReference(ref: string, translation: string): string {
         <div className="grid grid-cols-4 gap-2">
           {moods.map((mood) => (
             <button key={mood.id} onClick={() => { vibrate(8); setSelectedMood(mood.id); setContextText(''); setContextSaved(false); setRememberContext(false); }} className={`mood-chip no-tap-highlight ${selectedMood === mood.id ? 'bg-gold-500/10 border-gold-500/40' : ''}`}>
-              <span className={`text-lg ${selectedMood === mood.id ? 'text-gold-300' : 'text-ivory-500'}`}>{mood.icon}</span>
+              <span aria-hidden="true" className="text-2xl leading-none">{mood.emoji}</span>
               <span className={`text-[11px] font-medium ${selectedMood === mood.id ? 'text-ivory-50' : 'text-ivory-400'}`}>{copy.moods[mood.id]}</span>
             </button>
           ))}
