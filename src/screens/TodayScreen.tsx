@@ -717,7 +717,7 @@ function localizeReference(ref: string, translation: string): string {
           src="/assets/solapath-scenic-emblem.png"
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 h-full w-full object-cover object-center"
+          className="absolute -top-[25%] -left-[4%] h-[125%] w-[108%] max-w-none object-cover object-center"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-ink-950/30 via-ink-950/15 to-ink-950/40" />
         <div className="absolute inset-x-0 bottom-0 h-[260px] bg-gradient-to-t from-ink-950/95 via-ink-950/55 to-transparent" />
