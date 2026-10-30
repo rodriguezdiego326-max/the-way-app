@@ -123,6 +123,9 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
     setPrayers((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
   }
 
+  const activePrayers = prayers.filter((p) => p.status !== 'answered');
+  const answeredPrayers = prayers.filter((p) => p.status === 'answered');
+
   // Prayer detail — full-screen overlay
   if (selectedPrayer) {
     return (
@@ -230,7 +233,7 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
                 <div key={i} className="premium-card h-24 animate-pulse" />
               ))}
             </div>
-          ) : prayers.length === 0 ? (
+          ) : activePrayers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
               <div className="w-16 h-16 rounded-2xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center mb-6">
                 <Heart size={24} className="text-gold-300" />
@@ -247,7 +250,7 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
           ) : (
             <>
               <div className="flex flex-col gap-3 fade-stagger">
-                {prayers.map((prayer) => {
+                {activePrayers.map((prayer) => {
                   const cfg = statusConfig[prayer.status];
                   const count = updateCounts[prayer.id] || 0;
                   const lastPrayed = lastPrayedAt[prayer.id];
@@ -320,15 +323,19 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
             </p>
           </div>
 
-          {prayers.filter((p) => p.status === 'answered').length > 0 && (
+          {answeredPrayers.length > 0 && (
             <div className="mt-6">
               <p className="ui-label mb-3">{copy.answeredPrayers}</p>
               <div className="flex flex-col gap-3">
-                {prayers.filter((p) => p.status === 'answered').map((p) => (
-                  <div key={p.id} className="premium-card p-4">
+                {answeredPrayers.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => openPrayer(p)}
+                    className="premium-card p-4 text-left no-tap-highlight hover:border-gold-500/30 transition-all duration-300"
+                  >
                     <h4 className="font-serif text-lg text-ivory-50">{p.title}</h4>
                     <p className="text-sage-400 text-xs mt-1">{copy.answeredOn(formatPrayerDate(p.closed_at || p.updated_at, lang))}</p>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
