@@ -29,6 +29,9 @@ export interface PrayerCopy {
   faithfulnessNote: string;
   answeredPrayers: string;
   answeredOn: (date: string) => string;
+  closedPrayers: string;
+  noClosedPrayersTitle: string;
+  noClosedPrayersBody: string;
   status: { praying: string; waiting: string; answered: string; closed: string };
   started: (date: string) => string;
   updateStatus: string;
@@ -97,6 +100,9 @@ const en: PrayerCopy = {
   faithfulnessNote: 'This will populate as you record prayers and mark them answered or closed. Every answered prayer and every season of waiting becomes part of your faithfulness timeline.',
   answeredPrayers: 'Answered Prayers',
   answeredOn: (date) => `Answered · ${date}`,
+  closedPrayers: 'Closed Prayers',
+  noClosedPrayersTitle: 'No closed prayers yet',
+  noClosedPrayersBody: 'Prayers you close will rest here, so you can look back on the journey God walked with you.',
   status: { praying: 'Praying', waiting: 'Waiting', answered: 'Answered', closed: 'Closed · Continuing to Trust' },
   started: (date) => `Praying since ${date}`,
   updateStatus: 'Update Status',
@@ -165,6 +171,9 @@ const es: PrayerCopy = {
   faithfulnessNote: 'Esta sección se llenará a medida que registres oraciones y las marques como respondidas o cerradas. Cada oración respondida y cada temporada de espera forman parte de tu línea de tiempo de fidelidad.',
   answeredPrayers: 'Oraciones respondidas',
   answeredOn: (date) => `Respondida · ${date}`,
+  closedPrayers: 'Oraciones cerradas',
+  noClosedPrayersTitle: 'Aún no hay oraciones cerradas',
+  noClosedPrayersBody: 'Las oraciones que cierres permanecerán aquí, para que puedas recordar el camino que Dios recorrió contigo.',
   status: { praying: 'Orando', waiting: 'Esperando', answered: 'Respondida', closed: 'Cerrada · Confiando en Dios' },
   started: (date) => `Orando desde el ${date}`,
   updateStatus: 'Cambiar estado',

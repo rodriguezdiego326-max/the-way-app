@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Check, X, ChevronRight, Heart, BookOpen } from 'lucide-react';
+import { Plus, Check, X, ChevronRight, Heart, BookOpen, Archive } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { vibrate } from '@/lib/utils';
 import { createLegacyEvent } from '@/lib/legacyEngine';
@@ -23,6 +23,7 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
   const [prayers, setPrayers] = useState<Prayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
   const [selectedPrayer, setSelectedPrayer] = useState<Prayer | null>(null);
   const [updateCounts, setUpdateCounts] = useState<Record<string, number>>({});
   const [lastPrayedAt, setLastPrayedAt] = useState<Record<string, string>>({});
@@ -123,8 +124,9 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
     setPrayers((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
   }
 
-  const activePrayers = prayers.filter((p) => p.status !== 'answered');
+  const activePrayers = prayers.filter((p) => p.status === 'praying' || p.status === 'waiting');
   const answeredPrayers = prayers.filter((p) => p.status === 'answered');
+  const closedPrayers = prayers.filter((p) => p.status === 'closed');
 
   // Prayer detail — full-screen overlay
   if (selectedPrayer) {
@@ -197,6 +199,91 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
     );
   }
 
+  function renderPrayerCard(prayer: Prayer) {
+    const cfg = statusConfig[prayer.status];
+    const count = updateCounts[prayer.id] || 0;
+    const lastPrayed = lastPrayedAt[prayer.id];
+    const isActive = prayer.status === 'praying' || prayer.status === 'waiting';
+    return (
+      <button
+        key={prayer.id}
+        onClick={() => openPrayer(prayer)}
+        className="premium-card p-5 text-left no-tap-highlight hover:border-gold-500/30 transition-all duration-300 group"
+      >
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <h3 className="font-serif text-xl text-ivory-50 tracking-tight">{prayer.title}</h3>
+          <ChevronRight size={16} className="text-ivory-600 group-hover:text-gold-300 transition-colors shrink-0 mt-1" />
+        </div>
+        <div className="flex items-center gap-3 mt-2">
+          <span className={`px-2.5 py-1 rounded-full ${cfg.bg} ${cfg.border} border ${cfg.color} text-[11px] font-medium`}>
+            {copy.status[prayer.status]}
+          </span>
+          {prayer.related_scripture && (
+            <span className="text-gold-300/70 text-xs flex items-center gap-1">
+              <BookOpen size={11} />
+              {prayer.related_scripture}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center justify-between gap-3 mt-3">
+          <span className="text-ivory-600 text-xs">
+            {lastPrayed
+              ? copy.lastPrayed(formatPrayerDate(lastPrayed, lang))
+              : copy.started(formatPrayerDate(prayer.started_at, lang))}
+          </span>
+          {isActive && (
+            <span className="flex items-center gap-1.5 text-gold-300 text-xs font-medium">
+              <Heart size={11} />
+              {copy.pray}
+            </span>
+          )}
+        </div>
+        {count > 0 && (
+          <div className="flex items-center gap-1.5 mt-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-gold-400/50" />
+            <span className="text-ivory-600 text-xs">{copy.updateCount(count)}</span>
+          </div>
+        )}
+      </button>
+    );
+  }
+
+  // Closed prayers archive — full-screen overlay
+  if (showArchive) {
+    return (
+      <div className="fixed inset-0 z-[60] bg-ink-950 bg-parchment flex flex-col">
+        <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
+          <button onClick={() => setShowArchive(false)} className="btn-ghost">
+            <X size={20} />
+          </button>
+          <p className="ui-label">{copy.closedPrayers}</p>
+          <span className="w-10" />
+        </header>
+
+        <div className="flex-1 overflow-y-auto px-6 py-6 min-h-0">
+          {loading ? (
+            <div className="flex flex-col gap-3">
+              {[1, 2].map((i) => (
+                <div key={i} className="premium-card h-24 animate-pulse" />
+              ))}
+            </div>
+          ) : closedPrayers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
+              <h3 className="font-serif text-2xl text-ivory-50 mb-3">{copy.noClosedPrayersTitle}</h3>
+              <p className="text-ivory-500 text-sm max-w-xs leading-relaxed">
+                {copy.noClosedPrayersBody}
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 fade-stagger">
+              {closedPrayers.map(renderPrayerCard)}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // Main prayer list
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen nav-safe-padding">
@@ -225,8 +312,18 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
         </button>
       </div>
 
+      <div className="px-6 mt-3 flex justify-end">
+        <button
+          onClick={() => { vibrate(4); setShowArchive(true); }}
+          className="btn-ghost text-xs text-ivory-500 flex items-center gap-1.5"
+        >
+          <Archive size={12} />
+          {copy.closedPrayers}
+        </button>
+      </div>
+
       {tab === 'active' && (
-        <div className="px-6 mt-6">
+        <div className="px-6 mt-4">
           {loading ? (
             <div className="flex flex-col gap-3">
               {[1, 2, 3].map((i) => (
@@ -250,54 +347,7 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
           ) : (
             <>
               <div className="flex flex-col gap-3 fade-stagger">
-                {activePrayers.map((prayer) => {
-                  const cfg = statusConfig[prayer.status];
-                  const count = updateCounts[prayer.id] || 0;
-                  const lastPrayed = lastPrayedAt[prayer.id];
-                  const isActive = prayer.status === 'praying' || prayer.status === 'waiting';
-                  return (
-                    <button
-                      key={prayer.id}
-                      onClick={() => openPrayer(prayer)}
-                      className="premium-card p-5 text-left no-tap-highlight hover:border-gold-500/30 transition-all duration-300 group"
-                    >
-                      <div className="flex items-start justify-between gap-3 mb-2">
-                        <h3 className="font-serif text-xl text-ivory-50 tracking-tight">{prayer.title}</h3>
-                        <ChevronRight size={16} className="text-ivory-600 group-hover:text-gold-300 transition-colors shrink-0 mt-1" />
-                      </div>
-                      <div className="flex items-center gap-3 mt-2">
-                        <span className={`px-2.5 py-1 rounded-full ${cfg.bg} ${cfg.border} border ${cfg.color} text-[11px] font-medium`}>
-                          {copy.status[prayer.status]}
-                        </span>
-                        {prayer.related_scripture && (
-                          <span className="text-gold-300/70 text-xs flex items-center gap-1">
-                            <BookOpen size={11} />
-                            {prayer.related_scripture}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between gap-3 mt-3">
-                        <span className="text-ivory-600 text-xs">
-                          {lastPrayed
-                            ? copy.lastPrayed(formatPrayerDate(lastPrayed, lang))
-                            : copy.started(formatPrayerDate(prayer.started_at, lang))}
-                        </span>
-                        {isActive && (
-                          <span className="flex items-center gap-1.5 text-gold-300 text-xs font-medium">
-                            <Heart size={11} />
-                            {copy.pray}
-                          </span>
-                        )}
-                      </div>
-                      {count > 0 && (
-                        <div className="flex items-center gap-1.5 mt-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-gold-400/50" />
-                          <span className="text-ivory-600 text-xs">{copy.updateCount(count)}</span>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+                {activePrayers.map(renderPrayerCard)}
               </div>
               <button onClick={() => setShowNew(true)} className="btn-secondary w-full mt-4">
                 <Plus size={18} />
