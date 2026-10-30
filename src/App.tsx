@@ -423,7 +423,20 @@ export default function App() {
   }
 
   if (overlay.type === 'family') {
-    return <ErrorBoundary><FamilyScreen /></ErrorBoundary>;
+    return (
+      <ErrorBoundary>
+        <>
+          <FamilyScreen />
+          <BottomNav
+            active={activeTab}
+            onChange={(tab) => {
+              setOverlay({ type: 'none' });
+              setActiveTab(tab);
+            }}
+          />
+        </>
+      </ErrorBoundary>
+    );
   }
 
   if (overlay.type === 'reach') {
