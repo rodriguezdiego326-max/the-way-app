@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Users, BookOpen, MessageCircle, Scroll, Landmark, Heart,
   ChevronRight, Plus, X, Sparkles, Info, Shield,
@@ -38,6 +38,7 @@ export default function FamilyScreen() {
   const [familyName, setFamilyName] = useState('');
   const [creatingFamily, setCreatingFamily] = useState(false);
   const [familyError, setFamilyError] = useState<string | null>(null);
+  const creatingRef = useRef(false);
 
   // New member form
   const [memberNickname, setMemberNickname] = useState('');
@@ -50,7 +51,7 @@ export default function FamilyScreen() {
     loadFamilyData();
   }, []);
 
-  async function loadFamilyData() {
+  async function loadFamilyData(): Promise<FamilyProfile | null> {
     setLoading(true);
     const { data: profile, error } = await supabase
       .from('family_profiles')
@@ -83,34 +84,68 @@ export default function FamilyScreen() {
       setWalkRec(rec);
     }
     setLoading(false);
+    return (profile as FamilyProfile) ?? null;
+  }
+
+  function failCreateFamily(reason: string, dbError?: { code?: string; message?: string; details?: string; hint?: string } | null) {
+    console.error('[SOLAPATH] Family profile creation failed', { reason, ...dbError });
+    setFamilyError('We couldn\'t create your family profile. Please try again.');
+    setCreatingFamily(false);
+    creatingRef.current = false;
   }
 
   async function createFamily() {
+    if (creatingRef.current) return;
+    creatingRef.current = true;
     vibrate(12);
     setCreatingFamily(true);
     setFamilyError(null);
 
-    const name = familyName.trim() || 'My Family';
-
-    const { data, error } = await supabase
-      .from('family_profiles')
-      .insert({ family_name: name, memory_enabled: true })
-      .select('*')
-      .single();
-
-    if (error || !data) {
-      console.error('[SOLAPATH] Family profile creation failed:', error?.message || 'No data returned');
-      setFamilyError('We couldn\'t create your Family Profile. Please try again.');
-      setCreatingFamily(false);
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+    if (userError || !userId) {
+      failCreateFamily('no_authenticated_user', userError);
       return;
     }
 
-    setFamilyProfile(data as FamilyProfile);
+    const { data: existing, error: existingError } = await supabase
+      .from('family_profiles')
+      .select('id')
+      .eq('profile_id', userId)
+      .maybeSingle();
+
+    if (existingError) {
+      failCreateFamily('existing_check_failed', existingError);
+      return;
+    }
+
+    if (!existing) {
+      const name = familyName.trim() || 'My Family';
+      const { data, error } = await supabase
+        .from('family_profiles')
+        .insert({ family_name: name, memory_enabled: true, profile_id: userId })
+        .select('*')
+        .single();
+
+      if (error && error.code !== '23505') {
+        failCreateFamily('insert_failed', error);
+        return;
+      }
+      if (!error && (!data || data.profile_id !== userId)) {
+        failCreateFamily('owner_mismatch_on_return');
+        return;
+      }
+    }
+
+    const loaded = await loadFamilyData();
+    if (!loaded || loaded.profile_id !== userId) {
+      failCreateFamily('read_back_mismatch');
+      return;
+    }
     setFamilyName('');
     setShowCreateFamily(false);
     setCreatingFamily(false);
-    const rec = recommendFamilyWalk();
-    setWalkRec(rec);
+    creatingRef.current = false;
   }
 
   async function addMember() {
