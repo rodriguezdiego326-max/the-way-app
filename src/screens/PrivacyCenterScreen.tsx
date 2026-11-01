@@ -4,6 +4,7 @@ import { vibrate, formatDate } from '@/lib/utils';
 import { exportUserData, deleteAccount } from '@/lib/productionEngine';
 import { supabase } from '@/lib/supabase';
 import { deliverDataExport, ExportFileError } from '@/lib/dataExportFile';
+import { sanitizeUserExport } from '@/lib/dataExportSanitizer';
 import type { Profile } from '@/lib/types';
 
 interface Props {
@@ -30,7 +31,7 @@ export default function PrivacyCenterScreen({ profile, onBack }: Props) {
     setExportError(null);
     try {
       const data = await exportUserData(profile.id);
-      setExportData(data);
+      setExportData(sanitizeUserExport(data));
       vibrate(10);
     } catch {
       setExportError('We could not prepare your export. Please try again.');
