@@ -3,6 +3,7 @@ import { X, Shield, Download, Trash2, Brain, Heart, BookOpen, Users, Church, Boo
 import { vibrate, formatDate } from '@/lib/utils';
 import { exportUserData, deleteAccount } from '@/lib/productionEngine';
 import { supabase } from '@/lib/supabase';
+import { deliverDataExport, ExportFileError } from '@/lib/dataExportFile';
 import type { Profile } from '@/lib/types';
 
 interface Props {
@@ -11,38 +12,45 @@ interface Props {
 }
 
 type Section = 'main' | 'stores' | 'ai_data' | 'download' | 'delete';
+type DownloadPhase = 'idle' | 'file' | 'share';
 
 export default function PrivacyCenterScreen({ profile, onBack }: Props) {
   const [section, setSection] = useState<Section>('main');
   const [exporting, setExporting] = useState(false);
   const [exportData, setExportData] = useState<Record<string, unknown> | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [downloadPhase, setDownloadPhase] = useState<DownloadPhase>('idle');
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const [deleteStep, setDeleteStep] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
 
   const handleExport = useCallback(async () => {
     setExporting(true);
+    setExportError(null);
     try {
       const data = await exportUserData(profile.id);
       setExportData(data);
       vibrate(10);
     } catch {
-      console.error('Export failed');
+      setExportError('We could not prepare your export. Please try again.');
     } finally {
       setExporting(false);
     }
   }, [profile.id]);
 
-  const handleDownload = () => {
-    if (!exportData) return;
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `the-way-export-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleDownload = async () => {
+    if (!exportData || downloadPhase !== 'idle') return;
+    setDownloadError(null);
+    setDownloadPhase('file');
     vibrate(10);
+    try {
+      await deliverDataExport(exportData, setDownloadPhase);
+    } catch (err) {
+      setDownloadError(err instanceof ExportFileError ? err.message : 'Something went wrong. Please try again.');
+    } finally {
+      setDownloadPhase('idle');
+    }
   };
 
   const handleDelete = async () => {
@@ -162,9 +170,12 @@ export default function PrivacyCenterScreen({ profile, onBack }: Props) {
               <p className="text-ivory-100 font-medium text-sm mb-2">Export Your Data</p>
               <p className="text-ivory-500 text-xs leading-relaxed mb-4">Download all your data as a structured JSON file. This includes your profile, memories, prayers, reflections, Family records, REACH records, sermon notes, and all Legacy records. It does not include other users' private data.</p>
               {!exportData && (
-                <button onClick={handleExport} disabled={exporting} className="btn-primary w-full">
-                  <Download size={16} /> {exporting ? 'Preparing Export...' : 'Request Data Export'}
-                </button>
+                <>
+                  {exportError && <p className="text-error text-xs mb-3">{exportError}</p>}
+                  <button onClick={handleExport} disabled={exporting} className="btn-primary w-full">
+                    <Download size={16} /> {exporting ? 'Preparing Export...' : exportError ? 'Try Again' : 'Request Data Export'}
+                  </button>
+                </>
               )}
               {exportData && (
                 <>
@@ -172,9 +183,11 @@ export default function PrivacyCenterScreen({ profile, onBack }: Props) {
                     <p className="text-sage-300 text-xs font-medium">Export ready</p>
                     <p className="text-ivory-500 text-xs mt-1">{Object.keys(exportData).length} data categories included</p>
                   </div>
-                  <button onClick={handleDownload} className="btn-primary w-full">
-                    <Download size={16} /> Download JSON File
+                  <button onClick={handleDownload} disabled={downloadPhase !== 'idle'} className="btn-primary w-full disabled:opacity-60">
+                    <Download size={16} />{' '}
+                    {downloadPhase === 'file' ? 'Preparing file…' : downloadPhase === 'share' ? 'Opening Share Sheet…' : 'Download JSON File'}
                   </button>
+                  {downloadError && <p className="text-error text-xs mt-3">{downloadError}</p>}
                 </>
               )}
             </div>
