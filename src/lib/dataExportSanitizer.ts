@@ -32,9 +32,7 @@ const PERSONAL_CONTEXT_FIELDS = ['scripture_reference', 'topic', 'factual_summar
 const PERSONAL_CLAIM_FIELDS = ['text'] as const;
 const ASK_PAYLOAD_FIELDS = [
   'answer_summary', 'scripture_context', 'reformed_understanding', 'application', 'prayer_guidance',
-  'divine_revelation_response', 'human_support_recommended', 'human_support_note',
-  'not_explicitly_addressed_by_scripture', 'other_christian_views', 'theological_confidence',
-  'source_confidence', 'warnings',
+  'divine_revelation_response', 'human_support_note', 'other_christian_views', 'warnings',
 ] as const;
 const REFLECTION_RESPONSE_FIELDS = ['answer_summary', 'passage_reference', 'response_language', 'generated_at'] as const;
 const RECORDS_USED_FIELDS = ['type', 'title', 'date'] as const;

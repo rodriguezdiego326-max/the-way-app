@@ -182,7 +182,7 @@ export default function PrivacyCenterScreen({ profile, onBack }: Props) {
                 <>
                   <div className="premium-card p-3 mb-3 bg-sage-500/5 border-sage-500/20">
                     <p className="text-sage-300 text-xs font-medium">Export ready</p>
-                    <p className="text-ivory-500 text-xs mt-1">{Object.keys(exportData).length} data categories included</p>
+                    <p className="text-ivory-500 text-xs mt-1">Your data is ready to download</p>
                   </div>
                   <button onClick={handleDownload} disabled={downloadPhase !== 'idle'} className="btn-primary w-full disabled:opacity-60">
                     <Download size={16} />{' '}
