@@ -378,7 +378,7 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
         </section>
       </div>
 
-      <div className="px-6 pb-10 safe-bottom shrink-0">
+      <div className="px-6 pt-4 nav-safe-padding shrink-0">
         <button onClick={save} disabled={saving} className="btn-primary w-full disabled:opacity-40">
           {saving ? 'Saving...' : 'Save Profile'}
         </button>

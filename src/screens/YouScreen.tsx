@@ -275,7 +275,7 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
           <span className="w-10" />
         </header>
 
-        <div className="flex-1 overflow-y-auto px-6 py-6 animate-fade-in">
+        <div className="flex-1 overflow-y-auto px-6 pt-6 nav-safe-padding animate-fade-in">
           <div className="mb-6">
             <p className="ui-label mb-3">Theological Depth</p>
             <div className="flex flex-col gap-2">
