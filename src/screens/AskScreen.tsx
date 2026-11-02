@@ -37,7 +37,7 @@ import AuthorityLabel, { type AuthorityLevel } from '@/components/AuthorityLabel
 import SourceViewer from '@/components/SourceViewer';
 import BiblicalBasis from '@/components/BiblicalBasis';
 import MemoryProposalCard from '@/components/MemoryProposalCard';
-import { fetchIntelligenceResponse, retrieveStudyMemoryEvidence } from '@/lib/intelligenceService';
+import { fetchIntelligenceResponse, isMemoryEnabled, retrieveStudyMemoryEvidence } from '@/lib/intelligenceService';
 import { isAskHandoffContext, buildHandoffPrompt } from '@/lib/askHandoff';
 import type { AskIntent, Profile, Walk } from '@/lib/types';
 import type { StructuredTheologicalResponse, VerificationState, StudyMemoryEvidence, PersonalContextItem, PersonalClaim } from '@/lib/intelligenceTypes';
@@ -211,6 +211,20 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
   const scale = TEXT_SCALE_MAP[textScale];
   const t = ASK_STRINGS[getAskLang(activeTranslation)];
   const askLang = getAskLang(activeTranslation);
+  const [memoryEnabled, setMemoryEnabled] = useState(false);
+  useEffect(() => {
+    if (!profile?.id) {
+      setMemoryEnabled(false);
+      return;
+    }
+    let cancelled = false;
+    isMemoryEnabled(profile.id).then((enabled) => {
+      if (!cancelled) setMemoryEnabled(enabled);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.id]);
 
   const checkNearBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -956,6 +970,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
                   translation={activeTranslation}
                   t={t}
                   askLang={askLang}
+                  memoryEnabled={memoryEnabled}
                   onDismissProposal={(pid) => {
                     vibrate(6);
                     setDismissedProposals((prev) => new Set(prev).add(pid));
@@ -1442,6 +1457,7 @@ interface AssistantMessageProps {
   translation: BibleTranslation;
   t: typeof ASK_STRINGS[AskLang];
   askLang: AskLang;
+  memoryEnabled: boolean;
   onDismissProposal: (id: string) => void;
   onShowSources: () => void;
   onShowBiblicalBasis: () => void;
@@ -1459,6 +1475,7 @@ function AssistantMessage({
   translation,
   t,
   askLang,
+  memoryEnabled,
   onDismissProposal,
   onShowSources,
   onShowBiblicalBasis,
@@ -1584,7 +1601,7 @@ function AssistantMessage({
         </div>
 
         {/* Personal context indicator — subtle, only when memory was used */}
-        {response.personal_context_items && response.personal_context_items.length > 0 && (
+        {memoryEnabled && response.personal_context_items && response.personal_context_items.length > 0 && (
           <div className="pt-0.5">
             <button
               onClick={() => setShowPersonalContext(!showPersonalContext)}

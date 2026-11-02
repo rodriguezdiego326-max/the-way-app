@@ -24,17 +24,16 @@ export async function fetchIntelligenceResponse(
   studyMemoryEvidence?: StudyMemoryEvidence[],
   lastAssistantContext?: IntelligenceRequest['last_assistant_context'],
 ): Promise<StructuredTheologicalResponse> {
-  // Retrieve relevant memories (selective, not all)
-  const relevantMemories = await retrieveRelevantMemories(question, profile);
+  const memoryOn = profile ? await isMemoryEnabled(profile.id) : false;
 
-  // Retrieve enriched memory evidence from server-side edge function
-  const memoryEvidence = await retrieveMemoryEvidence(question);
+  const relevantMemories = memoryOn ? await retrieveRelevantMemories(question) : [];
+  const memoryEvidence = memoryOn ? await retrieveMemoryEvidence(question) : [];
 
   const request: IntelligenceRequest = {
     question,
     theological_depth: theologicalDepth,
     response_language: responseLanguage,
-    profile: profile
+    profile: profile && memoryOn
       ? {
           display_name: profile.display_name,
           life_stage: profile.life_stage,
@@ -46,7 +45,7 @@ export async function fetchIntelligenceResponse(
         }
       : undefined,
     relevant_memories: relevantMemories,
-    study_memory_evidence: studyMemoryEvidence,
+    study_memory_evidence: memoryOn ? studyMemoryEvidence : undefined,
     memory_evidence: memoryEvidence.length > 0 ? memoryEvidence : undefined,
     conversation_history: conversationHistory,
     last_assistant_context: lastAssistantContext,
@@ -102,12 +101,19 @@ export async function fetchIntelligenceResponse(
 // Does NOT dump the user's entire personal history.
 // ============================================================
 
+export async function isMemoryEnabled(profileId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('memory_enabled')
+    .eq('id', profileId)
+    .maybeSingle();
+  if (error) return false;
+  return data?.memory_enabled === true;
+}
+
 async function retrieveRelevantMemories(
   question: string,
-  profile: Profile | null,
 ): Promise<Array<{ category: string; content: string }>> {
-  if (!profile?.memory_enabled) return [];
-
   const { data: memories } = await supabase
     .from('memories')
     .select('category, content')
@@ -221,7 +227,7 @@ export async function retrieveStudyMemoryEvidence(
   question: string,
   profile: Profile | null,
 ): Promise<StudyMemoryEvidence[]> {
-  if (!profile) return [];
+  if (!profile || !(await isMemoryEnabled(profile.id))) return [];
 
   try {
     const { data: sessionData } = await supabase.auth.getSession();
