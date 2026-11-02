@@ -2,6 +2,7 @@ import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Sparkles, BookOpen, Clock, ChevronRight, Info, Lock, Loader2, ArrowRight, RotateCw, Quote, Pencil, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { recommendWalk, walkToInsert } from '@/lib/walkEngine';
+import { isMemoryEnabled } from '@/lib/intelligenceService';
 import { fetchVerses, fetchChapter } from '@/lib/bibleEngine';
 import type { Walk, Profile, DailyCheckin, WalkReflection } from '@/lib/types';
 import { vibrate } from '@/lib/utils';
@@ -247,6 +248,20 @@ function localizeReference(ref: string, translation: string): string {
     return `${y}-${m}-${day}`;
   }
 
+  async function recommendTodayWalk(mood: string | null, context: string | null) {
+    const memoryOn = profile ? await isMemoryEnabled(profile.id) : false;
+    let recentWalks: Walk[] = [];
+    if (memoryOn) {
+      const { data } = await supabase
+        .from('walks')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      recentWalks = (data as Walk[]) || [];
+    }
+    return recommendWalk(profile, recentWalks, new Date(), context, mood, memoryOn);
+  }
+
   async function loadOrCreateTodayWalk() {
     setLoading(true);
     setWalkError(null);
@@ -271,13 +286,7 @@ function localizeReference(ref: string, translation: string): string {
       return;
     }
 
-    const { data: recentWalks } = await supabase
-      .from('walks')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    const rec = await recommendWalk(profile, (recentWalks as Walk[]) || [], new Date(), contextText || null, selectedMood);
+    const rec = await recommendTodayWalk(selectedMood, contextText || null);
     setWalkReason(rec.reason);
 
     // Atomic insert: if a concurrent call already inserted for this day,
@@ -328,25 +337,14 @@ function localizeReference(ref: string, translation: string): string {
         // Still update the recommendation reason for UI feedback, but do NOT
         // overwrite passage_reference, reading_objective, observation_prompt,
         // or estimated_minutes on the locked walk.
-        const { data: recentWalks } = await supabase
-          .from('walks')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(10);
-        const rec = await recommendWalk(profile, (recentWalks as Walk[]) || [], new Date(), context || null, mood);
+        const rec = await recommendTodayWalk(mood, context || null);
         setWalkReason(rec.reason);
         setRegenerating(false);
         return;
       }
     }
 
-    const { data: recentWalks } = await supabase
-      .from('walks')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    const rec = await recommendWalk(profile, (recentWalks as Walk[]) || [], new Date(), context || null, mood);
+    const rec = await recommendTodayWalk(mood, context || null);
     setWalkReason(rec.reason);
 
     if (todayWalk) {

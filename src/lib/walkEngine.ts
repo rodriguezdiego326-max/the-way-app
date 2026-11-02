@@ -358,12 +358,13 @@ function pickByContext(text: string, availableTime: number, mood?: string | null
 
 export async function recommendWalk(
   profile: Profile | null,
-  recentWalks?: Walk[],
-  date = new Date(),
-  contextText?: string | null,
-  mood?: string | null,
+  recentWalks: Walk[],
+  date: Date,
+  contextText: string | null,
+  mood: string | null | undefined,
+  memoryEnabled: boolean,
 ): Promise<WalkRecommendation> {
-  const availableTime = profile?.available_time_minutes ?? 7;
+  const availableTime = memoryEnabled ? (profile?.available_time_minutes ?? 7) : 7;
 
   // If user provided context text, try to find contextually relevant scripture
   if (contextText && contextText.trim().length > 3) {
@@ -378,7 +379,7 @@ export async function recommendWalk(
   }
 
   // Check for current study with continuity
-  const study = profile?.current_study?.trim();
+  const study = memoryEnabled ? profile?.current_study?.trim() : undefined;
   if (study && studySequences[study]) {
     const sequence = studySequences[study];
 

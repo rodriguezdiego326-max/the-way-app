@@ -1,0 +1,13 @@
+{
+  "projectId": "70050774",
+  "functions": {
+    "memory-retrieval": {
+      "hasChanged": false,
+      "hash": "9b6b425a800962c6b184c2fd1cdcc7a3beca7c904ef4fe782ace3a6a8dfd4a87"
+    },
+    "the-way-intelligence": {
+      "hasChanged": false,
+      "hash": "e17b93d09be7011a8e79f01fe5d4ac1fdb64677e819bb5bb11f01cf0317ffd5b"
+    }
+  }
+}

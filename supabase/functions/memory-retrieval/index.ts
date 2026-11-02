@@ -28,6 +28,31 @@ interface MemoryRequest {
   conversation_id?: string;
 }
 
+async function isMemoryEnabledForUser(
+  supabaseUrl: string,
+  supabaseAnonKey: string,
+  callerToken: string,
+  userId: string,
+): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/profiles?select=memory_enabled&id=eq.${encodeURIComponent(userId)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${callerToken}`,
+          apikey: supabaseAnonKey,
+          Accept: "application/json",
+        },
+      },
+    );
+    if (!res.ok) return false;
+    const rows = await res.json();
+    return Array.isArray(rows) && rows.length === 1 && rows[0]?.memory_enabled === true;
+  } catch {
+    return false;
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -82,6 +107,13 @@ Deno.serve(async (req: Request) => {
   try {
     const { question } = (await req.json()) as MemoryRequest;
     if (!question || !question.trim()) {
+      return new Response(JSON.stringify({ evidence: [] }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!(await isMemoryEnabledForUser(supabaseUrl, supabaseAnonKey, callerToken, verifiedUserId))) {
       return new Response(JSON.stringify({ evidence: [] }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
