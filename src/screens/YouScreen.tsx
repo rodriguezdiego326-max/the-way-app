@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
+  AlertCircle,
   Brain,
   Heart,
   BookOpen,
@@ -73,6 +74,9 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
   const [subView, setSubView] = useState<SubView>('main');
   const [editingProfile, setEditingProfile] = useState(false);
   const [memories, setMemories] = useState<Memory[]>([]);
+  const [confirmDeleteAllOpen, setConfirmDeleteAllOpen] = useState(false);
+  const [deletingAllMemories, setDeletingAllMemories] = useState(false);
+  const [deleteAllError, setDeleteAllError] = useState<string | null>(null);
   const [walkCount, setWalkCount] = useState(0);
   const [prayerCount, setPrayerCount] = useState(0);
   const [reflectionCount, setReflectionCount] = useState(0);
@@ -136,8 +140,16 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
   }
 
   async function deleteAllMemories() {
+    setDeletingAllMemories(true);
+    setDeleteAllError(null);
     vibrate(20);
-    await supabase.from('memories').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    const { error } = await supabase.from('memories').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    setDeletingAllMemories(false);
+    if (error) {
+      setDeleteAllError('We could not delete your memories. Please try again.');
+      return;
+    }
+    setConfirmDeleteAllOpen(false);
     setMemories([]);
   }
 
@@ -249,7 +261,7 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
                 </div>
 
                 <button
-                  onClick={deleteAllMemories}
+                  onClick={() => { vibrate(8); setDeleteAllError(null); setConfirmDeleteAllOpen(true); }}
                   className="btn-secondary w-full text-error border-error/30 hover:bg-error/10"
                 >
                   <Trash2 size={16} />
@@ -259,6 +271,41 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
             )}
           </div>
         </div>
+
+        {confirmDeleteAllOpen && (
+          <div className="fixed inset-0 z-[70] flex items-end justify-center px-4 animate-fade-in" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+            <div className="absolute inset-0 bg-ink-950/60" onClick={() => !deletingAllMemories && setConfirmDeleteAllOpen(false)} />
+            <div role="alertdialog" aria-labelledby="delete-all-memories-title" className="relative w-full max-w-lg bg-ink-800/95 backdrop-blur-md border border-error/30 rounded-2xl p-5 shadow-xl shadow-ink-950/50 animate-fade-in-up mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle size={18} className="text-error" />
+                <p id="delete-all-memories-title" className="text-ivory-50 text-base font-medium font-serif">Delete All Memories?</p>
+              </div>
+              <p className="text-ivory-400 text-sm leading-relaxed mb-3">
+                This permanently deletes all saved SOLAPATH memories. It cannot be undone.
+              </p>
+              <p className="text-ivory-500 text-xs leading-relaxed mb-4">
+                Your account, prayers, Family records, Ask conversations, Bible notes, bookmarks, highlights, and other records are not affected.
+              </p>
+              {deleteAllError && <p className="text-error text-xs mb-3">{deleteAllError}</p>}
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={deleteAllMemories}
+                  disabled={deletingAllMemories}
+                  className="btn-secondary w-full text-error border-error/30 hover:bg-error/10 disabled:opacity-40"
+                >
+                  <Trash2 size={16} /> {deletingAllMemories ? 'Deleting...' : 'Delete All Memories'}
+                </button>
+                <button
+                  onClick={() => setConfirmDeleteAllOpen(false)}
+                  disabled={deletingAllMemories}
+                  className="btn-secondary w-full"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
