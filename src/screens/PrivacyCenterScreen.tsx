@@ -4,6 +4,7 @@ import { vibrate, formatDate } from '@/lib/utils';
 import { exportUserData, deleteAccount } from '@/lib/productionEngine';
 import { supabase } from '@/lib/supabase';
 import { deliverDataExport, ExportFileError } from '@/lib/dataExportFile';
+import DeleteAllMemoriesDialog from '@/components/DeleteAllMemoriesDialog';
 import { sanitizeUserExport } from '@/lib/dataExportSanitizer';
 import type { Profile } from '@/lib/types';
 
@@ -25,6 +26,7 @@ export default function PrivacyCenterScreen({ profile, onBack }: Props) {
   const [deleteStep, setDeleteStep] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [memoryDialogOpen, setMemoryDialogOpen] = useState(false);
 
   const handleExport = useCallback(async () => {
     setExporting(true);
@@ -143,15 +145,19 @@ export default function PrivacyCenterScreen({ profile, onBack }: Props) {
               {profile.memory_enabled ? 'Disable Memory' : 'Enable Memory'}
             </button>
             <button
-              onClick={async () => {
+              onClick={() => {
                 vibrate(15);
-                await supabase.from('memories').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-                vibrate(10);
+                setMemoryDialogOpen(true);
               }}
               className="btn-secondary w-full text-sm text-error border-error/30"
             >
               <Trash2 size={14} /> Delete All Memories
             </button>
+            <DeleteAllMemoriesDialog
+              open={memoryDialogOpen}
+              onClose={() => setMemoryDialogOpen(false)}
+              onDeleted={() => vibrate(10)}
+            />
           </div>
         </div>
       </div>
