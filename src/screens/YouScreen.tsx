@@ -179,7 +179,7 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
           <span className="w-10" />
         </header>
 
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="flex-1 overflow-y-auto px-6 pt-6 nav-safe-padding">
           <div className="animate-fade-in">
             <div className="flex items-start gap-3 mb-6">
               <div className="w-10 h-10 rounded-xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center shrink-0">
