@@ -228,7 +228,29 @@ export async function exportUserData(profileId: string): Promise<Record<string, 
 // ACCOUNT DELETION
 // ============================================================
 
-export type DeleteAccountResult = { ok: true } | { ok: false; message: string };
+export type DeleteAccountFailureStep = 'data' | 'auth' | 'unknown';
+
+export type DeleteAccountResult =
+  | { ok: true }
+  | { ok: false; step: DeleteAccountFailureStep; message: string };
+
+const DELETE_ACCOUNT_MESSAGES: Record<DeleteAccountFailureStep, string> = {
+  data: 'We could not delete your account. Your SOLAPATH data has not been deleted. Please try again.',
+  auth: 'Your SOLAPATH data was removed, but we could not finish deleting your account. Please try Delete My Account again to complete the process.',
+  unknown: 'We could not confirm that account deletion finished. Please try again. If the problem continues, contact support.',
+};
+
+async function readDeleteFailureStep(error: unknown): Promise<DeleteAccountFailureStep> {
+  const response = (error as { context?: Response } | null)?.context;
+  if (!response || typeof response.json !== 'function') return 'unknown';
+  try {
+    const body = await response.json();
+    if (body?.step === 'data' || body?.step === 'auth') return body.step;
+  } catch {
+    return 'unknown';
+  }
+  return 'unknown';
+}
 
 async function currentAppVersion(): Promise<string> {
   try {
@@ -248,8 +270,9 @@ export async function deleteAccount(profileId: string): Promise<DeleteAccountRes
   });
 
   if (error || !data || data.ok !== true) {
-    console.error('[productionEngine] deleteAccount failed', error?.message ?? data?.error);
-    return { ok: false, message: 'We could not delete your account. Nothing has been removed from your account. Please check your connection and try again.' };
+    const step = error ? await readDeleteFailureStep(error) : 'unknown';
+    console.error('[productionEngine] deleteAccount failed', step);
+    return { ok: false, step, message: DELETE_ACCOUNT_MESSAGES[step] };
   }
 
   clearAllUserDrafts(profileId);
