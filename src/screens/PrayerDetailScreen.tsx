@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, BookOpen, Calendar, Plus, Pencil, Heart } from 'lucide-react';
+import { X, BookOpen, Calendar, Plus, Pencil, Heart, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { vibrate } from '@/lib/utils';
 import { createLegacyEvent } from '@/lib/legacyEngine';
 import { formatPrayerDate, getPrayerCopy, getPrayerLang } from '@/lib/prayerCopy';
 import { buildJourneyEvents, type PrayerUpdateRow, type UpdateType } from '@/lib/prayerJourney';
 import PrayerEditor from '@/components/PrayerEditor';
+import DeletePrayerDialog from '@/components/DeletePrayerDialog';
 import PrayerJourneyTimeline from '@/components/PrayerJourneyTimeline';
 import PrayerMode from '@/components/PrayerMode';
 import type { Prayer, PrayerSession, PrayerStatus, Profile } from '@/lib/types';
@@ -25,9 +26,10 @@ interface Props {
   profile: Profile | null;
   onClose: () => void;
   onPrayerChanged: (prayer: Prayer) => void;
+  onDeleted: (prayerId: string) => void;
 }
 
-export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onClose, onPrayerChanged }: Props) {
+export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onClose, onPrayerChanged, onDeleted }: Props) {
   const [prayer, setPrayer] = useState<Prayer>(initialPrayer);
   const [updates, setUpdates] = useState<PrayerUpdateRow[]>([]);
   const [sessions, setSessions] = useState<PrayerSession[]>([]);
@@ -39,6 +41,7 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
   const [saving, setSaving] = useState(false);
   const [showPrayerEditor, setShowPrayerEditor] = useState(false);
   const [showPrayerMode, setShowPrayerMode] = useState(false);
+  const [showDeletePrayer, setShowDeletePrayer] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lang = getPrayerLang();
   const copy = getPrayerCopy(lang);
@@ -220,7 +223,7 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
           <span className="w-10" />
         </header>
 
-        <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
+        <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-6 pt-6 pb-[calc(24px+env(safe-area-inset-bottom,0px))]">
           <div className="animate-fade-in-up">
             <span className={`inline-block px-3 py-1.5 rounded-full ${cfg.bg} ${cfg.border} border ${cfg.color} text-xs font-medium mb-4`}>
               {copy.status[prayer.status]}
@@ -306,6 +309,15 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
                 );
               })}
             </div>
+
+            <div className="gold-divider mb-6" />
+
+            <button
+              onClick={() => { vibrate(6); setShowDeletePrayer(true); }}
+              className="btn-secondary w-full text-error border-error/30 hover:bg-error/10"
+            >
+              <Trash2 size={16} /> {copy.deletePrayer}
+            </button>
           </div>
         </div>
       </div>
@@ -396,6 +408,14 @@ export default function PrayerDetailScreen({ prayer: initialPrayer, profile, onC
             setShowPrayerEditor(false);
           }}
           onCancel={() => setShowPrayerEditor(false)}
+        />
+      )}
+      {showDeletePrayer && (
+        <DeletePrayerDialog
+          prayerId={prayer.id}
+          copy={copy}
+          onClose={() => setShowDeletePrayer(false)}
+          onDeleted={() => onDeleted(prayer.id)}
         />
       )}
     </>

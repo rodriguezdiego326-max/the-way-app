@@ -47,6 +47,11 @@ export interface PrayerCopy {
   editSaveError: string;
   identifyError: string;
   saveError: string;
+  deletePrayer: string;
+  deletePrayerTitle: string;
+  deletePrayerBody: string;
+  deletePrayerDeleting: string;
+  deletePrayerError: string;
   updatePlaceholder: string;
   reflectionPlaceholder: string;
   addUpdateLabel: string;
@@ -118,6 +123,11 @@ const en: PrayerCopy = {
   editSaveError: 'Could not save your changes. Your edits are still here, so please try again.',
   identifyError: 'Could not identify user. Please try again.',
   saveError: 'Could not save. Please try again.',
+  deletePrayer: 'Delete Prayer',
+  deletePrayerTitle: 'Delete this prayer?',
+  deletePrayerBody: 'This permanently deletes this prayer, its updates, reflections, prayer history, and its Legacy timeline entry. It cannot be undone. Your other prayers are not affected.',
+  deletePrayerDeleting: 'Deleting...',
+  deletePrayerError: 'Could not delete this prayer. It has not been removed. Please try again.',
   updatePlaceholder: 'What is happening with this prayer?',
   reflectionPlaceholder: 'What are you learning as you continue to pray?',
   addUpdateLabel: 'Add an update',
@@ -189,6 +199,11 @@ const es: PrayerCopy = {
   editSaveError: 'No se pudieron guardar los cambios. Tus cambios siguen aquí; inténtalo de nuevo.',
   identifyError: 'No se pudo identificar al usuario. Inténtalo de nuevo.',
   saveError: 'No se pudo guardar. Inténtalo de nuevo.',
+  deletePrayer: 'Eliminar oración',
+  deletePrayerTitle: '¿Eliminar esta oración?',
+  deletePrayerBody: 'Esto elimina permanentemente esta oración, sus actualizaciones, reflexiones, historial de oración y su entrada en la línea de tiempo de Legado. No se puede deshacer. Tus otras oraciones no se verán afectadas.',
+  deletePrayerDeleting: 'Eliminando...',
+  deletePrayerError: 'No se pudo eliminar esta oración. No se ha borrado. Inténtalo de nuevo.',
   updatePlaceholder: '¿Qué está pasando con esta oración?',
   reflectionPlaceholder: '¿Qué estás aprendiendo mientras continúas orando?',
   addUpdateLabel: 'Agregar una actualización',

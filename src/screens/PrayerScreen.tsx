@@ -124,6 +124,11 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
     setPrayers((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
   }
 
+  function handlePrayerDeleted(prayerId: string) {
+    setPrayers((prev) => prev.filter((p) => p.id !== prayerId));
+    setSelectedPrayer(null);
+  }
+
   const activePrayers = prayers.filter((p) => p.status === 'praying' || p.status === 'waiting');
   const answeredPrayers = prayers.filter((p) => p.status === 'answered');
   const closedPrayers = prayers.filter((p) => p.status === 'closed');
@@ -136,6 +141,7 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
         profile={profile ?? null}
         onClose={() => setSelectedPrayer(null)}
         onPrayerChanged={handlePrayerChanged}
+        onDeleted={handlePrayerDeleted}
       />
     );
   }
