@@ -3,7 +3,7 @@ import { X, Check, AlertCircle, FlaskConical, ChevronDown, Shield, Lock, Cpu } f
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import { supabase } from '@/lib/supabase';
-import { getFeatureFlags, checkDatabaseHealth, getAiUsageStats, exportUserData, deleteAccount, lockSubmission, unlockSubmission, isSubmitting, saveDraft, loadDraft, clearDraft, clearAllUserDrafts } from '@/lib/productionEngine';
+import { getFeatureFlags, checkDatabaseHealth, getAiUsageStats, exportUserData, lockSubmission, unlockSubmission, isSubmitting, saveDraft, loadDraft, clearDraft, clearAllUserDrafts } from '@/lib/productionEngine';
 import type { Profile } from '@/lib/types';
 
 interface Props {
@@ -234,87 +234,23 @@ export default function Phase10TestScreen({ profile, onBack }: Props) {
         });
       } catch (e) { updateTest('legacy_privacy', 'fail', { testUsers: 'Circle leader, Church admin', expectedBehavior: 'Legacy private', actualBehavior: `Error: ${e instanceof Error ? e.message : 'unknown'}`, dbEndpoint: 'legacy_events', authResult: 'Error', passFailReason: 'FAIL: Exception' }); }
 
-      // TEST 8: Account Deletion — Runtime Verification
+      // TEST 8: Account deletion endpoint rejects unauthenticated callers (non-destructive)
       try {
-        const hasDeleteFunction = typeof deleteAccount === 'function';
-        const testProfileId = crypto.randomUUID();
-
-        // Create an isolated test profile
-        await supabase.from('profiles').insert({
-          id: testProfileId,
-          display_name: '__test_deletion_user__',
-          theological_depth: 'simple',
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
         });
-
-        // Insert test records in profile_id-scoped tables
-        const scopedTables = [
-          { table: 'legacy_events', data: { profile_id: testProfileId, event_type: 'test', title: '__test_deletion_event__' } },
-          { table: 'legacy_life_seasons', data: { profile_id: testProfileId, title: '__test_deletion_season__' } },
-          { table: 'legacy_letters', data: { profile_id: testProfileId, body: '__test_deletion_letter__' } },
-          { table: 'legacy_testimony', data: { profile_id: testProfileId } },
-          { table: 'family_profiles', data: { profile_id: testProfileId, family_name: '__test_deletion_family__' } },
-          { table: 'sermon_notes', data: { profile_id: testProfileId } },
-        ];
-        for (const { table, data } of scopedTables) {
-          await supabase.from(table).insert(data);
-        }
-
-        // Back up unscoped tables (column: null in deleteAccount — all rows will be deleted)
-        const unscopedTables = ['memories', 'prayers', 'prayer_updates', 'walk_reflections', 'ask_conversations', 'ask_messages', 'daily_checkins'];
-        const backups: Record<string, Array<Record<string, unknown>>> = {};
-        for (const table of unscopedTables) {
-          const { data } = await supabase.from(table).select('*');
-          backups[table] = (data || []) as Array<Record<string, unknown>>;
-        }
-
-        let deleteResult = false;
-        let profileGone = false;
-        let allScopedGone = true;
-        const scopedResults: string[] = [];
-        let auditContainsTestId = false;
-
-        try {
-          deleteResult = await deleteAccount(testProfileId);
-
-          // Verify profile is gone
-          const { data: profileAfter } = await supabase.from('profiles').select('id').eq('id', testProfileId).maybeSingle();
-          profileGone = profileAfter === null;
-
-          // Verify scoped records are gone
-          for (const { table } of scopedTables) {
-            const { count } = await supabase.from(table).select('id', { count: 'exact' }).eq('profile_id', testProfileId);
-            scopedResults.push(`${table}: ${count || 0}`);
-            if ((count || 0) > 0) allScopedGone = false;
-          }
-
-          // Check audit trail for test profile ID (should NOT be present)
-          const { data: auditRows } = await supabase.from('audit_trail').select('*').limit(50);
-          auditContainsTestId = auditRows ? JSON.stringify(auditRows).includes(testProfileId) : false;
-        } finally {
-          // Restore backed-up data (FK-safe order: parent tables first)
-          const restoreOrder = ['memories', 'prayers', 'ask_conversations', 'prayer_updates', 'walk_reflections', 'ask_messages', 'daily_checkins'];
-          for (const table of restoreOrder) {
-            if (backups[table] && backups[table].length > 0) {
-              await supabase.from(table).insert(backups[table]);
-            }
-          }
-          // Clean up any remaining test records
-          for (const { table } of scopedTables) {
-            await supabase.from(table).delete().eq('profile_id', testProfileId);
-          }
-          await supabase.from('profiles').delete().eq('id', testProfileId);
-        }
-
-        const allPassed = hasDeleteFunction && deleteResult && profileGone && allScopedGone && !auditContainsTestId;
-        updateTest('account_deletion', allPassed ? 'pass' : 'fail', {
-          testUsers: 'Isolated test user (auto-created and deleted)',
-          expectedBehavior: 'Account deletion permanently deletes all user data. No soft-delete. Audit trail retains only minimal metadata — no spiritual content.',
-          actualBehavior: `Profile after deletion: ${profileGone ? 'NOT FOUND' : 'STILL EXISTS'}. Scoped records after deletion: ${scopedResults.join(', ')}. Audit contains test ID: ${auditContainsTestId ? 'YES' : 'NO'}.`,
-          dbEndpoint: 'profiles (DELETE), legacy_events/life_seasons/letters/testimony (DELETE), memories/prayers/ask/sermon_notes (DELETE)',
-          authResult: `Runtime verified: deleteAccount ${deleteResult ? 'succeeded' : 'failed'}. Profile after deletion: ${profileGone ? 'NOT FOUND' : 'FOUND'}. All scoped records absent: ${allScopedGone}. Audit safe: ${!auditContainsTestId}. Backup data restored.`,
-          passFailReason: allPassed ? 'PASS: Account deletion is permanent and audit-safe (runtime verified)' : 'FAIL: Deletion incomplete or audit retains sensitive data',
+        const rejected = res.status === 401 || res.status === 403;
+        updateTest('account_deletion', rejected ? 'pass' : 'fail', {
+          testUsers: 'Unauthenticated caller',
+          expectedBehavior: 'Account deletion endpoint rejects requests without a valid session. Destructive deletion is never run from tests.',
+          actualBehavior: `Unauthenticated request returned HTTP ${res.status}.`,
+          dbEndpoint: 'delete-account (Edge Function)',
+          authResult: rejected ? 'Rejected without a session' : 'Unexpected response',
+          passFailReason: rejected ? 'PASS: Unauthenticated deletion rejected' : 'FAIL: Endpoint did not reject unauthenticated request',
         });
-      } catch (e) { updateTest('account_deletion', 'fail', { testUsers: 'Isolated test user', expectedBehavior: 'Permanent deletion', actualBehavior: `Error: ${e instanceof Error ? e.message : 'unknown'}`, dbEndpoint: 'profiles', authResult: 'Error', passFailReason: 'FAIL: Exception' }); }
+      } catch (e) { updateTest('account_deletion', 'fail', { testUsers: 'Unauthenticated caller', expectedBehavior: 'Endpoint rejects unauthenticated deletion', actualBehavior: `Error: ${e instanceof Error ? e.message : 'unknown'}`, dbEndpoint: 'delete-account', authResult: 'Error', passFailReason: 'FAIL: Exception' }); }
 
       // TEST 9: Data Export Scope
       try {

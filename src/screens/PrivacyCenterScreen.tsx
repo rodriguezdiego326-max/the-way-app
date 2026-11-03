@@ -25,6 +25,7 @@ export default function PrivacyCenterScreen({ profile, onBack }: Props) {
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [deleteStep, setDeleteStep] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [memoryDialogOpen, setMemoryDialogOpen] = useState(false);
 
@@ -59,19 +60,17 @@ export default function PrivacyCenterScreen({ profile, onBack }: Props) {
   const handleDelete = async () => {
     if (deleteConfirm !== 'DELETE') return;
     setDeleting(true);
+    setDeleteError(null);
     vibrate(20);
-    try {
-      const success = await deleteAccount(profile.id);
-      if (success) {
-        // Clear all local drafts and reload
-        localStorage.clear();
-        window.location.reload();
-      }
-    } catch {
-      console.error('Delete failed');
-    } finally {
+    const result = await deleteAccount(profile.id);
+    if (!result.ok) {
+      setDeleteError(result.message);
       setDeleting(false);
+      return;
     }
+    await supabase.auth.signOut({ scope: 'local' });
+    localStorage.clear();
+    window.location.reload();
   };
 
   const sections = [
@@ -253,8 +252,9 @@ export default function PrivacyCenterScreen({ profile, onBack }: Props) {
                   >
                     {deleting ? 'Deleting...' : 'Delete My Account'}
                   </button>
-                  <button onClick={() => { setDeleteStep(0); setDeleteConfirm(''); }} className="btn-secondary">Cancel</button>
+                  <button onClick={() => { setDeleteStep(0); setDeleteConfirm(''); setDeleteError(null); }} className="btn-secondary">Cancel</button>
                 </div>
+                {deleteError && <p role="alert" className="text-error text-xs leading-relaxed mt-3">{deleteError}</p>}
               </div>
             )}
           </div>

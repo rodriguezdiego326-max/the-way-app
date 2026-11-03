@@ -228,87 +228,32 @@ export async function exportUserData(profileId: string): Promise<Record<string, 
 // ACCOUNT DELETION
 // ============================================================
 
-export async function deleteAccount(profileId: string): Promise<boolean> {
-  const now = new Date().toISOString();
+export type DeleteAccountResult = { ok: true } | { ok: false; message: string };
 
-  // PERMANENTLY DELETE all user-owned tables — no soft-delete, no recovery.
-  // This matches the user-facing promise: "permanently remove."
-  const allDeleteTables = [
-    // Legacy tables (previously soft-deleted — now hard-deleted to match promise)
-    { table: 'legacy_events', column: 'profile_id' },
-    { table: 'legacy_life_seasons', column: 'profile_id' },
-    { table: 'legacy_letters', column: 'profile_id' },
-    { table: 'legacy_milestones', column: 'profile_id' },
-    { table: 'legacy_testimony', column: 'profile_id' },
-    { table: 'legacy_scripture_refs', column: 'profile_id' },
-    { table: 'legacy_year_reviews', column: 'profile_id' },
-    { table: 'legacy_designated_persons', column: 'profile_id' },
-    // Personal data
-    { table: 'memories', column: null },
-    { table: 'prayers', column: null },
-    { table: 'prayer_updates', column: null },
-    { table: 'walk_reflections', column: null },
-    { table: 'ask_conversations', column: null },
-    { table: 'ask_messages', column: null },
-    { table: 'daily_checkins', column: null },
-    { table: 'life_stages', column: 'profile_id' },
-    { table: 'life_areas', column: 'profile_id' },
-    { table: 'growth_areas', column: 'profile_id' },
-    { table: 'current_studies', column: 'profile_id' },
-    // Family
-    { table: 'family_profiles', column: 'profile_id' },
-    { table: 'family_members', column: 'profile_id' },
-    { table: 'family_walks', column: 'profile_id' },
-    { table: 'family_prayers', column: 'profile_id' },
-    { table: 'family_prayer_updates', column: 'profile_id' },
-    { table: 'family_journey_progress', column: 'profile_id' },
-    { table: 'catechism_progress', column: 'profile_id' },
-    // REACH
-    { table: 'reach_people', column: 'profile_id' },
-    { table: 'reach_conversations', column: 'profile_id' },
-    { table: 'reach_prayer_updates', column: 'profile_id' },
-    { table: 'prodigal_journey', column: 'profile_id' },
-    { table: 'prodigal_updates', column: 'profile_id' },
-    { table: 'conversation_practice', column: 'profile_id' },
-    // Church
-    { table: 'sermon_notes', column: 'profile_id' },
-    { table: 'church_memberships', column: 'profile_id' },
-    // Together / Circles
-    { table: 'circle_members', column: 'profile_id' },
-    { table: 'circle_invitations', column: 'invited_by_profile_id' },
-    { table: 'shared_prayers', column: 'profile_id' },
-    { table: 'shared_reflections', column: 'profile_id' },
-    { table: 'circle_check_ins', column: 'profile_id' },
-    { table: 'encouragements', column: 'from_profile_id' },
-    { table: 'accountability_relationships', column: 'profile_id' },
-    // Settings
-    { table: 'notification_preferences', column: 'profile_id' },
-  ];
-
-  for (const { table, column } of allDeleteTables) {
-    let query = supabase.from(table).delete();
-    if (column) query = query.eq(column, profileId);
-    await query;
+async function currentAppVersion(): Promise<string> {
+  try {
+    const { App: CapApp } = await import('@capacitor/app');
+    const info = await CapApp.getInfo();
+    return `${info.version} (${info.build})`;
+  } catch {
+    return 'unknown';
   }
+}
 
-  // Finally, delete the profile itself
-  const { error: profileErr } = await supabase.from('profiles').delete().eq('id', profileId);
-  if (profileErr) { console.error('[productionEngine] deleteAccount profile', profileErr); return false; }
-
-  // Log minimal audit metadata — NO spiritual content, NO profile ID that could
-  // be cross-referenced back to deleted data. Only the event, timestamp, and version.
-  await supabase.from('audit_trail').insert({
-    action: 'account_deletion',
-    entity_type: 'profile',
-    entity_id: 'deleted',
-    performed_by: null,
-    metadata: { deleted_at: now, system_version: 'phase10.1' },
+// The server derives the account from the verified session; no user ID is sent.
+export async function deleteAccount(profileId: string): Promise<DeleteAccountResult> {
+  const appVersion = await currentAppVersion();
+  const { data, error } = await supabase.functions.invoke('delete-account', {
+    body: { appVersion },
   });
 
-  // Clear all local drafts for this user
-  clearAllUserDrafts(profileId);
+  if (error || !data || data.ok !== true) {
+    console.error('[productionEngine] deleteAccount failed', error?.message ?? data?.error);
+    return { ok: false, message: 'We could not delete your account. Nothing has been removed from your account. Please check your connection and try again.' };
+  }
 
-  return true;
+  clearAllUserDrafts(profileId);
+  return { ok: true };
 }
 
 // ============================================================

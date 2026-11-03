@@ -3,3 +3,6 @@ verify_jwt = true
 
 [functions.memory-retrieval]
 verify_jwt = true
+
+[functions.delete-account]
+verify_jwt = true

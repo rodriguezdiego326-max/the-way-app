@@ -8,6 +8,10 @@
     "the-way-intelligence": {
       "hasChanged": false,
       "hash": "e17b93d09be7011a8e79f01fe5d4ac1fdb64677e819bb5bb11f01cf0317ffd5b"
+    },
+    "delete-account": {
+      "hasChanged": false,
+      "hash": "264dc3c411b8ded5851d1627d76dc980973e4cd301ebeff02c07e8756ed9c1fb"
     }
   }
 }
