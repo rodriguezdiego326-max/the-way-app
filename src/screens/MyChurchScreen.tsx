@@ -4,6 +4,7 @@ import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';
 import ChurchSearchResults, { type AppleSearchStatus, type ChurchSearchStatus } from '@/components/ChurchSearchResults';
 import ChurchRoleSheet from '@/components/ChurchRoleSheet';
+import ChurchAdministrationCard from '@/components/church/ChurchAdministrationCard';
 import {
   createChurch, searchChurchDirectory, joinChurch, getAllChurchMemberships, getChurch, updateChurch,
   leaveChurch, isChurchOwner, importChurchDirectoryEntry, releaseChurchOwnershipAndLeave, updateChurchMembershipRole,
@@ -23,6 +24,7 @@ interface Props {
   onOpenSundayMode: () => void;
   onOpenSermonNotes: () => void;
   onOpenChurchStudies: () => void;
+  onOpenManageChurchStudies: () => void;
   onOpenChurchPrayer: () => void;
   onOpenSmallGroups: () => void;
 }
@@ -37,7 +39,7 @@ interface ChurchWithMeta {
 }
 
 export default function MyChurchScreen({
-  profile, activeChurchId, onActiveChurchChange, onBack, onOpenSundayMode, onOpenSermonNotes, onOpenChurchStudies, onOpenChurchPrayer, onOpenSmallGroups,
+  profile, activeChurchId, onActiveChurchChange, onBack, onOpenSundayMode, onOpenSermonNotes, onOpenChurchStudies, onOpenManageChurchStudies, onOpenChurchPrayer, onOpenSmallGroups,
 }: Props) {
   const [memberships, setMemberships] = useState<ChurchWithMeta[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -373,6 +375,12 @@ export default function MyChurchScreen({
                   <p className="text-ivory-500 text-xs mt-1 leading-relaxed">You manage this church's details. Leaving releases ownership: the church stays in the directory with no owner, and other members keep their access.</p>
                 </div>
               )}
+              <ChurchAdministrationCard
+                churchId={active.church.id}
+                membership={active.membership}
+                onManageStudies={onOpenManageChurchStudies}
+                onChanged={load}
+              />
               <button
                 onClick={() => { vibrate(8); setShowLeaveConfirm(active); }}
                 className="btn-secondary w-full text-sm text-clay-400 mb-4"

@@ -193,12 +193,18 @@ export interface SermonNote {
   updated_at: string;
 }
 
+export type ChurchStudyStatus = 'draft' | 'published' | 'archived';
+
 export interface ChurchStudy {
   id: string;
   church_id: string;
   title: string;
   description: string | null;
+  status: ChurchStudyStatus;
+  published_at: string | null;
+  published_by_profile_id: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface ChurchStudyAssignment {
@@ -210,7 +216,36 @@ export interface ChurchStudyAssignment {
   discussion_questions: string[];
   prayer_focus: string | null;
   meeting_date: string | null;
+  sort_order: number;
   created_at: string;
+  updated_at: string;
+}
+
+export const VERIFIED_CHURCH_ROLES = ['CHURCH_ADMIN', 'PASTOR', 'ELDER', 'LEADER'] as const;
+export type VerifiedChurchRole = (typeof VERIFIED_CHURCH_ROLES)[number];
+
+export const VERIFIED_CHURCH_ROLE_LABELS: Record<VerifiedChurchRole, string> = {
+  CHURCH_ADMIN: 'Church Admin',
+  PASTOR: 'Pastor',
+  ELDER: 'Elder',
+  LEADER: 'Leader',
+};
+
+export function isVerifiedChurchPublisher(role: string | null | undefined): role is VerifiedChurchRole {
+  return !!role && (VERIFIED_CHURCH_ROLES as readonly string[]).includes(role);
+}
+
+export type ChurchAdminClaimStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
+
+export interface ChurchAdminClaim {
+  id: string;
+  church_id: string;
+  profile_id: string;
+  requested_role: VerifiedChurchRole;
+  status: ChurchAdminClaimStatus;
+  created_at: string;
+  updated_at: string;
+  reviewed_at: string | null;
 }
 
 export interface ChurchPrayerItem {

@@ -52,6 +52,7 @@ import ContinueSundayScreen from '@/screens/ContinueSundayScreen';
 import SermonCompanionScreen from '@/screens/SermonCompanionScreen';
 import AskMyPastorScreen from '@/screens/AskMyPastorScreen';
 import ChurchStudiesScreen from '@/screens/ChurchStudiesScreen';
+import ManageChurchStudiesScreen from '@/screens/ManageChurchStudiesScreen';
 import SmallGroupModeScreen from '@/screens/SmallGroupModeScreen';
 import ChurchPrayerScreen from '@/screens/ChurchPrayerScreen';
 import Phase8TestScreen from '@/screens/Phase8TestScreen';
@@ -125,6 +126,7 @@ type Overlay =
   | { type: 'sermon_companion'; sermon: Sermon }
   | { type: 'ask_my_pastor'; sermon: Sermon }
   | { type: 'church_studies' }
+  | { type: 'manage_church_studies' }
   | { type: 'small_groups' }
   | { type: 'church_prayer' }
   | { type: 'phase8_tests' }
@@ -315,6 +317,13 @@ export default function App() {
 
   function handleReadInApp(walk: Walk) {
     setOverlay({ type: 'bible-reader', walk });
+  }
+
+  function handleOpenPassage(passageReference: string): boolean {
+    const parsed = parsePassageReference(passageReference);
+    if (!parsed) return false;
+    handleOpenBibleReference(parsed.book, parsed.chapter, parsed.verseStart, parsed.verseEnd);
+    return true;
   }
 
   function handleOpenBibleReference(book: string, chapter: number, verseStart: number | null, verseEnd: number | null) {
@@ -597,6 +606,7 @@ export default function App() {
           onOpenSundayMode={() => setOverlay({ type: 'sunday_mode' })}
           onOpenSermonNotes={() => setOverlay({ type: 'sermon_notes' })}
           onOpenChurchStudies={() => setOverlay({ type: 'church_studies' })}
+          onOpenManageChurchStudies={() => setOverlay({ type: 'manage_church_studies' })}
           onOpenChurchPrayer={() => setOverlay({ type: 'church_prayer' })}
           onOpenSmallGroups={() => setOverlay({ type: 'small_groups' })}
         />
@@ -640,7 +650,10 @@ export default function App() {
   }
 
   if (overlay.type === 'church_studies' && profile) {
-    return <ErrorBoundary><ChurchStudiesScreen profile={profile} onBack={() => setOverlay({ type: 'my_church' })} /></ErrorBoundary>;
+    return <ErrorBoundary><ChurchStudiesScreen profile={profile} churchId={activeChurchId} onBack={() => setOverlay({ type: 'my_church' })} onOpenBible={handleOpenPassage} /></ErrorBoundary>;
+  }
+  if (overlay.type === 'manage_church_studies' && profile) {
+    return <ErrorBoundary><ManageChurchStudiesScreen profile={profile} churchId={activeChurchId} onBack={() => setOverlay({ type: 'my_church' })} /></ErrorBoundary>;
   }
 
   if (overlay.type === 'small_groups' && profile) {

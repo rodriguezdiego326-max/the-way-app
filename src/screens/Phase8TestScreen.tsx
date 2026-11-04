@@ -459,75 +459,69 @@ export default function Phase8TestScreen({ profile, onBack }: Props) {
           .single();
         if (roleTestChurch) createdIds.push(`church:${roleTestChurch.id}`);
 
-        // --- Normal User: self-selects Pastor as personal_role ---
-        // Insert a membership where personal_role='Pastor' but verified_church_role is null
-        const { data: normalMembership } = await supabase
+        // A signed-in user may self-select a personal title, but must not be able to grant themselves a verified role.
+        const { error: selfVerifiedInsertError } = await supabase
           .from('church_memberships')
           .insert({
             profile_id: testProfileId,
-            church_id: roleTestChurch.id,
-            personal_role: 'Pastor',
-            // verified_church_role intentionally left null — self-selected only
-          })
-          .select('*')
-          .single();
-        if (normalMembership) createdIds.push(`membership:${normalMembership.id}`);
-
-        // Attempt privileged church admin action (create a church-wide study)
-        // using the backend authorization function can_perform_church_admin_action()
-        const { data: normalCanAdmin } = await supabase
-          .rpc('can_perform_church_admin_action', {
-            check_profile_id: testProfileId,
-            check_church_id: roleTestChurch.id,
-          });
-        const normalDenied = normalCanAdmin === false;
-
-        // --- Verified Church Admin: has verified_church_role set ---
-        // Create a second test profile with verified_church_role
-        const verifiedProfileId = '00000000-0000-0000-0000-000000000099';
-        const { data: verifiedMembership } = await supabase
-          .from('church_memberships')
-          .insert({
-            profile_id: verifiedProfileId,
             church_id: roleTestChurch.id,
             personal_role: 'Member',
             verified_church_role: 'CHURCH_ADMIN',
           })
           .select('*')
           .single();
-        if (verifiedMembership) createdIds.push(`membership:${verifiedMembership.id}`);
+        const selfVerifiedInsertDenied = selfVerifiedInsertError !== null;
 
-        // Attempt the same privileged action
-        const { data: verifiedCanAdmin } = await supabase
-          .rpc('can_perform_church_admin_action', {
-            check_profile_id: verifiedProfileId,
-            check_church_id: roleTestChurch.id,
-          });
-        const verifiedAllowed = verifiedCanAdmin === true;
+        const { data: normalMembership } = await supabase
+          .from('church_memberships')
+          .insert({
+            profile_id: testProfileId,
+            church_id: roleTestChurch.id,
+            personal_role: 'Pastor',
+          })
+          .select('*')
+          .single();
+        if (normalMembership) createdIds.push(`membership:${normalMembership.id}`);
 
-        // Verify the self-selected Pastor's personal_role is indeed Pastor
-        const personalRoleIsPastor = normalMembership?.personal_role === 'Pastor';
-        const noVerifiedRole = normalMembership?.verified_church_role === null;
+        const { error: selfVerifiedUpdateError } = normalMembership
+          ? await supabase
+              .from('church_memberships')
+              .update({ verified_church_role: 'CHURCH_ADMIN' })
+              .eq('id', normalMembership.id)
+              .select('*')
+              .single()
+          : { error: { message: 'membership missing' } };
+        const selfVerifiedUpdateDenied = selfVerifiedUpdateError !== null;
 
-        const allPass = normalDenied && verifiedAllowed && personalRoleIsPastor && noVerifiedRole;
+        const { data: unchangedMembership } = normalMembership
+          ? await supabase
+              .from('church_memberships')
+              .select('personal_role, verified_church_role')
+              .eq('id', normalMembership.id)
+              .maybeSingle()
+          : { data: null };
+        const personalRoleIsPastor = unchangedMembership?.personal_role === 'Pastor';
+        const noVerifiedRole = unchangedMembership?.verified_church_role === null;
+
+        const allPass = selfVerifiedInsertDenied && selfVerifiedUpdateDenied && personalRoleIsPastor && noVerifiedRole;
 
         updateTest('church_role_security',
           allPass ? 'pass' : 'fail',
           {
-            testUsers: 'Normal User (self-selects Pastor), Verified Church Admin (approved verified_church_role)',
-            expectedBehavior: 'Self-selected personal role grants no privileges. Verified authorized church role may perform approved church administration.',
-            actualBehavior: `Normal user privileged action: ${normalDenied ? 'DENIED' : 'ALLOWED'}. Verified admin privileged action: ${verifiedAllowed ? 'ALLOWED' : 'DENIED'}. personal_role=Pastor: ${personalRoleIsPastor}. verified_church_role=null for normal user: ${noVerifiedRole}.`,
-            dbEndpoint: 'church_memberships (INSERT, SELECT), can_perform_church_admin_action() RPC',
-            authResult: `Backend function can_perform_church_admin_action() checks verified_church_role IS NOT NULL. Normal user (personal_role=Pastor, verified_church_role=null): ${normalDenied ? 'DENIED' : 'ALLOWED'}. Verified admin (verified_church_role=CHURCH_ADMIN): ${verifiedAllowed ? 'ALLOWED' : 'DENIED'}.`,
+            testUsers: 'Signed-in normal user (self-selects Pastor as personal title)',
+            expectedBehavior: 'Self-selected personal title is stored as descriptive only. Self-assigning verified_church_role is rejected on insert and on update.',
+            actualBehavior: `Insert with verified_church_role denied: ${selfVerifiedInsertDenied}. Update of verified_church_role denied: ${selfVerifiedUpdateDenied}. personal_role still Pastor: ${personalRoleIsPastor}. verified_church_role still null: ${noVerifiedRole}.`,
+            dbEndpoint: 'church_memberships (INSERT, UPDATE column grants)',
+            authResult: 'Column-level grants exclude verified_church_role for the authenticated role. Verified roles are set only by the service-role review function.',
             passFailReason: allPass
-              ? 'PASS: Server-side authorization demonstrated — self-selected Pastor denied, verified admin allowed'
-              : 'FAIL: Church role security not properly enforced',
+              ? 'PASS: Self-assigned verified role rejected on insert and update; personal title unchanged'
+              : 'FAIL: A signed-in user could change verified_church_role',
           });
       } catch (e) {
         updateTest('church_role_security', 'fail', {
-          testUsers: 'Normal User, Verified Church Admin', expectedBehavior: 'Self-selected Pastor denied, verified admin allowed',
+          testUsers: 'Signed-in normal user', expectedBehavior: 'Self-assigned verified role rejected',
           actualBehavior: `Error: ${e instanceof Error ? e.message : 'unknown'}`,
-          dbEndpoint: 'church_memberships, can_perform_church_admin_action() RPC', authResult: 'Error', passFailReason: 'FAIL: Exception',
+          dbEndpoint: 'church_memberships (INSERT, UPDATE column grants)', authResult: 'Error', passFailReason: 'FAIL: Exception',
         });
       }
 

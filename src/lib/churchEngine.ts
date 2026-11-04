@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import type { Profile } from '@/lib/types';
 import type {
   ChurchProfile, ChurchMembership, Sermon, SermonNote,
-  ChurchStudy, ChurchStudyAssignment, ChurchPrayerItem,
+  ChurchStudy, ChurchPrayerItem,
   ChurchGroup, GroupDiscussion, NotificationPreferences,
 } from '@/lib/togetherTypes';
 import { CHURCH_ROLES } from '@/lib/togetherTypes';
@@ -136,6 +136,20 @@ export async function getMyChurchMembership(profileId: string): Promise<ChurchMe
     .eq('profile_id', profileId)
     .order('created_at', { ascending: false })
     .maybeSingle();
+  return (data as ChurchMembership) || null;
+}
+
+export async function getChurchMembershipForChurch(profileId: string, churchId: string): Promise<ChurchMembership | null> {
+  const { data, error } = await supabase
+    .from('church_memberships')
+    .select('*')
+    .eq('profile_id', profileId)
+    .eq('church_id', churchId)
+    .maybeSingle();
+  if (error) {
+    console.error('[Church] load membership failed', { code: error.code, message: error.message });
+    return null;
+  }
   return (data as ChurchMembership) || null;
 }
 
@@ -337,21 +351,13 @@ export async function getSermonNoteForSermon(sermonId: string, profileId: string
 // ============================================================
 
 export async function getChurchStudies(churchId: string): Promise<ChurchStudy[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('church_studies')
     .select('*')
     .eq('church_id', churchId)
     .order('created_at', { ascending: false });
+  if (error) throw error;
   return (data as ChurchStudy[]) || [];
-}
-
-export async function getStudyAssignments(studyId: string): Promise<ChurchStudyAssignment[]> {
-  const { data } = await supabase
-    .from('church_study_assignments')
-    .select('*')
-    .eq('church_study_id', studyId)
-    .order('created_at');
-  return (data as ChurchStudyAssignment[]) || [];
 }
 
 // ============================================================
