@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Church, Plus, ChevronRight, Search, MapPin, Globe, BookOpen, Heart, Users, Sun, LogOut, Check } from 'lucide-react';
+import { X, Church, Plus, ChevronRight, Search, MapPin, Globe, BookOpen, Heart, Users, Sun, LogOut, Check, Pencil } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';
 import ChurchSearchResults, { type AppleSearchStatus, type ChurchSearchStatus } from '@/components/ChurchSearchResults';
+import ChurchRoleSheet from '@/components/ChurchRoleSheet';
 import {
   createChurch, searchChurchDirectory, joinChurch, getAllChurchMemberships, getChurch, updateChurch,
-  leaveChurch, isChurchOwner,
+  leaveChurch, isChurchOwner, importChurchDirectoryEntry, releaseChurchOwnershipAndLeave, updateChurchMembershipRole,
   getChurchStudies, getChurchPrayerItems, getChurchGroups,
 } from '@/lib/churchEngine';
 import type { Profile } from '@/lib/types';
@@ -57,6 +58,7 @@ export default function MyChurchScreen({
   const [showLeaveConfirm, setShowLeaveConfirm] = useState<ChurchWithMeta | null>(null);
   const [leaving, setLeaving] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [showRoleEdit, setShowRoleEdit] = useState(false);
   const [editName, setEditName] = useState('');
   const [editCity, setEditCity] = useState('');
   const [editWebsite, setEditWebsite] = useState('');
@@ -147,16 +149,16 @@ export default function MyChurchScreen({
     setAddingApple(true);
     setAddError(null);
     try {
-      const created = await createChurch(
+      const churchId = await importChurchDirectoryEntry(
         pendingApple.name,
         pendingApple.city ?? undefined,
         pendingApple.website ?? undefined,
       );
-      if (!created) {
+      if (!churchId) {
         setAddError('Could not add this church. Please try again.');
         return;
       }
-      const joined = await joinChurch(profile, created.id, selectedRole);
+      const joined = await joinChurch(profile, churchId, selectedRole);
       if (!joined) {
         setAddError('Church added but could not join. Please try again.');
         return;
@@ -248,10 +250,20 @@ export default function MyChurchScreen({
     setShowEdit(true);
   }
 
+  async function handleSaveRole(role: string): Promise<boolean> {
+    if (!active) return false;
+    const updated = await updateChurchMembershipRole(active.membership.id, role);
+    if (!updated) return false;
+    setShowRoleEdit(false);
+    await load();
+    return true;
+  }
+
   async function handleLeaveChurch(m: ChurchWithMeta) {
-    if (m.isOwner) return;
     setLeaving(true);
-    const success = await leaveChurch(m.membership.id);
+    const success = m.isOwner
+      ? await releaseChurchOwnershipAndLeave(m.church.id)
+      : await leaveChurch(m.membership.id);
     setLeaving(false);
     setShowLeaveConfirm(null);
     if (!success) {
@@ -333,6 +345,9 @@ export default function MyChurchScreen({
                   {active.church.city && <span className="flex items-center gap-1"><MapPin size={11} /> {active.church.city}</span>}
                   {active.church.website && <span className="flex items-center gap-1"><Globe size={11} /> {active.church.website}</span>}
                   <span>· Your role: {active.membership.personal_role}</span>
+                  <button type="button" onClick={() => { vibrate(6); setShowRoleEdit(true); }} className="flex items-center gap-1 text-gold-300 hover:text-gold-200 transition-colors">
+                    <Pencil size={11} /> Edit Role
+                  </button>
                 </div>
               </div>
 
@@ -352,20 +367,18 @@ export default function MyChurchScreen({
                 <ChurchActionCard icon={Users} label="Small Groups" desc={`${active.groups.length} groups`} onClick={onOpenSmallGroups} />
               </div>
 
-              {/* Leave church — blocked for owners */}
-              {active.isOwner ? (
+              {active.isOwner && (
                 <div className="premium-card p-4 mb-4 border-clay-500/20">
                   <p className="text-ivory-300 text-xs font-medium">Church Owner</p>
-                  <p className="text-ivory-500 text-xs mt-1 leading-relaxed">You created this church. You cannot leave while you are the owner. The church profile must remain managed.</p>
+                  <p className="text-ivory-500 text-xs mt-1 leading-relaxed">You manage this church's details. Leaving releases ownership: the church stays in the directory with no owner, and other members keep their access.</p>
                 </div>
-              ) : (
-                <button
-                  onClick={() => { vibrate(8); setShowLeaveConfirm(active); }}
-                  className="btn-secondary w-full text-sm text-clay-400 mb-4"
-                >
-                  <LogOut size={14} /> Leave This Church
-                </button>
               )}
+              <button
+                onClick={() => { vibrate(8); setShowLeaveConfirm(active); }}
+                className="btn-secondary w-full text-sm text-clay-400 mb-4"
+              >
+                <LogOut size={14} /> {active.isOwner ? 'Leave & Release Ownership' : 'Leave This Church'}
+              </button>
             </>
           )}
         </div>
@@ -420,6 +433,15 @@ export default function MyChurchScreen({
         </div>
       )}
 
+      {showRoleEdit && active && (
+        <ChurchRoleSheet
+          churchName={active.church.name}
+          currentRole={active.membership.personal_role}
+          onSave={handleSaveRole}
+          onClose={() => setShowRoleEdit(false)}
+        />
+      )}
+
       {/* Edit church modal */}
       {showEdit && active && (
         <div className="fixed inset-0 z-[70] h-[100dvh] bg-ink-950 bg-parchment flex flex-col">
@@ -463,7 +485,7 @@ export default function MyChurchScreen({
             </p>
             {pendingApple.address && <p className="text-ivory-600 text-xs leading-relaxed mb-1">{pendingApple.address}</p>}
             <p className="text-ivory-600 text-xs leading-relaxed mb-4">
-              This creates a church record you own and joins you to it as {selectedRole}. Other members can then join it from search.
+              This adds the church to the shared directory and joins you to it as {selectedRole}. Directory churches have no owner, so they cannot be edited.
             </p>
             {addError && <p className="text-error text-xs mb-3">{addError}</p>}
             <div className="flex gap-2">
@@ -485,9 +507,11 @@ export default function MyChurchScreen({
             <div className="w-12 h-12 rounded-xl bg-clay-500/10 border border-clay-500/20 flex items-center justify-center mb-4">
               <LogOut size={20} className="text-clay-400" />
             </div>
-            <h3 className="font-serif text-xl text-ivory-50 mb-2">Leave {showLeaveConfirm.church.name}?</h3>
+            <h3 className="font-serif text-xl text-ivory-50 mb-2">{showLeaveConfirm.isOwner ? `Release ${showLeaveConfirm.church.name}?` : `Leave ${showLeaveConfirm.church.name}?`}</h3>
             <p className="text-ivory-500 text-sm leading-relaxed mb-4">
-              You will no longer have access to this church's studies, prayer items, and small groups. You can rejoin at any time.
+              {showLeaveConfirm.isOwner
+                ? 'Ownership will be released. The church stays in the directory with no owner, so no one can edit its details. Other members keep their membership, studies, prayers, and groups.'
+                : "You will no longer have access to this church's studies, prayer items, and small groups. You can rejoin at any time."}
             </p>
             <div className="flex gap-2">
               <button onClick={() => setShowLeaveConfirm(null)} className="btn-secondary flex-1 text-sm">
@@ -498,7 +522,7 @@ export default function MyChurchScreen({
                 disabled={leaving}
                 className="btn-primary flex-1 text-sm disabled:opacity-40 text-clay-400"
               >
-                {leaving ? 'Leaving...' : 'Leave'}
+                {leaving ? 'Working...' : showLeaveConfirm.isOwner ? 'Release & Leave' : 'Leave'}
               </button>
             </div>
           </div>

@@ -9,6 +9,7 @@ import type {
   ChurchStudy, ChurchStudyAssignment, ChurchPrayerItem,
   ChurchGroup, GroupDiscussion, NotificationPreferences,
 } from '@/lib/togetherTypes';
+import { CHURCH_ROLES } from '@/lib/togetherTypes';
 
 // ============================================================
 // CHURCH PROFILES
@@ -156,6 +157,63 @@ export async function leaveChurch(membershipId: string): Promise<boolean> {
     console.error('[Church] leave church failed', {
       operation: 'delete',
       table: 'church_memberships',
+      code: error.code,
+      message: error.message,
+    });
+    return false;
+  }
+  return true;
+}
+
+export async function importChurchDirectoryEntry(
+  name: string,
+  city?: string,
+  website?: string,
+): Promise<string | null> {
+  const { data, error } = await supabase.rpc('import_church_directory_entry', {
+    p_name: name,
+    p_city: city ?? null,
+    p_website: website ?? null,
+  });
+  if (error || typeof data !== 'string') {
+    console.error('[Church] import directory entry failed', {
+      operation: 'rpc:import_church_directory_entry',
+      code: error?.code,
+      message: error?.message,
+    });
+    return null;
+  }
+  return data;
+}
+
+export async function updateChurchMembershipRole(
+  membershipId: string,
+  personalRole: string,
+): Promise<ChurchMembership | null> {
+  if (!CHURCH_ROLES.includes(personalRole as (typeof CHURCH_ROLES)[number])) return null;
+  const { data, error } = await supabase
+    .from('church_memberships')
+    .update({ personal_role: personalRole })
+    .eq('id', membershipId)
+    .select('*')
+    .single();
+  if (error) {
+    console.error('[Church] update membership role failed', {
+      operation: 'update',
+      table: 'church_memberships',
+      code: error.code,
+      message: error.message,
+    });
+    return null;
+  }
+  return (data as ChurchMembership) || null;
+}
+
+export async function releaseChurchOwnershipAndLeave(churchId: string): Promise<boolean> {
+  const { error } = await supabase.rpc('release_church_ownership_and_leave', { p_church_id: churchId });
+  if (error) {
+    console.error('[Church] release ownership failed', {
+      operation: 'rpc:release_church_ownership_and_leave',
       code: error.code,
       message: error.message,
     });
