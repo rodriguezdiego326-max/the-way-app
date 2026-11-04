@@ -448,7 +448,11 @@ export default function App() {
   }
 
   if (overlay.type === 'reach') {
-    return <ErrorBoundary><ReachScreen /></ErrorBoundary>;
+    return (
+      <ErrorBoundary>
+        <ReachScreen onBack={() => setOverlay({ type: 'none' })} />
+      </ErrorBoundary>
+    );
   }
 
   if (overlay.type === 'library_search') {

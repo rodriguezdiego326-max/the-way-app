@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Heart, MessageCircle, Users, BookOpen, Landmark, Compass, Sparkles, Shield, Info } from 'lucide-react';
+import { X, Heart, MessageCircle, Users, BookOpen, Landmark, Compass, Sparkles, Shield, Info } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import PeoplePrayingScreen from '@/screens/PeoplePrayingScreen';
 import TheyAskedMeScreen from '@/screens/TheyAskedMeScreen';
@@ -12,7 +12,11 @@ import MissionsScreen from '@/screens/MissionsScreen';
 
 type SubView = 'main' | 'people' | 'they_asked' | 'gospel_conversation' | 'prodigal' | 'apologetics' | 'foundations' | 'trails' | 'missions';
 
-export default function ReachScreen() {
+interface Props {
+  onBack: () => void;
+}
+
+export default function ReachScreen({ onBack }: Props) {
   const [subView, setSubView] = useState<SubView>('main');
 
   if (subView === 'people') return <PeoplePrayingScreen onBack={() => setSubView('main')} />;
@@ -27,6 +31,9 @@ export default function ReachScreen() {
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28">
       <header className="px-6 pt-14 safe-top">
+        <button type="button" onClick={onBack} className="btn-ghost -ml-2 mb-2" aria-label="Close Reach">
+          <X size={20} />
+        </button>
         <p className="ui-label animate-fade-in-down">SOLAPATH Reach</p>
         <h1 className="font-serif text-4xl text-ivory-50 mt-2 tracking-tight">Reach</h1>
         <p className="text-ivory-500 text-sm mt-2 leading-relaxed">
