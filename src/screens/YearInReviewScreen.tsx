@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Calendar, Plus, Sparkles, FileText, Eye } from 'lucide-react';
+import { X, Calendar, Sparkles, Eye } from 'lucide-react';
 import { vibrate, formatDate } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import { getLegacyEvents, getLifeSeasons, getScriptureRefs, getMilestones, getLetters, upsertYearReview, getYearReview, deleteYearReviewAiSummary } from '@/lib/legacyEngine';

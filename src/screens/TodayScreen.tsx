@@ -1,5 +1,5 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { Sparkles, BookOpen, Clock, ChevronRight, Info, Lock, Loader2, ArrowRight, RotateCw, Quote, Pencil, X } from 'lucide-react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import { Sparkles, BookOpen, Clock, ChevronRight, Info, Lock, Loader2, ArrowRight, RotateCw, Pencil, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { recommendWalk, walkToInsert } from '@/lib/walkEngine';
 import { isMemoryEnabled } from '@/lib/intelligenceService';
@@ -66,7 +66,6 @@ export default function TodayScreen({ profile, onStartWalk, onReadInApp, onConti
   const [reflecting, setReflecting] = useState(false);
   const [reflectionResponse, setReflectionResponse] = useState<StructuredTheologicalResponse | null>(null);
   const [reflectionError, setReflectionError] = useState<string | null>(null);
-  const [reflectionPromptUsed, setReflectionPromptUsed] = useState<string | null>(null);
   // Edit mode (Build 80) — lets the user replace their saved reflection body.
   const [editingReflection, setEditingReflection] = useState(false);
   const [editText, setEditText] = useState('');
@@ -107,11 +106,16 @@ function localizeReference(ref: string, translation: string): string {
   return ref;
 }
 
+  const loadOrCreateTodayWalkRef = useRef(loadOrCreateTodayWalk);
   useEffect(() => {
-    loadOrCreateTodayWalk();
+    loadOrCreateTodayWalkRef.current = loadOrCreateTodayWalk;
+  });
+
+  useEffect(() => {
+    loadOrCreateTodayWalkRef.current();
   }, [profile?.id]);
 
-  async function loadScriptureText(ref: string) {
+  const loadScriptureText = useCallback(async (ref: string) => {
     setScriptureLoading(true);
     setScriptureText(null);
     try {
@@ -134,27 +138,9 @@ function localizeReference(ref: string, translation: string): string {
       }
     } catch { /* non-critical */ }
     setScriptureLoading(false);
-  }
+  }, [activeTranslation]);
 
-  useEffect(() => {
-    if (todayWalk?.passage_reference) {
-      loadScriptureText(todayWalk.passage_reference);
-      // Reset the stale-load guard when we switch to a walk that isn't the one
-      // we just persisted, so normal hydration is allowed again.
-      if (savedReflectionWalkIdRef.current && savedReflectionWalkIdRef.current !== todayWalk.id) {
-        savedReflectionWalkIdRef.current = null;
-      }
-      loadExistingReflection(todayWalk.id);
-    } else {
-      savedReflectionWalkIdRef.current = null;
-      setSavedReflection(null);
-      setReflectionResponse(null);
-      setReflectionError(null);
-      setReflectionPromptUsed(null);
-    }
-  }, [todayWalk?.id, todayWalk?.passage_reference, activeTranslation]);
-
-  async function loadExistingReflection(walkId: string) {
+  const loadExistingReflection = useCallback(async (walkId: string, walkPassage: string) => {
     // Skip stale fetches that would overwrite a row we just persisted for a
     // different (e.g. duplicate same-day) walk. The guard is cleared once the
     // fetch matches the most recent persisted walk id.
@@ -171,9 +157,9 @@ function localizeReference(ref: string, translation: string): string {
       // Consistency check: if the persisted AI response was generated for a
       // different passage than the walk's current passage, it is stale.
       // Clear it from the database and don't render it.
-      if (existing?.ai_response && todayWalk) {
+      if (existing?.ai_response) {
         const storedPassage = existing.ai_response.passage_reference;
-        if (storedPassage && storedPassage !== todayWalk.passage_reference) {
+        if (storedPassage && storedPassage !== walkPassage) {
           try {
             await supabase
               .from('walk_reflections')
@@ -182,7 +168,6 @@ function localizeReference(ref: string, translation: string): string {
           } catch { /* non-critical */ }
           setSavedReflection({ ...existing, ai_response: null });
           setReflectionResponse(null);
-          setReflectionPromptUsed(null);
           return;
         }
       }
@@ -191,11 +176,27 @@ function localizeReference(ref: string, translation: string): string {
         const structured = existing.ai_response.structured as StructuredTheologicalResponse | null;
         if (structured) {
           setReflectionResponse(structured);
-          setReflectionPromptUsed(existing.ai_response.reflection_prompt || null);
         }
       }
     } catch { /* non-critical */ }
-  }
+  }, []);
+
+  useEffect(() => {
+    if (todayWalk?.passage_reference) {
+      loadScriptureText(todayWalk.passage_reference);
+      // Reset the stale-load guard when we switch to a walk that isn't the one
+      // we just persisted, so normal hydration is allowed again.
+      if (savedReflectionWalkIdRef.current && savedReflectionWalkIdRef.current !== todayWalk.id) {
+        savedReflectionWalkIdRef.current = null;
+      }
+      loadExistingReflection(todayWalk.id, todayWalk.passage_reference);
+    } else {
+      savedReflectionWalkIdRef.current = null;
+      setSavedReflection(null);
+      setReflectionResponse(null);
+      setReflectionError(null);
+    }
+  }, [todayWalk?.id, todayWalk?.passage_reference, activeTranslation, loadScriptureText, loadExistingReflection]);
 
   useLayoutEffect(() => {
     const el = heroScriptureRef.current;
@@ -464,7 +465,6 @@ function localizeReference(ref: string, translation: string): string {
         } catch { /* non-critical — we just won't use the stale response */ }
         setSavedReflection({ ...savedReflection, ai_response: null });
         setReflectionResponse(null);
-        setReflectionPromptUsed(null);
       }
     }
 
@@ -494,7 +494,6 @@ function localizeReference(ref: string, translation: string): string {
       );
 
       setReflectionResponse(result.response);
-      setReflectionPromptUsed(result.reflectionPrompt);
       if (persisted) {
         savedReflectionWalkIdRef.current = persisted.walk_id;
         setSavedReflection(persisted);
@@ -563,7 +562,6 @@ function localizeReference(ref: string, translation: string): string {
       setSavedReflection(verified);
       if (!verified.ai_response) {
         setReflectionResponse(null);
-        setReflectionPromptUsed(null);
       }
       setEditingReflection(false);
       setEditText('');
@@ -590,12 +588,6 @@ function localizeReference(ref: string, translation: string): string {
     onStartWalk(todayWalk);
   }
 
-  function handleReadInApp() {
-    if (!todayWalk) return;
-    vibrate(10);
-    onReadInApp(todayWalk);
-  }
-
   function handleDiveDeeper() {
     if (!todayWalk) return;
     vibrate(10);
@@ -604,7 +596,7 @@ function localizeReference(ref: string, translation: string): string {
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
-    let handles: Array<() => void> = [];
+    const handles: Array<() => void> = [];
     (async () => {
       try {
         const { Keyboard } = await import('@capacitor/keyboard');

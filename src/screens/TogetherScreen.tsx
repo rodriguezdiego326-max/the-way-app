@@ -3,7 +3,7 @@ import { X, Users, Heart, BookOpen, CheckCircle, HandHeart, Shield, Church, Mail
 import { supabase } from '@/lib/supabase';
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
-import { getMyCircles, getInvitationsForProfile, acceptInvitation, getInvitationByCode } from '@/lib/togetherEngine';
+import { getMyCircles, getInvitationsForProfile, acceptInvitation } from '@/lib/togetherEngine';
 import { getMyChurchMembership, getChurch } from '@/lib/churchEngine';
 import type { Profile } from '@/lib/types';
 import type { Circle, CircleInvitation } from '@/lib/togetherTypes';
@@ -19,15 +19,13 @@ interface Props {
   onOpenEncouragement: () => void;
   onOpenAccountability: () => void;
   onOpenMyChurch: () => void;
-  onOpenInvitations: () => void;
-  onJoinByCode: () => void;
   initialTab?: 'main' | 'invitations' | 'join_code';
 }
 
 export default function TogetherScreen({
   profile, onBack, onOpenCircle, onOpenCreateCircle,
   onOpenPrayer, onOpenScripture, onOpenCheckIn, onOpenEncouragement,
-  onOpenAccountability, onOpenMyChurch, onOpenInvitations, onJoinByCode,
+  onOpenAccountability, onOpenMyChurch,
   initialTab,
 }: Props) {
   const [view, setView] = useState<'main' | 'invitations' | 'join_code'>(initialTab || 'main');

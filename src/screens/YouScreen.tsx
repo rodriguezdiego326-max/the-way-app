@@ -1,38 +1,11 @@
-import { useEffect, useState } from 'react';
-import {
-  Brain,
-  Heart,
-  BookOpen,
-  Users,
-  Church,
-  Settings,
-  ChevronRight,
-  Trash2,
-  Eye,
-  EyeOff,
-  X,
-  ShieldCheck,
-  Sparkles,
-  BookMarked,
-  Scroll,
-  Landmark,
-  FileText,
-  Pencil,
-  FlaskConical,
-  Search,
-  Shield,
-  BarChart3,
-  Package,
-  Cpu,
-  BookHeart,
-  MessageSquare,
-} from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { Brain, Heart, BookOpen, Users, Church, Settings, ChevronRight, Trash2, Eye, EyeOff, X, ShieldCheck, Sparkles, BookMarked, Scroll, Landmark, Pencil, FlaskConical, Search, Shield, BarChart3, Package, Cpu, BookHeart, MessageSquare } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { vibrate, formatDate } from '@/lib/utils';
 import ProfileEditor from '@/components/ProfileEditor';
 import DeleteAllMemoriesDialog from '@/components/DeleteAllMemoriesDialog';
 import TestSuite from '@/screens/TestSuite';
-import type { Profile, Memory, TheologicalDepth, LifeStage, LifeArea, GrowthArea, TheologicalAuthor, ConfessionalDocument, Walk, Prayer } from '@/lib/types';
+import type { Profile, Memory, TheologicalDepth, LifeStage, LifeArea, GrowthArea, TheologicalAuthor, ConfessionalDocument, Walk, Prayer, WalkReflection } from '@/lib/types';
 
 interface YouScreenProps {
   profile: Profile | null;
@@ -59,7 +32,6 @@ interface YouScreenProps {
   onOpenBetaFeedback: () => void;
   session: { user: { id: string; email?: string } | null } | null;
   onSignOut: () => void;
-  onShowAuth: () => void;
 }
 
 type SubView = 'main' | 'memories' | 'settings' | 'library' | 'test_suite' | 'walks' | 'prayers' | 'reflections';
@@ -70,7 +42,7 @@ const depthLabels: Record<TheologicalDepth, string> = {
   deep_study: 'Deep Study',
 };
 
-export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOpenReach, onOpenLibrarySearch, onOpenAdminSources, onOpenRetrievalDebug, onOpenRAGTests, onOpenPhase6Tests, onOpenQADashboard, onOpenSourceBatches, onOpenReleaseGate, onOpenProductionStatus, onOpenTogether, onOpenMyChurch, onOpenPhase8Tests, onOpenLegacy, onOpenPhase9Tests, onOpenPrivacyCenter, onOpenProductionReadiness, onOpenPhase10Tests, onOpenBetaFeedback, session, onSignOut, onShowAuth }: YouScreenProps) {
+export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOpenReach, onOpenLibrarySearch, onOpenAdminSources, onOpenRetrievalDebug, onOpenRAGTests, onOpenPhase6Tests, onOpenQADashboard, onOpenSourceBatches, onOpenReleaseGate, onOpenProductionStatus, onOpenTogether, onOpenMyChurch, onOpenPhase8Tests, onOpenLegacy, onOpenPhase9Tests, onOpenPrivacyCenter, onOpenProductionReadiness, onOpenPhase10Tests, onOpenBetaFeedback, session, onSignOut }: YouScreenProps) {
   const [subView, setSubView] = useState<SubView>('main');
   const [editingProfile, setEditingProfile] = useState(false);
   const [memories, setMemories] = useState<Memory[]>([]);
@@ -84,18 +56,7 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
   const [authors, setAuthors] = useState<TheologicalAuthor[]>([]);
   const [confessions, setConfessions] = useState<ConfessionalDocument[]>([]);
 
-  useEffect(() => {
-    if (subView === 'memories') loadMemories();
-    if (subView === 'main') loadStats();
-    if (subView === 'library') loadLibrary();
-  }, [subView, profile]);
-
-  async function loadMemories() {
-    const { data } = await supabase.from('memories').select('*').order('created_at', { ascending: false });
-    setMemories((data as Memory[]) || []);
-  }
-
-  async function loadStats() {
+  const loadStats = useCallback(async () => {
     if (!profile) return;
     const [walksRes, prayersRes, reflectionsRes, stagesRes, areasRes, growthRes] = await Promise.all([
       supabase.from('walks').select('id', { count: 'exact', head: true }),
@@ -111,6 +72,17 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
     setStages(((stagesRes.data as LifeStage[]) || []).map((s) => s.stage));
     setAreas(((areasRes.data as LifeArea[]) || []).map((a) => a.area));
     setGrowthAreas(((growthRes.data as GrowthArea[]) || []).map((g) => g.area));
+  }, [profile]);
+
+  useEffect(() => {
+    if (subView === 'memories') loadMemories();
+    if (subView === 'main') loadStats();
+    if (subView === 'library') loadLibrary();
+  }, [subView, profile, loadStats]);
+
+  async function loadMemories() {
+    const { data } = await supabase.from('memories').select('*').order('created_at', { ascending: false });
+    setMemories((data as Memory[]) || []);
   }
 
   async function loadLibrary() {
@@ -482,7 +454,7 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
               <p className="text-ivory-600 text-xs mt-2 leading-relaxed">Start from Today or Bible to begin your first walk.</p>
             </div>
           ) : (
-            <WalksList profile={profile} onBack={() => setSubView('main')} />
+            <WalksList />
           )}
         </div>
       </div>
@@ -505,7 +477,7 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
               <p className="text-ivory-600 text-xs mt-2 leading-relaxed">Bring your requests before God from the Prayer tab.</p>
             </div>
           ) : (
-            <PrayersList onBack={() => setSubView('main')} />
+            <PrayersList />
           )}
         </div>
       </div>
@@ -528,7 +500,7 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
               <p className="text-ivory-600 text-xs mt-2 leading-relaxed">Your reflections from Bible walks will appear here.</p>
             </div>
           ) : (
-            <ReflectionsList onBack={() => setSubView('main')} />
+            <ReflectionsList />
           )}
         </div>
       </div>
@@ -976,7 +948,7 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
 
 import { useEffect as useEffect2, useState as useState2 } from 'react';
 
-function WalksList({ profile, onBack }: { profile: Profile | null; onBack: () => void }) {
+function WalksList() {
   const [walks, setWalks] = useState2<Walk[]>([]);
   const [loading, setLoading] = useState2(true);
 
@@ -1008,7 +980,7 @@ function WalksList({ profile, onBack }: { profile: Profile | null; onBack: () =>
   );
 }
 
-function PrayersList({ onBack }: { onBack: () => void }) {
+function PrayersList() {
   const [prayers, setPrayers] = useState2<Prayer[]>([]);
   const [loading, setLoading] = useState2(true);
 
@@ -1040,13 +1012,15 @@ function PrayersList({ onBack }: { onBack: () => void }) {
   );
 }
 
-function ReflectionsList({ onBack }: { onBack: () => void }) {
-  const [reflections, setReflections] = useState2<any[]>([]);
+type ReflectionWithWalk = WalkReflection & { walks: { passage_reference: string } | null };
+
+function ReflectionsList() {
+  const [reflections, setReflections] = useState2<ReflectionWithWalk[]>([]);
   const [loading, setLoading] = useState2(true);
 
   useEffect2(() => {
     supabase.from('walk_reflections').select('*, walks(passage_reference)').order('created_at', { ascending: false }).limit(50).then(({ data }) => {
-      setReflections(data || []);
+      setReflections((data as ReflectionWithWalk[] | null) || []);
       setLoading(false);
     });
   }, []);
@@ -1061,7 +1035,7 @@ function ReflectionsList({ onBack }: { onBack: () => void }) {
   }
   return (
     <div className="flex flex-col gap-3">
-      {reflections.map((r: any) => (
+      {reflections.map((r) => (
         <div key={r.id} className="premium-card p-4">
           {r.walks?.passage_reference && (
             <p className="text-gold-300 text-xs font-medium mb-1">{r.walks.passage_reference}</p>
