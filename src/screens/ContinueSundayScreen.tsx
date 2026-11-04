@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, BookOpen, Calendar, ArrowRight, Sparkles } from 'lucide-react';
+import { X, BookOpen, Calendar, Sparkles } from 'lucide-react';
 import { vibrate, formatDate } from '@/lib/utils';
 import { LoadingState, EmptyState } from '@/components/States';
 import { getSermonNotes } from '@/lib/churchEngine';

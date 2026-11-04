@@ -24,7 +24,7 @@ export default function AuthForm({ onAuthed, initialMode = 'signin' }: AuthFormP
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
-    let handles: Array<() => void> = [];
+    const handles: Array<() => void> = [];
 
     (async () => {
       try {
@@ -57,7 +57,7 @@ export default function AuthForm({ onAuthed, initialMode = 'signin' }: AuthFormP
         try {
           const { Keyboard, KeyboardResize } = await import('@capacitor/keyboard');
           await Keyboard.setResizeMode({ mode: KeyboardResize.Body });
-        } catch (e) {
+        } catch {
           // ignore
         }
       })();

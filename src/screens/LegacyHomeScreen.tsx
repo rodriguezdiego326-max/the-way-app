@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, BookHeart, Heart, BookOpen, Clock, Church, Users, Mail, Award, Archive, Search, Plus, ChevronRight, Sparkles, Scroll } from 'lucide-react';
+import { X, BookHeart, Heart, BookOpen, Clock, Users, Mail, Award, Archive, Search, Plus, ChevronRight, Sparkles, Scroll } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import { getLegacyStats } from '@/lib/legacyEngine';

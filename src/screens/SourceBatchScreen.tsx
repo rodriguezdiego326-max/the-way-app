@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, Package, Check, AlertCircle, Layers, BookOpen } from 'lucide-react';
+import { X, Package, Check, BookOpen } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { vibrate, formatRelative } from '@/lib/utils';
+import { formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';
 import type { SourceBatch } from '@/lib/intelligenceTypes';
 

@@ -139,7 +139,6 @@ export default function Phase11TestScreen({ profile, onBack }: Props) {
       // TEST 8: Session restoration
       // Capacitor preserves localStorage between launches by default on both platforms.
       // Verify the profile state would survive a reload.
-      const profileInStorage = Object.keys(localStorage).some(k => k.includes('supabase') || k.includes('theway'));
       update('session_restoration', 'pass',
         `Supabase client configured with persistSession: false — no auth tokens stored in localStorage. Profile is loaded from Supabase on each app start (App.tsx loadProfile). App state and drafts persist via localStorage (Capacitor preserves localStorage between launches on iOS and Android). No privileged credentials on device. REAL DEVICE TEST REQUIRED to confirm background/foreground and cold start restore behavior.`,
         'PASS (PACKAGING): Session architecture sound — REAL DEVICE TEST REQUIRED to fully verify');

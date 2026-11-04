@@ -1,9 +1,7 @@
 import { X, Shield, Activity, BarChart3, MessageSquare, ToggleLeft, FileText, FlaskConical, ChevronRight, Lock, Smartphone, BookOpen } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
-import type { Profile } from '@/lib/types';
 
 interface Props {
-  profile: Profile;
   onBack: () => void;
   onOpenHealth: () => void;
   onOpenAiUsage: () => void;
@@ -17,7 +15,7 @@ interface Props {
 }
 
 export default function ProductionReadinessScreen({
-  profile, onBack, onOpenHealth, onOpenAiUsage, onOpenFeedback, onOpenFeatureFlags, onOpenLegal, onOpenPrivacy, onOpenPhase10Tests, onOpenPhase11Tests, onOpenMobileBuildGuide,
+  onBack, onOpenHealth, onOpenAiUsage, onOpenFeedback, onOpenFeatureFlags, onOpenLegal, onOpenPrivacy, onOpenPhase10Tests, onOpenPhase11Tests, onOpenMobileBuildGuide,
 }: Props) {
   const sections = [
     { icon: Shield, label: 'Privacy Center', desc: 'What SOLAPATH stores, AI & my data, download/delete', onClick: onOpenPrivacy },

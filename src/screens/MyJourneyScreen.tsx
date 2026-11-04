@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Clock, Plus, ChevronRight, Sparkles, BookOpen } from 'lucide-react';
+import { X, Clock, Plus, Sparkles } from 'lucide-react';
 import { vibrate, formatDate } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import { getLegacyEvents } from '@/lib/legacyEngine';

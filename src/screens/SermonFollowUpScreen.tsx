@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { X, BookOpen, ArrowDown, Lightbulb, HandHeart, ChevronRight } from 'lucide-react';
+import { X, BookOpen, ArrowDown, Lightbulb } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
-import { retrieveSources } from '@/lib/libraryEngine';
+
 import type { Sermon } from '@/lib/togetherTypes';
 
 interface Props {
@@ -14,7 +14,6 @@ type Phase = 'stood_out' | 'passage' | 'read_again' | 'remember' | 'examine' | '
 export default function SermonFollowUpScreen({ sermon, onBack }: Props) {
   const [phase, setPhase] = useState<Phase>('stood_out');
   const [stoodOut, setStoodOut] = useState('');
-  const [readDone, setReadDone] = useState(false);
   const [mainPoint, setMainPoint] = useState('');
   const [examine, setExamine] = useState('');
   const [apply, setApply] = useState('');
@@ -57,7 +56,7 @@ export default function SermonFollowUpScreen({ sermon, onBack }: Props) {
                 <BookOpen size={24} className="text-gold-300" />
               </div>
               <p className="text-ivory-300 text-sm leading-relaxed mb-6 max-w-xs mx-auto">Open your Bible to {sermon.passage}. Read it slowly. Let the text speak.</p>
-              <button onClick={() => { vibrate(10); setReadDone(true); setPhase('remember'); }} className="btn-primary">
+              <button onClick={() => { vibrate(10); setPhase('remember'); }} className="btn-primary">
                 <ArrowDown size={16} /> I've Read It
               </button>
             </div>

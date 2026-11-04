@@ -189,7 +189,7 @@ export default function FamilyScreen({ onClose }: FamilyScreenProps) {
     return <FamilyWalkScreen walk={walkRec} familyProfile={familyProfile} onBack={() => setSubView('main')} />;
   }
   if (subView === 'child_asked') {
-    return <ChildAskedScreen familyProfile={familyProfile} members={members} onBack={() => setSubView('main')} />;
+    return <ChildAskedScreen members={members} onBack={() => setSubView('main')} />;
   }
   if (subView === 'catechism') {
     return <CatechismScreen familyProfile={familyProfile} onBack={() => setSubView('main')} />;

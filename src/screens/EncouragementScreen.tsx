@@ -27,8 +27,8 @@ export default function EncouragementScreen({ profile, circle, onBack }: Props) 
     setLoading(true);
     try {
       const [encs, m] = await Promise.all([
-        circle ? getEncouragementsForCircle(circle.id) : getEncouragementsForProfile(profile.id),
-        circle ? getCircleMembers(circle.id) : [],
+        circle?.id ? getEncouragementsForCircle(circle.id) : getEncouragementsForProfile(profile.id),
+        circle?.id ? getCircleMembers(circle.id) : [],
       ]);
       setReceived(encs.filter((e) => e.to_profile_id === profile.id));
       setMembers(m.filter((m) => m.profile_id !== profile.id));

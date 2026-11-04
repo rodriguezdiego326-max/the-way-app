@@ -1,35 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import {
-  Send,
-  BookOpen,
-  Scroll,
-  Lightbulb,
-  FileText,
-  ShieldCheck,
-  Check,
-  AlertCircle,
-  Heart,
-  Hand,
-  Info,
-  ShieldX,
-  HelpCircle,
-  UserCheck,
-  Flag,
-  X,
-  Plus,
-  Copy,
-  ArrowUpRight,
-  Share,
-  ChevronLeft,
-  Type,
-  Settings,
-  ThumbsUp,
-  ThumbsDown,
-  RotateCw,
-  Sparkles,
-  ChevronDown,
-  ChevronRight,
-} from 'lucide-react';
+import { Send, BookOpen, Scroll, Lightbulb, FileText, ShieldCheck, Check, AlertCircle, Heart, Hand, ShieldX, HelpCircle, UserCheck, Flag, X, Plus, Copy, ArrowUpRight, Share, ChevronLeft, Type, Settings, ThumbsUp, ThumbsDown, Sparkles, ChevronDown, ChevronRight } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/lib/supabase';
 import { vibrate } from '@/lib/utils';
@@ -39,7 +9,7 @@ import BiblicalBasis from '@/components/BiblicalBasis';
 import MemoryProposalCard from '@/components/MemoryProposalCard';
 import { fetchIntelligenceResponse, isMemoryEnabled, retrieveStudyMemoryEvidence } from '@/lib/intelligenceService';
 import { isAskHandoffContext, buildHandoffPrompt, type AskHandoffContext } from '@/lib/askHandoff';
-import type { AskIntent, Profile, Walk } from '@/lib/types';
+import type { AskIntent, Profile } from '@/lib/types';
 import type { StructuredTheologicalResponse, VerificationState, StudyMemoryEvidence, PersonalContextItem, PersonalClaim } from '@/lib/intelligenceTypes';
 import ScriptureBlock from '@/components/ScriptureBlock';
 import { parsePassageReference } from '@/lib/passageParser';
@@ -160,7 +130,6 @@ type ThreadItem =
 interface AskScreenProps {
   theologicalDepth: string;
   profile: Profile | null;
-  onStartWalk: (walk: Walk) => void;
   onOpenBibleReference: (book: string, chapter: number, verseStart: number | null, verseEnd: number | null) => void;
   initialContext?: string | AskHandoffContext | null;
   onContextConsumed?: () => void;
@@ -171,7 +140,7 @@ interface AskScreenProps {
   onTranslationChange: (tr: BibleTranslation) => void;
 }
 
-export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOpenBibleReference, initialContext, onContextConsumed, onKeyboardVisibilityChange, activeConversationId, onConversationChange, translation, onTranslationChange }: AskScreenProps) {
+export default function AskScreen({ theologicalDepth, profile, onOpenBibleReference, initialContext, onContextConsumed, onKeyboardVisibilityChange, activeConversationId, onConversationChange, translation, onTranslationChange }: AskScreenProps) {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [emptyComposerFocused, setEmptyComposerFocused] = useState(false);
   const [vvHeight, setVvHeight] = useState(typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.height : (typeof window !== 'undefined' ? window.innerHeight : 800));
@@ -257,26 +226,36 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
   }, [thread, thinking]);
 
   // Load active conversation on mount if we have one — try localStorage first, then prop
+  const restoreConversationRef = useRef<() => void>(() => {});
   useEffect(() => {
-    const storedId = typeof localStorage !== 'undefined'
-      ? localStorage.getItem('solapath_active_ask_conv')
-      : null;
-    const returnConvId = typeof localStorage !== 'undefined'
-      ? localStorage.getItem('solapath_ask_return_conv')
-      : null;
-    const convId = returnConvId || activeConversationId || storedId;
-    if (convId && !conversationStarted && thread.length === 0) {
-      loadConversation(convId);
-    }
-    // Clean up return marker after use
-    if (returnConvId && typeof localStorage !== 'undefined') {
-      localStorage.removeItem('solapath_ask_return_conv');
-    }
+    restoreConversationRef.current = () => {
+      const storedId = typeof localStorage !== 'undefined'
+        ? localStorage.getItem('solapath_active_ask_conv')
+        : null;
+      const returnConvId = typeof localStorage !== 'undefined'
+        ? localStorage.getItem('solapath_ask_return_conv')
+        : null;
+      const convId = returnConvId || activeConversationId || storedId;
+      if (convId && !conversationStarted && thread.length === 0) {
+        loadConversation(convId);
+      }
+      // Clean up return marker after use
+      if (returnConvId && typeof localStorage !== 'undefined') {
+        localStorage.removeItem('solapath_ask_return_conv');
+      }
+    };
+  });
+  useEffect(() => {
+    restoreConversationRef.current();
   }, []);
 
   // Sync conversation ID to app level + persist to localStorage
   // Skip syncing null on initial mount — the restore effect handles loading
   const hasSyncedRef = useRef(false);
+  const onConversationChangeRef = useRef(onConversationChange);
+  useEffect(() => {
+    onConversationChangeRef.current = onConversationChange;
+  });
   useEffect(() => {
     if (conversationId === null && !hasSyncedRef.current) {
       // Initial mount with null — don't overwrite parent state;
@@ -284,7 +263,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
       return;
     }
     hasSyncedRef.current = true;
-    onConversationChange?.(conversationId);
+    onConversationChangeRef.current?.(conversationId);
     if (conversationId && typeof localStorage !== 'undefined') {
       localStorage.setItem('solapath_active_ask_conv', conversationId);
     }
@@ -454,7 +433,7 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
     if (!inConversation) return;
     if (!Capacitor.isNativePlatform()) return;
 
-    let handles: Array<() => void> = [];
+    const handles: Array<() => void> = [];
 
     (async () => {
       try {
@@ -494,14 +473,19 @@ export default function AskScreen({ theologicalDepth, profile, onStartWalk, onOp
     };
   }, [inConversation, onKeyboardVisibilityChange]);
 
+  const handoffLatestRef = useRef({ conversationId, conversationStarted, startConversation, onContextConsumed });
   useEffect(() => {
-    if (initialContext && !conversationId && !conversationStarted) {
+    handoffLatestRef.current = { conversationId, conversationStarted, startConversation, onContextConsumed };
+  });
+  useEffect(() => {
+    const latest = handoffLatestRef.current;
+    if (initialContext && !latest.conversationId && !latest.conversationStarted) {
       if (isAskHandoffContext(initialContext)) {
-        startConversation('passage', buildHandoffPrompt(initialContext));
+        latest.startConversation('passage', buildHandoffPrompt(initialContext));
       } else {
-        startConversation('passage', `Help me understand ${initialContext}`);
+        latest.startConversation('passage', `Help me understand ${initialContext}`);
       }
-      onContextConsumed?.();
+      latest.onContextConsumed?.();
     }
   }, [initialContext]);
 

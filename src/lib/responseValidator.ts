@@ -19,11 +19,6 @@ const PROHIBITED_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
   { pattern: /god told (?:you|me) this person is (?:your|my) spouse/i, reason: 'Claims divine spouse identification' },
 ];
 
-const PROHIBITED_IN_SCRIPTURE_CONTEXT: RegExp[] = [
-  /scripture says.*god told/i,
-  /in scripture.*god told/i,
-];
-
 export interface ValidationResult {
   passed: boolean;
   warnings: string[];
@@ -104,7 +99,7 @@ export function validateStructuredOutput(response: Record<string, unknown>): Str
 
 export function validateResponse(response: StructuredTheologicalResponse): ValidationResult {
   const warnings: string[] = [];
-  let sanitized_summary: string | null = null;
+  const sanitized_summary: string | null = null;
 
   const textToCheck = [
     response.answer_summary,

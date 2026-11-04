@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Shield, Check, AlertCircle, Lock, Unlock, GitBranch, Cpu, Database, FlaskConical } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { vibrate, formatRelative } from '@/lib/utils';
+import { formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import { retrieveSources, validateAttribution, validateQuote } from '@/lib/libraryEngine';
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Lock, Users, Shield } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
-import { LoadingState, ErrorState } from '@/components/States';
+import { LoadingState } from '@/components/States';
 import { createCheckIn, getCheckIns } from '@/lib/togetherEngine';
 import type { Profile } from '@/lib/types';
 import type { Circle, CircleCheckIn } from '@/lib/togetherTypes';
@@ -24,7 +24,7 @@ export default function CheckInScreen({ profile, circle, onBack }: Props) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      if (circle) {
+      if (circle?.id) {
         const data = await getCheckIns(circle.id);
         setCheckIns(data.filter((c) => c.visibility !== 'private'));
       }

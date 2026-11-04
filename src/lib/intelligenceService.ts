@@ -5,7 +5,7 @@ import type {
   StudyMemoryEvidence,
   MemoryEvidence,
 } from './intelligenceTypes';
-import type { InlineScriptureReference } from './intelligenceTypes';
+
 import type { Profile, Memory } from './types';
 
 // ============================================================

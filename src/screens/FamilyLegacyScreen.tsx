@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Users, Plus, Sparkles, Lock } from 'lucide-react';
+import { X, Users, Plus, Lock } from 'lucide-react';
 import { vibrate, formatDate } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
-import { createLegacyEvent, getLegacyEvents, softDeleteLegacyEvent } from '@/lib/legacyEngine';
+import { createLegacyEvent, getLegacyEvents } from '@/lib/legacyEngine';
 import { supabase } from '@/lib/supabase';
 import type { Profile } from '@/lib/types';
 import type { LegacyEvent } from '@/lib/legacyTypes';

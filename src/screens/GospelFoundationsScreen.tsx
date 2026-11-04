@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import {
-  X, BookOpen, ChevronRight, ChevronDown, Info, Sparkles, ShieldCheck,
-} from 'lucide-react';
+import { X, BookOpen, ChevronDown, Sparkles, ShieldCheck } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import { gospelFoundations } from '@/lib/reachEngine';
 import { familyEvangelismGuidance, prayingForSomeoneThemes } from '@/lib/reachEngine';

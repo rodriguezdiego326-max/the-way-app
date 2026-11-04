@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, BookOpen, Plus, Sparkles, Map } from 'lucide-react';
 import { vibrate, formatDate } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
-import { createScriptureRef, getScriptureRefs, getScriptureMap, softDeleteScriptureRef, getLifeSeasons } from '@/lib/legacyEngine';
+import { createScriptureRef, getScriptureRefs, getScriptureMap, getLifeSeasons } from '@/lib/legacyEngine';
 import type { Profile } from '@/lib/types';
 import type { LegacyScriptureRef, ScriptureMapEntry, LegacyLifeSeason } from '@/lib/legacyTypes';
 

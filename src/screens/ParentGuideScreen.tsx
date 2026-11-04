@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import {
-  X, BookOpen, ChevronRight, ChevronDown, Info, Heart, Users,
-} from 'lucide-react';
+import { X, BookOpen, ChevronDown, Users } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import { parentGuideSections } from '@/lib/familyEngine';
 

@@ -3,12 +3,7 @@ import { X, Check, AlertCircle, FlaskConical, ChevronDown, Shield, Lock, BookHea
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import { supabase } from '@/lib/supabase';
-import {
-  createLegacyEvent, getLegacyEvents, setAiSummary, deleteAiSummary,
-  createLifeSeason, getLifeSeasons, softDeleteLegacyEvent, softDeleteLifeSeason,
-  createScriptureRef, getScriptureRefs, getLegacyStats, deleteEntireLegacy,
-  upsertYearReview, getYearReview, deleteYearReviewAiSummary,
-} from '@/lib/legacyEngine';
+import { createLegacyEvent, getLegacyEvents, setAiSummary, deleteAiSummary, createLifeSeason, getLifeSeasons, softDeleteLegacyEvent, softDeleteLifeSeason, createScriptureRef, getScriptureRefs, deleteEntireLegacy, upsertYearReview, getYearReview, deleteYearReviewAiSummary } from '@/lib/legacyEngine';
 import type { Profile } from '@/lib/types';
 
 interface Props {
@@ -323,7 +318,7 @@ export default function Phase9TestScreen({ profile, onBack }: Props) {
         updateTest('legacy_retrieval_accuracy', found ? 'pass' : 'fail', {
           testUsers: 'User A',
           expectedBehavior: 'Legacy retrieval searches only the user\'s authorized Legacy content.',
-          actualBehavior: `Search found the user\'s record: ${found}.`,
+          actualBehavior: `Search found the user's record: ${found}.`,
           dbEndpoint: 'legacy_events (SELECT with profile_id filter)',
           authResult: 'All Legacy queries filter by profile_id. Only the user\'s own records are returned.',
           passFailReason: found ? 'PASS: Retrieval is user-scoped and accurate' : 'FAIL: Retrieval failed',

@@ -1,81 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import {
-  BookOpen,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  X,
-  Copy,
-  Share,
-  Bookmark,
-  Highlighter,
-  StickyNote,
-  Send,
-  Search,
-  Library,
-  Tag,
-  Trash2,
-  Type,
-  Check,
-  AlertCircle,
-  ArrowLeft,
-  ArrowRight,
-  RotateCw,
-  Plus,
-  Sparkles,
-  Pencil,
-  XCircle,
-  Zap,
-  Link2,
-  Clock,
-  MapPin,
-  Flame,
-  Crown,
-  Heart,
-  Eye,
-  BookOpen as BookOpenIcon,
-  MoreHorizontal,
-  History,
-  Info,
-  type LucideIcon,
-} from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { BookOpen, ChevronLeft, ChevronRight, ChevronDown, X, Copy, Share, Bookmark, Highlighter, StickyNote, Send, Search, Library, Tag, Trash2, Type, Check, AlertCircle, ArrowLeft, RotateCw, Plus, Sparkles, Pencil, XCircle, Zap, Link2, MoreHorizontal, Info } from 'lucide-react';
+
 import { vibrate } from '@/lib/utils';
 import type { Walk } from '@/lib/types';
-import {
-  BIBLE_BOOKS,
-  BIBLE_TRANSLATIONS,
-  HIGHLIGHT_COLORS,
-  MARKING_COLORS,
-  MARK_STYLES,
-  SYMBOL_LIBRARY,
-  SYMBOL_OPTIONS,
-  NOTE_TYPE_LABELS,
-  getBook,
-  formatReference,
-  getMarkStyleClasses,
-  getMarkingColor,
-  getPhraseSafeStyle,
-  getStyleDescription,
-  isSingleWordStyle,
-  isIconSymbol,
-  type BibleBook,
-  type BibleVerse,
-  type BibleTranslation,
-  type BibleTranslationInfo,
-  type NoteType,
-  type HighlightColor,
-  type MarkStyle,
-  type VerseSelection,
-  type BibleNote,
-  type BibleHighlight,
-  type BibleBookmark,
-  type BibleKeyword,
-  type BibleKeywordMark,
-  type BibleChapterNote,
-  type SymbolOption,
-  getBookDisplayName,
-} from '@/lib/bibleTypes';
+import { BIBLE_BOOKS, BIBLE_TRANSLATIONS, HIGHLIGHT_COLORS, MARK_STYLES, NOTE_TYPE_LABELS, getBook, formatReference, getMarkStyleClasses, getStyleDescription, isSingleWordStyle, type BibleVerse, type BibleTranslation, type NoteType, type HighlightColor, type MarkStyle, type VerseSelection, type BibleNote, type BibleHighlight, type BibleBookmark, type BibleKeyword, type BibleKeywordMark, type BibleChapterNote, getBookDisplayName } from '@/lib/bibleTypes';
 import {
   fetchChapter,
   getReadingHistory,
@@ -185,7 +113,6 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
   const [chapterMarkingMode, setChapterMarkingMode] = useState(false);
   const [activeKeyId, setActiveKeyId] = useState<string | null>(null);
   const [markDetailId, setMarkDetailId] = useState<string | null>(null);
-  const [showSymbolPicker, setShowSymbolPicker] = useState(false);
   const [rapidMode, setRapidMode] = useState(true);
   const [undoToast, setUndoToast] = useState<{ markId: string; keyName: string } | null>(null);
   const [changeKeyMode, setChangeKeyMode] = useState(false);
@@ -202,9 +129,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
   const [highlightRemoveError, setHighlightRemoveError] = useState(false);
   const [bookmarkSaveError, setBookmarkSaveError] = useState(false);
   const [noteSaveError, setNoteSaveError] = useState(false);
-  const [studySaving, setStudySaving] = useState(false);
   const loadRequestId = useRef(0);
-  const [history, setHistory] = useState<{ book: string; chapter: number } | null>(null);
   const [noteEditorState, setNoteEditorState] = useState<{ sel: VerseSelection; existing?: BibleNote } | null>(null);
   const [studySel, setStudySel] = useState<VerseSelection | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -240,7 +165,6 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
     setChapterMarkingMode(false);
     setActiveKeyId(null);
     setMarkDetailId(null);
-    setShowSymbolPicker(false);
     setRapidMode(true);
     setUndoToast(null);
     setChangeKeyMode(false);
@@ -279,7 +203,6 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
     (async () => {
       if (initialReference && !initialReferenceProcessed.current) {
         initialReferenceProcessed.current = true;
-        setHistory({ book: initialReference.book, chapter: initialReference.chapter });
         const vs = initialReference.verseStart;
         const ve = initialReference.verseEnd;
         if (vs !== null && ve !== null) {
@@ -289,7 +212,6 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
       } else {
         const h = await getReadingHistory();
         if (h) {
-          setHistory({ book: h.book, chapter: h.chapter });
           loadChapter(h.book, h.chapter);
         } else {
           loadChapter('John', 1);
@@ -1574,9 +1496,6 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                                 key={s.key}
                                 onClick={() => {
                                   setInlineKeyStyle(s.key);
-                                  if (s.key === 'symbol' || s.key === 'symbol_underline' || s.key === 'symbol_highlight') {
-                                    setShowSymbolPicker(true);
-                                  }
                                 }}
                                 className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border text-xs no-tap-highlight transition-all ${inlineKeyStyle === s.key ? 'bg-gold-500/20 border-gold-500/40 text-gold-200' : 'bg-ink-700/40 border-ink-600/30 text-ivory-400'}`}
                               >
@@ -1598,7 +1517,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                           <label className="text-ivory-500 text-[10px] uppercase tracking-wider mb-1 block">Symbol</label>
                           <SymbolPicker
                             selectedSymbol={inlineKeySymbol}
-                            onSelect={(sym) => { setInlineKeySymbol(sym); setShowSymbolPicker(false); }}
+                            onSelect={(sym) => { setInlineKeySymbol(sym); }}
                           />
                         </div>
                       )}
@@ -2175,9 +2094,6 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                             key={s.key}
                             onClick={() => {
                               setInlineKeyStyle(s.key);
-                              if (s.key === 'symbol' || s.key === 'symbol_underline' || s.key === 'symbol_highlight') {
-                                setShowSymbolPicker(true);
-                              }
                             }}
                             className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border text-xs no-tap-highlight transition-all ${inlineKeyStyle === s.key ? 'bg-gold-500/20 border-gold-500/40 text-gold-200' : 'bg-ink-700/40 border-ink-600/30 text-ivory-400'}`}
                           >
@@ -2199,7 +2115,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                       <label className="text-ivory-500 text-[10px] uppercase tracking-wider mb-1 block">Symbol</label>
                       <SymbolPicker
                         selectedSymbol={inlineKeySymbol}
-                        onSelect={(sym) => { setInlineKeySymbol(sym); setShowSymbolPicker(false); }}
+                        onSelect={(sym) => { setInlineKeySymbol(sym); }}
                       />
                     </div>
                   )}
@@ -2780,8 +2696,12 @@ function NotesLibrary({
   const [showSearch, setShowSearch] = useState(false);
   const display = searchQuery.trim() ? searchResults : notes;
 
+  const loadAllNotesRef = useRef(loadAllNotes);
   useEffect(() => {
-    loadAllNotes();
+    loadAllNotesRef.current = loadAllNotes;
+  });
+  useEffect(() => {
+    loadAllNotesRef.current();
   }, []);
 
   return (

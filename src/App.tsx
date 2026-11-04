@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Profile, Walk } from '@/lib/types';
 import type { OnboardingData } from '@/components/Onboarding';
@@ -167,7 +167,6 @@ export default function App() {
   const [session, setSession] = useState<{ user: { id: string; email?: string } | null } | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
-  const [showAuth, setShowAuth] = useState(false);
   const [askContext, setAskContext] = useState<string | AskHandoffContext | null>(null);
   const [activeAskConversationId, setActiveAskConversationId] = useState<string | null>(null);
   const [askKeyboardOpen, setAskKeyboardOpen] = useState(false);
@@ -182,44 +181,7 @@ export default function App() {
   }
   const authGenerationRef = useRef(0);
 
-  useEffect(() => {
-    if (appState !== 'app' || profile || profileLoading || !session) return;
-    loadProfile();
-  }, [appState, profile, profileLoading, session]);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s as typeof session);
-      setAuthLoading(false);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
-      if (event === 'SIGNED_OUT' || (!s && !session)) {
-        authGenerationRef.current++;
-        setSession(null);
-        setProfile(null);
-        setProfileLoading(false);
-        setAuthLoading(false);
-        setOverlay({ type: 'none' });
-        setActiveTab('today');
-        return;
-      }
-      setSession(s as typeof session);
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
-
-  async function handleSignOut() {
-    authGenerationRef.current++;
-    setProfileLoading(false);
-    setAuthLoading(false);
-    setSession(null);
-    setProfile(null);
-    setOverlay({ type: 'none' });
-    setActiveTab('today');
-    await supabase.auth.signOut();
-  }
-
-  async function loadProfile() {
+  const loadProfile = useCallback(async () => {
     if (profileLoading) return;
     if (!session?.user?.id) return;
     const gen = authGenerationRef.current;
@@ -248,6 +210,43 @@ export default function App() {
       setAppState('onboarding');
     }
     setProfileLoading(false);
+  }, [profileLoading, session]);
+
+  useEffect(() => {
+    if (appState !== 'app' || profile || profileLoading || !session) return;
+    loadProfile();
+  }, [appState, profile, profileLoading, session, loadProfile]);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s as typeof session);
+      setAuthLoading(false);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === 'SIGNED_OUT' || !s) {
+        authGenerationRef.current++;
+        setSession(null);
+        setProfile(null);
+        setProfileLoading(false);
+        setAuthLoading(false);
+        setOverlay({ type: 'none' });
+        setActiveTab('today');
+        return;
+      }
+      setSession(s as typeof session);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  async function handleSignOut() {
+    authGenerationRef.current++;
+    setProfileLoading(false);
+    setAuthLoading(false);
+    setSession(null);
+    setProfile(null);
+    setOverlay({ type: 'none' });
+    setActiveTab('today');
+    await supabase.auth.signOut();
   }
 
   const [onboardingSaving, setOnboardingSaving] = useState(false);
@@ -334,7 +333,7 @@ export default function App() {
     setOverlay({ type: 'none' });
   }
 
-  function handleReflectionComplete(_walk: Walk) {
+  function handleReflectionComplete() {
     setOverlay({ type: 'none' });
     setActiveTab('today');
   }
@@ -368,7 +367,7 @@ export default function App() {
   }
 
   if (!session) {
-    return <WelcomeScreen onAuthed={() => { setShowAuth(false); loadProfile(); }} />;
+    return <WelcomeScreen onAuthed={loadProfile} />;
   }
 
   if (appState === 'onboarding') {
@@ -495,8 +494,6 @@ export default function App() {
           onOpenEncouragement={() => setOverlay({ type: 'encouragement' })}
           onOpenAccountability={() => setOverlay({ type: 'accountability' })}
           onOpenMyChurch={() => setOverlay({ type: 'my_church' })}
-          onOpenInvitations={() => setOverlay({ type: 'together_invitations' })}
-          onJoinByCode={() => setOverlay({ type: 'together_join_code' })}
         />
       </ErrorBoundary>
     );
@@ -516,8 +513,6 @@ export default function App() {
           onOpenEncouragement={() => setOverlay({ type: 'encouragement' })}
           onOpenAccountability={() => setOverlay({ type: 'accountability' })}
           onOpenMyChurch={() => setOverlay({ type: 'my_church' })}
-          onOpenInvitations={() => setOverlay({ type: 'none' })}
-          onJoinByCode={() => setOverlay({ type: 'none' })}
           initialTab="invitations"
         />
       </ErrorBoundary>
@@ -538,8 +533,6 @@ export default function App() {
           onOpenEncouragement={() => setOverlay({ type: 'encouragement' })}
           onOpenAccountability={() => setOverlay({ type: 'accountability' })}
           onOpenMyChurch={() => setOverlay({ type: 'my_church' })}
-          onOpenInvitations={() => setOverlay({ type: 'none' })}
-          onJoinByCode={() => setOverlay({ type: 'none' })}
           initialTab="join_code"
         />
       </ErrorBoundary>
@@ -755,7 +748,7 @@ export default function App() {
   if (overlay.type === 'production_readiness' && profile) {
     return (
       <ErrorBoundary>
-        <ProductionReadinessScreen profile={profile} onBack={() => setOverlay({ type: 'none' })}
+        <ProductionReadinessScreen onBack={() => setOverlay({ type: 'none' })}
           onOpenHealth={() => setOverlay({ type: 'system_health' })}
           onOpenAiUsage={() => setOverlay({ type: 'ai_usage' })}
           onOpenFeedback={() => setOverlay({ type: 'beta_feedback' })}
@@ -798,10 +791,10 @@ export default function App() {
         setActiveTab('ask');
         setAskContext(ref);
       }} />}
-      {activeTab === 'ask' && <AskScreen theologicalDepth={profile?.theological_depth || 'simple'} profile={profile} onStartWalk={handleStartWalk} onOpenBibleReference={handleOpenBibleReference} initialContext={askContext} onContextConsumed={() => setAskContext(null)} onKeyboardVisibilityChange={setAskKeyboardOpen} activeConversationId={activeAskConversationId} onConversationChange={setActiveAskConversationId} translation={globalTranslation} onTranslationChange={handleTranslationChange} />}
+      {activeTab === 'ask' && <AskScreen theologicalDepth={profile?.theological_depth || 'simple'} profile={profile} onOpenBibleReference={handleOpenBibleReference} initialContext={askContext} onContextConsumed={() => setAskContext(null)} onKeyboardVisibilityChange={setAskKeyboardOpen} activeConversationId={activeAskConversationId} onConversationChange={setActiveAskConversationId} translation={globalTranslation} onTranslationChange={handleTranslationChange} />}
 
       {activeTab === 'prayer' && <PrayerScreen profile={profile} />}
-      {activeTab === 'you' && <YouScreen profile={profile} onProfileUpdate={handleProfileUpdate} session={session} onSignOut={handleSignOut} onShowAuth={() => setShowAuth(true)} onOpenFamily={() => setOverlay({ type: 'family' })} onOpenReach={() => setOverlay({ type: 'reach' })} onOpenLibrarySearch={() => setOverlay({ type: 'library_search' })} onOpenAdminSources={() => setOverlay({ type: 'admin_sources' })} onOpenRetrievalDebug={() => setOverlay({ type: 'retrieval_debug' })} onOpenRAGTests={() => setOverlay({ type: 'rag_tests' })} onOpenPhase6Tests={() => setOverlay({ type: 'phase6_tests' })} onOpenQADashboard={() => setOverlay({ type: 'qa_dashboard' })} onOpenSourceBatches={() => setOverlay({ type: 'source_batches' })} onOpenReleaseGate={() => setOverlay({ type: 'release_gate' })} onOpenProductionStatus={() => setOverlay({ type: 'production_status' })} onOpenTogether={() => setOverlay({ type: 'together' })} onOpenMyChurch={() => setOverlay({ type: 'my_church' })} onOpenPhase8Tests={() => setOverlay({ type: 'phase8_tests' })} onOpenLegacy={() => setOverlay({ type: 'legacy_home' })} onOpenPhase9Tests={() => setOverlay({ type: 'phase9_tests' })} onOpenPrivacyCenter={() => setOverlay({ type: 'privacy_center' })} onOpenProductionReadiness={() => setOverlay({ type: 'production_readiness' })} onOpenPhase10Tests={() => setOverlay({ type: 'phase10_tests' })} onOpenBetaFeedback={() => setOverlay({ type: 'beta_feedback' })} />}
+      {activeTab === 'you' && <YouScreen profile={profile} onProfileUpdate={handleProfileUpdate} session={session} onSignOut={handleSignOut} onOpenFamily={() => setOverlay({ type: 'family' })} onOpenReach={() => setOverlay({ type: 'reach' })} onOpenLibrarySearch={() => setOverlay({ type: 'library_search' })} onOpenAdminSources={() => setOverlay({ type: 'admin_sources' })} onOpenRetrievalDebug={() => setOverlay({ type: 'retrieval_debug' })} onOpenRAGTests={() => setOverlay({ type: 'rag_tests' })} onOpenPhase6Tests={() => setOverlay({ type: 'phase6_tests' })} onOpenQADashboard={() => setOverlay({ type: 'qa_dashboard' })} onOpenSourceBatches={() => setOverlay({ type: 'source_batches' })} onOpenReleaseGate={() => setOverlay({ type: 'release_gate' })} onOpenProductionStatus={() => setOverlay({ type: 'production_status' })} onOpenTogether={() => setOverlay({ type: 'together' })} onOpenMyChurch={() => setOverlay({ type: 'my_church' })} onOpenPhase8Tests={() => setOverlay({ type: 'phase8_tests' })} onOpenLegacy={() => setOverlay({ type: 'legacy_home' })} onOpenPhase9Tests={() => setOverlay({ type: 'phase9_tests' })} onOpenPrivacyCenter={() => setOverlay({ type: 'privacy_center' })} onOpenProductionReadiness={() => setOverlay({ type: 'production_readiness' })} onOpenPhase10Tests={() => setOverlay({ type: 'phase10_tests' })} onOpenBetaFeedback={() => setOverlay({ type: 'beta_feedback' })} />}
 
       {!(activeTab === 'ask' && askKeyboardOpen) && <BottomNav active={activeTab} onChange={setActiveTab} />}
     </>

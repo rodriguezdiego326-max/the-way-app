@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Activity, Database, Cpu, BookOpen, AlertCircle, CheckCircle, Clock, Server } from 'lucide-react';
-import { vibrate, formatDate } from '@/lib/utils';
+import { X, Activity, Database, Cpu, BookOpen, AlertCircle, CheckCircle, Server } from 'lucide-react';
+import { formatDate } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import { checkDatabaseHealth, getSystemVersions, getAiUsageStats, getAuditTrail } from '@/lib/productionEngine';
 

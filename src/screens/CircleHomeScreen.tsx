@@ -1,13 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Users, Heart, BookOpen, CheckCircle, HandHeart, Shield, Plus, ChevronRight, UserPlus, LogOut, Mail, Clock, Lock } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { X, Users, Heart, BookOpen, CheckCircle, HandHeart, Shield, ChevronRight, UserPlus, LogOut, Mail, Lock } from 'lucide-react';
+
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
-import {
-  getCircle, getCircleMembers, getMyRole, leaveCircle, createInvitation, getScriptureStudies, getSharedPrayers, getCheckIns,
-} from '@/lib/togetherEngine';
+import { getCircleMembers, getMyRole, leaveCircle, createInvitation, getScriptureStudies, getSharedPrayers, getCheckIns } from '@/lib/togetherEngine';
 import type { Profile } from '@/lib/types';
-import type { Circle, CircleMember, SharedScriptureStudy, SharedPrayer, CircleCheckIn, CircleInvitation } from '@/lib/togetherTypes';
+import type { Circle, CircleMember, SharedScriptureStudy, SharedPrayer, CircleCheckIn } from '@/lib/togetherTypes';
 
 interface Props {
   profile: Profile;

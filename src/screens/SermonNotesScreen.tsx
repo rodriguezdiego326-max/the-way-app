@@ -3,7 +3,7 @@ import { X, BookOpen, Plus, ChevronRight, Calendar, User, FileText, ArrowRight }
 import { vibrate, formatDate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';
 import {
-  createSermon, createSermonNote, getSermonNotes, getRecentSermons, getSermonNoteForSermon,
+  createSermon, createSermonNote, getSermonNotes, getSermonNoteForSermon,
   updateSermonNote,
 } from '@/lib/churchEngine';
 import type { Profile } from '@/lib/types';
@@ -22,7 +22,6 @@ export default function SermonNotesScreen({
   profile, onBack, onOpenSermonFollowUp, onOpenContinueSunday, onOpenSermonCompanion, onOpenAskMyPastor,
 }: Props) {
   const [notes, setNotes] = useState<Array<SermonNote & { sermons: Sermon }>>([]);
-  const [recentSermons, setRecentSermons] = useState<Sermon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -44,12 +43,8 @@ export default function SermonNotesScreen({
     setLoading(true);
     setError(null);
     try {
-      const [n, recent] = await Promise.all([
-        getSermonNotes(profile.id),
-        getRecentSermons(10),
-      ]);
+      const n = await getSermonNotes(profile.id);
       setNotes(n);
-      setRecentSermons(recent);
     } catch {
       setError('Could not load sermon notes.');
     } finally {

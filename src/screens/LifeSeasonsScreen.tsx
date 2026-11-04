@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Clock, Plus, ChevronRight, Sparkles, Calendar } from 'lucide-react';
+import { X, Clock, Plus, Sparkles } from 'lucide-react';
 import { vibrate, formatDate } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
-import { createLifeSeason, getLifeSeasons, endLifeSeason, softDeleteLifeSeason } from '@/lib/legacyEngine';
+import { createLifeSeason, getLifeSeasons, endLifeSeason } from '@/lib/legacyEngine';
 import { LIFE_SEASON_PRESETS } from '@/lib/legacyTypes';
 import type { Profile } from '@/lib/types';
 import type { LegacyLifeSeason } from '@/lib/legacyTypes';

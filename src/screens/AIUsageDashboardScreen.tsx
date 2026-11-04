@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, BarChart3, DollarSign, Zap, AlertCircle, Clock, Cpu } from 'lucide-react';
-import { vibrate, formatDate } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import { getAiUsageStats } from '@/lib/productionEngine';
 

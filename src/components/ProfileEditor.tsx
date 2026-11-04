@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { X, Check, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { X, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { vibrate } from '@/lib/utils';
 import {
@@ -13,7 +13,7 @@ import {
   studyOptions,
   seasonOptions,
 } from '@/lib/profileOptions';
-import type { Profile, TheologicalDepth, LifeStage, LifeArea, GrowthArea, Familiarity } from '@/lib/types';
+import type { Profile, TheologicalDepth, LifeStage, LifeArea, GrowthArea } from '@/lib/types';
 
 interface ProfileEditorProps {
   profile: Profile;
@@ -36,11 +36,7 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
   const [currentStudy, setCurrentStudy] = useState(profile.current_study || 'None currently');
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadProfileData();
-  }, []);
-
-  async function loadProfileData() {
+  const loadProfileData = useCallback(async () => {
     const [stagesRes, areasRes, growthRes] = await Promise.all([
       supabase.from('life_stages').select('*').eq('profile_id', profile.id),
       supabase.from('life_areas').select('*').eq('profile_id', profile.id),
@@ -56,7 +52,11 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
       setSeason('Other');
       setSeasonText(profile.season);
     }
-  }
+  }, [profile.id, profile.season]);
+
+  useEffect(() => {
+    loadProfileData();
+  }, [loadProfileData]);
 
   function toggleArray(arr: string[], value: string): string[] {
     return arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];

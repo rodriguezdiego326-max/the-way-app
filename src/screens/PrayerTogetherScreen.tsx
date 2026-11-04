@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Plus, Heart, Check, Lock, Users, Clock } from 'lucide-react';
+import { X, Plus, Heart, Check, Lock, Users } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';
 import {

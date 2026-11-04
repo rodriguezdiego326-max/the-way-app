@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, Award, Plus, Sparkles, Church } from 'lucide-react';
 import { vibrate, formatDate } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
-import { createMilestone, getMilestones, softDeleteMilestone } from '@/lib/legacyEngine';
+import { createMilestone, getMilestones } from '@/lib/legacyEngine';
 import { MILESTONE_TYPES } from '@/lib/legacyTypes';
 import type { Profile } from '@/lib/types';
 import type { LegacyMilestone } from '@/lib/legacyTypes';

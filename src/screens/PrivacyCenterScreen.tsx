@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { X, Shield, Download, Trash2, Brain, Heart, BookOpen, Users, Church, BookHeart, Lock, Sparkles, AlertCircle } from 'lucide-react';
-import { vibrate, formatDate } from '@/lib/utils';
+import { X, Shield, Download, Trash2, Brain, Heart, BookOpen, Users, Church, BookHeart, Lock, AlertCircle } from 'lucide-react';
+import { vibrate } from '@/lib/utils';
 import { exportUserData, deleteAccount } from '@/lib/productionEngine';
 import { supabase } from '@/lib/supabase';
 import { deliverDataExport, ExportFileError } from '@/lib/dataExportFile';

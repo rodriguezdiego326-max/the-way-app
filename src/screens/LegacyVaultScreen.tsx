@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Archive, Lock, Sparkles } from 'lucide-react';
-import { vibrate, formatDate } from '@/lib/utils';
+import { X, Archive, Lock } from 'lucide-react';
+import { formatDate } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import { getVaultEvents, getMilestones, getLetters } from '@/lib/legacyEngine';
-import { SOURCE_LABELS } from '@/lib/legacyTypes';
+
 import type { Profile } from '@/lib/types';
 import type { LegacyEvent, LegacyMilestone, LegacyLetter } from '@/lib/legacyTypes';
 

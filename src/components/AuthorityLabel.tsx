@@ -1,5 +1,3 @@
-import type { SourceType } from '@/lib/types';
-
 export type AuthorityLevel =
   | 'scripture'
   | 'confession'
@@ -71,25 +69,4 @@ export default function AuthorityLabel({ level, size = 'sm' }: AuthorityLabelPro
       {c.label}
     </span>
   );
-}
-
-export function sourceTypeToAuthority(sourceType: SourceType): AuthorityLevel {
-  switch (sourceType) {
-    case 'scripture':
-      return 'scripture';
-    case 'creed':
-    case 'confession':
-    case 'catechism':
-      return 'confession';
-    case 'historic_theologian':
-      return 'historic_theology';
-    case 'modern_teacher':
-      return 'teacher';
-    case 'editorial':
-      return 'explanation';
-    case 'ai_application':
-      return 'application';
-    default:
-      return 'explanation';
-  }
 }

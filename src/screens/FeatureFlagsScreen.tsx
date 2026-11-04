@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, ToggleLeft, ToggleRight, AlertTriangle, Shield, Power } from 'lucide-react';
+import { X, ToggleLeft, ToggleRight, Power } from 'lucide-react';
 import { vibrate, formatDate } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import { getFeatureFlags, setFeatureFlag } from '@/lib/productionEngine';

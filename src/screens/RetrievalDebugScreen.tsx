@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { X, Shield, Search, ChevronRight, Check, AlertCircle, Info } from 'lucide-react';
+import { X, Shield } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { vibrate, formatRelative } from '@/lib/utils';
-import { authorityLevelLabels, sourceTypeLabels } from '@/lib/libraryEngine';
+
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';
 import type { RetrievalLogEntry } from '@/lib/libraryTypes';
 

@@ -1,8 +1,5 @@
 import { useState } from 'react';
-import {
-  X, Heart, MessageCircle, Users, BookOpen, Landmark, Compass,
-  ChevronRight, Sparkles, Shield, Info,
-} from 'lucide-react';
+import { Heart, MessageCircle, Users, BookOpen, Landmark, Compass, Sparkles, Shield, Info } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import PeoplePrayingScreen from '@/screens/PeoplePrayingScreen';
 import TheyAskedMeScreen from '@/screens/TheyAskedMeScreen';
@@ -18,10 +15,10 @@ type SubView = 'main' | 'people' | 'they_asked' | 'gospel_conversation' | 'prodi
 export default function ReachScreen() {
   const [subView, setSubView] = useState<SubView>('main');
 
-  if (subView === 'people') return <PeoplePrayingScreen onBack={() => setSubView('main')} />;
+  if (subView === 'people') return <PeoplePrayingScreen />;
   if (subView === 'they_asked') return <TheyAskedMeScreen onBack={() => setSubView('main')} />;
   if (subView === 'gospel_conversation') return <GospelConversationScreen onBack={() => setSubView('main')} />;
-  if (subView === 'prodigal') return <ProdigalJourneyScreen onBack={() => setSubView('main')} />;
+  if (subView === 'prodigal') return <ProdigalJourneyScreen />;
   if (subView === 'apologetics') return <ApologeticsCoachScreen onBack={() => setSubView('main')} />;
   if (subView === 'foundations') return <GospelFoundationsScreen onBack={() => setSubView('main')} />;
   if (subView === 'trails') return <EvangelismBibleTrailsScreen onBack={() => setSubView('main')} />;

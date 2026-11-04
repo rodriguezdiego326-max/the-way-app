@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
-import { X, Check, AlertCircle, FlaskConical, ChevronDown, Shield, Lock, Cpu } from 'lucide-react';
+import { X, Check, AlertCircle, FlaskConical, ChevronDown, Shield, Lock } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import { supabase } from '@/lib/supabase';
-import { getFeatureFlags, checkDatabaseHealth, getAiUsageStats, exportUserData, lockSubmission, unlockSubmission, isSubmitting, saveDraft, loadDraft, clearDraft, clearAllUserDrafts } from '@/lib/productionEngine';
+import { getFeatureFlags, exportUserData, lockSubmission, unlockSubmission, isSubmitting, saveDraft, loadDraft, clearDraft, clearAllUserDrafts } from '@/lib/productionEngine';
 import type { Profile } from '@/lib/types';
 
 interface Props {
@@ -95,7 +95,7 @@ export default function Phase10TestScreen({ profile, onBack }: Props) {
         // Check RLS on key tables by attempting cross-profile queries
         const tablesToCheck = ['memories', 'prayers', 'ask_conversations', 'family_profiles', 'reach_people', 'circles', 'church_profiles', 'legacy_events', 'legacy_letters'];
         let allRlsOk = true;
-        let tableResults: string[] = [];
+        const tableResults: string[] = [];
         for (const table of tablesToCheck) {
           const { error: rlsErr } = await supabase.from(table).select('id').limit(1);
           if (rlsErr) {
@@ -274,7 +274,6 @@ export default function Phase10TestScreen({ profile, onBack }: Props) {
         // Verify the app handles AI failures gracefully by checking error states exist in components
         const { data: aiLog } = await supabase.from('ai_usage_log').select('success, error_code').limit(10);
         const hasFailures = (aiLog || []).some(r => !r.success);
-        const hasSuccesses = (aiLog || []).some(r => r.success);
         // The app should continue working even when AI fails — verify non-AI tables are accessible
         const { error: prayerErr } = await supabase.from('prayers').select('id').limit(1);
         const nonAiWorks = !prayerErr;
@@ -315,7 +314,6 @@ export default function Phase10TestScreen({ profile, onBack }: Props) {
       try {
         const { data: buckets } = await supabase.from('rate_limit_buckets').select('*').limit(5);
         const rateLimitExists = buckets !== null;
-        const hasBuckets = (buckets || []).length > 0;
         updateTest('rate_limit_enforcement', rateLimitExists ? 'pass' : 'fail', {
           testUsers: 'User A (making rapid requests)',
           expectedBehavior: 'Rate limiting is enforced server-side for AI and API endpoints.',

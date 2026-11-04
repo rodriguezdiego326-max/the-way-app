@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import {
-  X, Search, BookOpen, Landmark, Scroll, Users, Sparkles, Info, Filter, ChevronDown,
-} from 'lucide-react';
+import { X, Search, BookOpen, Landmark, Scroll, Users, Sparkles, Info, Filter } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import ViewSources from '@/components/ViewSources';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';
-import { generateRAGAnswer, retrieveSources, emptyStateMessages, sourceTypeLabels } from '@/lib/libraryEngine';
+import { generateRAGAnswer, retrieveSources, emptyStateMessages } from '@/lib/libraryEngine';
 import type { RAGAnswer, RetrievalResult, SourceType } from '@/lib/libraryTypes';
 
 interface Props { onBack: () => void; }
@@ -40,15 +38,6 @@ export default function LibrarySearchScreen({ onBack }: Props) {
     try {
       const retrievalResult = await retrieveSources(query.trim());
       setRetrieval(retrievalResult);
-
-      let filtered = retrievalResult;
-      if (filter !== 'all') {
-        filtered = {
-          ...filtered,
-          citations: filtered.citations.filter(c => c.source_type === filter),
-          retrieved_sources: filtered.retrieved_sources.filter(rs => rs.source.source_type === filter),
-        };
-      }
 
       const answer = await generateRAGAnswer(query.trim());
 

@@ -3,7 +3,7 @@ import {
   Clock, MapPin, Flame, Crown, Heart, Eye, BookOpen,
   type LucideIcon,
 } from 'lucide-react';
-import { SYMBOL_OPTIONS, isIconSymbol, type SymbolOption } from '@/lib/bibleTypes';
+import { SYMBOL_OPTIONS, type SymbolOption } from '@/lib/bibleTypes';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   clock: Clock,
@@ -75,4 +75,3 @@ const SymbolPicker: React.FC<SymbolPickerProps> = ({ selectedSymbol, onSelect })
 };
 
 export default React.memo(SymbolPicker);
-export { isIconSymbol };

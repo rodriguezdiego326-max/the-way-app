@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Mail, Plus, Sparkles, Calendar, Lock } from 'lucide-react';
+import { X, Mail, Plus, Calendar, Lock } from 'lucide-react';
 import { vibrate, formatDate } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
-import { createLetter, getLetters, softDeleteLetter } from '@/lib/legacyEngine';
+import { createLetter, getLetters } from '@/lib/legacyEngine';
 import { LETTER_TYPES } from '@/lib/legacyTypes';
 import type { Profile } from '@/lib/types';
 import type { LegacyLetter } from '@/lib/legacyTypes';

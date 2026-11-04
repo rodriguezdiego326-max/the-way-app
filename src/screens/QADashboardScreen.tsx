@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, FlaskConical, Check, AlertCircle, BarChart3, Clock } from 'lucide-react';
+import { X, Check, AlertCircle, BarChart3 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';

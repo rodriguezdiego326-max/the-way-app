@@ -11,10 +11,9 @@ interface Props {
   churchId: string;
   membership: ChurchMembership;
   onManageStudies: () => void;
-  onChanged: () => void;
 }
 
-export default function ChurchAdministrationCard({ churchId, membership, onManageStudies, onChanged }: Props) {
+export default function ChurchAdministrationCard({ churchId, membership, onManageStudies }: Props) {
   const [claims, setClaims] = useState<ChurchAdminClaim[]>([]);
   const [claimsLoaded, setClaimsLoaded] = useState(false);
   const [requestRole, setRequestRole] = useState<VerifiedChurchRole>('CHURCH_ADMIN');

@@ -1,15 +1,11 @@
 import { useEffect, useState } from 'react';
-import {
-  X, Plus, Heart, BookOpen, ChevronRight, Calendar, Check, Shield, MessageCircle,
-} from 'lucide-react';
+import { X, Plus, Heart, BookOpen, ChevronRight, Calendar, Shield } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { vibrate, formatDate, formatRelative } from '@/lib/utils';
 import { spiritualContextOptions } from '@/lib/reachEngine';
 import type { ReachPerson, ReachPrayerUpdate, ReachConversation } from '@/lib/reachTypes';
 
-interface Props { onBack: () => void; }
-
-export default function PeoplePrayingScreen({ onBack }: Props) {
+export default function PeoplePrayingScreen() {
   const [people, setPeople] = useState<ReachPerson[]>([]);
   const [showNew, setShowNew] = useState(false);
   const [selected, setSelected] = useState<ReachPerson | null>(null);

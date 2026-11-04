@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { X, BookOpen, Lightbulb, Scroll, Landmark, FileText, ChevronRight, Sparkles } from 'lucide-react';
-import { vibrate } from '@/lib/utils';
+
 import { LoadingState } from '@/components/States';
 import { retrieveSources } from '@/lib/libraryEngine';
 import type { Sermon } from '@/lib/togetherTypes';

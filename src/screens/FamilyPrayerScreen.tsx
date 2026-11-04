@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   X, Plus, Heart, BookOpen, Calendar, Check, ChevronRight,
 } from 'lucide-react';
@@ -28,11 +28,7 @@ export default function FamilyPrayerScreen({ familyProfile, onBack }: FamilyPray
   const [scripture, setScripture] = useState('');
   const [updateText, setUpdateText] = useState('');
 
-  useEffect(() => {
-    if (familyProfile) loadPrayers();
-  }, [familyProfile]);
-
-  async function loadPrayers() {
+  const loadPrayers = useCallback(async () => {
     if (!familyProfile) return;
     const { data } = await supabase
       .from('family_prayers')
@@ -40,7 +36,11 @@ export default function FamilyPrayerScreen({ familyProfile, onBack }: FamilyPray
       .eq('family_profile_id', familyProfile.id)
       .order('created_at', { ascending: false });
     setPrayers((data as FamilyPrayer[]) || []);
-  }
+  }, [familyProfile]);
+
+  useEffect(() => {
+    if (familyProfile) loadPrayers();
+  }, [loadPrayers, familyProfile]);
 
   async function createPrayer() {
     if (!title.trim() || !familyProfile) return;

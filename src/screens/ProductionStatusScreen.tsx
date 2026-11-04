@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Cpu, Cloud, Database, FileText, FlaskConical, Check, AlertCircle, Info, Shield, BookOpen, Quote, Sparkles } from 'lucide-react';
+import { X, Cpu, Cloud, Database, FileText, Check, AlertCircle, Info, Shield, BookOpen, Quote, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { LoadingState, ErrorState } from '@/components/States';
 import { retrieveSources, validateQuote, validateAttribution } from '@/lib/libraryEngine';
@@ -39,8 +39,6 @@ export default function ProductionStatusScreen({ onBack }: Props) {
   const [checking, setChecking] = useState(false);
   const [providerHealth, setProviderHealth] = useState<ProviderHealth | null>(null);
 
-  useEffect(() => { loadVersions(); }, []);
-
   const loadVersions = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -58,6 +56,8 @@ export default function ProductionStatusScreen({ onBack }: Props) {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => { loadVersions(); }, [loadVersions]);
 
   const runHealthChecks = useCallback(async () => {
     setChecking(true);

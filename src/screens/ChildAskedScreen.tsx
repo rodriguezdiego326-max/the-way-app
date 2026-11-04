@@ -5,10 +5,9 @@ import {
 } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import { getChildAskedResponse } from '@/lib/familyEngine';
-import type { FamilyProfile, FamilyMember, AgeRange, ChildAskedResponse } from '@/lib/familyTypes';
+import type { FamilyMember, AgeRange, ChildAskedResponse } from '@/lib/familyTypes';
 
 interface ChildAskedScreenProps {
-  familyProfile: FamilyProfile | null;
   members: FamilyMember[];
   onBack: () => void;
 }
@@ -22,16 +21,13 @@ const ageLabels: { id: AgeRange; label: string }[] = [
   { id: '18+', label: 'Adult' },
 ];
 
-export default function ChildAskedScreen({ familyProfile, members, onBack }: ChildAskedScreenProps) {
+export default function ChildAskedScreen({ members, onBack }: ChildAskedScreenProps) {
   const [question, setQuestion] = useState('');
   const [selectedAge, setSelectedAge] = useState<AgeRange>(
     members[0]?.age_range || '6-8',
   );
   const [response, setResponse] = useState<ChildAskedResponse | null>(null);
   const [thinking, setThinking] = useState(false);
-
-  // Use the age range from the first family member if available
-  const defaultAge = members[0]?.age_range || '6-8';
 
   async function handleAsk() {
     if (!question.trim()) return;

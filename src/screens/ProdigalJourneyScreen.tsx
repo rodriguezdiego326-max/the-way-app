@@ -6,9 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { vibrate, formatDate, formatRelative } from '@/lib/utils';
 import type { ProdigalJourney, ProdigalUpdate } from '@/lib/reachTypes';
 
-interface Props { onBack: () => void; }
-
-export default function ProdigalJourneyScreen({ onBack }: Props) {
+export default function ProdigalJourneyScreen() {
   const [journeys, setJourneys] = useState<ProdigalJourney[]>([]);
   const [showNew, setShowNew] = useState(false);
   const [selected, setSelected] = useState<ProdigalJourney | null>(null);

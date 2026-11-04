@@ -5,7 +5,7 @@ import { LoadingState, ErrorState, EmptyState } from '@/components/States';
 import {
   createScriptureStudy, getScriptureStudies, createReflection, getReflections,
 } from '@/lib/togetherEngine';
-import { retrieveSources } from '@/lib/libraryEngine';
+
 import type { Profile } from '@/lib/types';
 import type { Circle, SharedScriptureStudy, SharedReflection } from '@/lib/togetherTypes';
 
@@ -36,7 +36,7 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
     setLoading(true);
     setError(null);
     try {
-      if (circle) {
+      if (circle?.id) {
         const data = await getScriptureStudies(circle.id);
         setStudies(data);
       }

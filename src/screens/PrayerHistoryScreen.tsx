@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Heart, Plus, Sparkles, BookOpen } from 'lucide-react';
+import { X, Heart, Sparkles } from 'lucide-react';
 import { vibrate, formatDate } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import { supabase } from '@/lib/supabase';
-import { createLegacyEvent, softDeleteLegacyEvent } from '@/lib/legacyEngine';
+import { createLegacyEvent } from '@/lib/legacyEngine';
 import { ANSWERED_PRAYER_OPTIONS } from '@/lib/legacyTypes';
 import type { Profile } from '@/lib/types';
 import type { Prayer } from '@/lib/types';

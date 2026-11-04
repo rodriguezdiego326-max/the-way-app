@@ -3,7 +3,7 @@ import {
   Clock, MapPin, Flame, Crown, Heart, Eye, BookOpen,
   type LucideIcon,
 } from 'lucide-react';
-import { tokenizeVerse, reconstructVerse, getSelectedText, rangesOverlap, type ScriptureToken } from '@/lib/scriptureTokenizer';
+import { tokenizeVerse, type ScriptureToken } from '@/lib/scriptureTokenizer';
 import { getMarkStyleClasses, getPhraseSafeStyle, getMarkingColor, isIconSymbol, type BibleKeywordMark, type BibleKeyword, type HighlightColor, type BibleHighlight } from '@/lib/bibleTypes';
 
 const HIGHLIGHT_COLOR_CLASSES: Record<string, string> = {
@@ -236,4 +236,3 @@ const ScriptureVerseText: React.FC<ScriptureVerseTextProps> = ({
 };
 
 export default React.memo(ScriptureVerseText);
-export { reconstructVerse, rangesOverlap };

@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Church, Plus, ChevronRight, Search, MapPin, Globe, BookOpen, Heart, Users, Sun, LogOut, Check, Pencil } from 'lucide-react';
-import { vibrate, formatRelative } from '@/lib/utils';
-import { LoadingState, ErrorState, EmptyState } from '@/components/States';
+import { vibrate } from '@/lib/utils';
+import { LoadingState, ErrorState } from '@/components/States';
 import ChurchSearchResults, { type AppleSearchStatus, type ChurchSearchStatus } from '@/components/ChurchSearchResults';
 import ChurchRoleSheet from '@/components/ChurchRoleSheet';
 import ChurchAdministrationCard from '@/components/church/ChurchAdministrationCard';
@@ -67,6 +67,8 @@ export default function MyChurchScreen({
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
+  const activeChurchIdRef = useRef(activeChurchId);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -94,7 +96,7 @@ export default function MyChurchScreen({
       setMemberships(enriched);
       // Sync active church: use provided activeChurchId if it matches a membership, else first
       if (enriched.length > 0) {
-        const matchIdx = enriched.findIndex((m) => m.church.id === activeChurchId);
+        const matchIdx = enriched.findIndex((m) => m.church.id === activeChurchIdRef.current);
         const newIdx = matchIdx >= 0 ? matchIdx : 0;
         setActiveIndex(newIdx);
         onActiveChurchChange(enriched[newIdx].church.id);
@@ -106,7 +108,9 @@ export default function MyChurchScreen({
     } finally {
       setLoading(false);
     }
-  }, [profile.id, activeIndex]);
+  }, [profile.id, onActiveChurchChange]);
+
+  useEffect(() => { activeChurchIdRef.current = activeChurchId; }, [activeChurchId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -379,7 +383,6 @@ export default function MyChurchScreen({
                 churchId={active.church.id}
                 membership={active.membership}
                 onManageStudies={onOpenManageChurchStudies}
-                onChanged={load}
               />
               <button
                 onClick={() => { vibrate(8); setShowLeaveConfirm(active); }}

@@ -1,18 +1,12 @@
 import { useState, useCallback } from 'react';
-import { X, Check, AlertCircle, FlaskConical, ChevronDown, Shield, Lock, Users, Heart, BookOpen, Church, Sparkles, Database } from 'lucide-react';
+import { X, Check, AlertCircle, FlaskConical, ChevronDown, Shield, Lock, Database } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import { supabase } from '@/lib/supabase';
-import {
-  createCircle, getMyCircles, createReflection, getReflections,
-  createSharedPrayer, getSharedPrayers, acknowledgePrayer,
-  createCheckIn, leaveCircle, createInvitation, getInvitationByCode,
-  acceptInvitation, revokeInvitation, getCircleMembers, getCircle,
-  getAcknowledgementCount,
-} from '@/lib/togetherEngine';
+import { createCircle, getMyCircles, createReflection, getReflections, createSharedPrayer, acknowledgePrayer, leaveCircle, createInvitation, getInvitationByCode, revokeInvitation, getAcknowledgementCount } from '@/lib/togetherEngine';
 import { retrieveSources } from '@/lib/libraryEngine';
 import type { Profile } from '@/lib/types';
-import type { Circle, SharedPrayer, SharedReflection } from '@/lib/togetherTypes';
+
 
 interface Props {
   profile: Profile;
@@ -93,8 +87,6 @@ export default function Phase8TestScreen({ profile, onBack }: Props) {
     setResults(TEST_DEFS.map(emptyResult));
 
     const testProfileId = profile.id;
-    const fakeProfileId = '00000000-0000-0000-0000-000000000001';
-    const fakeProfileId2 = '00000000-0000-0000-0000-000000000002';
     const createdIds: string[] = [];
 
     try {
@@ -242,9 +234,7 @@ export default function Phase8TestScreen({ profile, onBack }: Props) {
           if (sharedRefl) createdIds.push(`refl:${sharedRefl.id}`);
 
           // Query reflections for this circle — only shared ones should be returned by the app
-          const allReflections = await getReflections(reflCircle.id);
-          const sharedOnly = allReflections.filter(r => r.visibility === 'circle');
-          const privateInResults = allReflections.filter(r => r.visibility === 'private');
+          await getReflections(reflCircle.id);
 
           // The app filters by visibility=circle when displaying to circle members
           // Private reflections should only be visible to their owner
@@ -595,7 +585,6 @@ export default function Phase8TestScreen({ profile, onBack }: Props) {
       try {
         const rag = await retrieveSources('justification');
         const hasCitations = rag.citations.length >= 0;
-        const usesVerifiedLibrary = rag.citations.every(c => c.verified || !c.verified); // All citations have verified flag
         const hasAuthorityLevels = rag.citations.every(c => typeof c.authority_level === 'number');
 
         updateTest('together_production_rag',

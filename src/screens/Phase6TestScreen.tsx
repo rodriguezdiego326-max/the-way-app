@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Check, AlertCircle, FlaskConical, ChevronRight, ChevronDown, Clock, Tag, BookOpen, Shield } from 'lucide-react';
+import { X, Check, AlertCircle, FlaskConical, ChevronDown, Clock, Tag, BookOpen } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import { retrieveSources, validateAttribution, validateQuote } from '@/lib/libraryEngine';
@@ -330,7 +330,7 @@ export default function Phase6TestScreen({ onBack }: Props) {
       });
 
       // TEST 16: Sensitive memory neutrality
-      const { data: memData } = await supabase.from('memories').select('category, content, sensitive').limit(5).maybeSingle();
+      await supabase.from('memories').select('category, content, sensitive').limit(5).maybeSingle();
       const memNeutral = true; // Memory proposals are neutral by design — they don't affirm or deny divine claims
       updateTest('sensitive_memory_neutrality', memNeutral ? 'pass' : 'fail', {
         testInput: 'Check memory proposals for sensitive topic neutrality',

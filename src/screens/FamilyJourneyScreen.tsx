@@ -1,11 +1,9 @@
-import { useEffect, useState } from 'react';
-import {
-  X, Landmark, ChevronRight, Check, Lock, Info, BookOpen,
-} from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { X, Landmark, Check, Lock, Info, BookOpen } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { vibrate } from '@/lib/utils';
 import { journeyPathways } from '@/lib/familyEngine';
-import type { FamilyProfile, FamilyJourneyProgress, JourneyPathway } from '@/lib/familyTypes';
+import type { FamilyProfile, FamilyJourneyProgress } from '@/lib/familyTypes';
 
 interface FamilyJourneyScreenProps {
   familyProfile: FamilyProfile | null;
@@ -16,11 +14,7 @@ export default function FamilyJourneyScreen({ familyProfile, onBack }: FamilyJou
   const [progress, setProgress] = useState<FamilyJourneyProgress[]>([]);
   const [selectedPathway, setSelectedPathway] = useState<string>('foundations');
 
-  useEffect(() => {
-    if (familyProfile) loadProgress();
-  }, [familyProfile]);
-
-  async function loadProgress() {
+  const loadProgress = useCallback(async () => {
     if (!familyProfile) return;
     const { data } = await supabase
       .from('family_journey_progress')
@@ -28,7 +22,11 @@ export default function FamilyJourneyScreen({ familyProfile, onBack }: FamilyJou
       .eq('family_profile_id', familyProfile.id)
       .order('lesson_number', { ascending: true });
     setProgress((data as FamilyJourneyProgress[]) || []);
-  }
+  }, [familyProfile]);
+
+  useEffect(() => {
+    if (familyProfile) loadProgress();
+  }, [loadProgress, familyProfile]);
 
   function getLessonStatus(pathway: string, lessonNumber: number): string {
     const p = progress.find((p) => p.pathway === pathway && p.lesson_number === lessonNumber);

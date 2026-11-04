@@ -1,8 +1,5 @@
 import { useState } from 'react';
-import {
-  X, Shield, ChevronRight, ChevronDown, MessageCircle, Send, Check,
-  Info, Sparkles, BookOpen, Heart, AlertCircle,
-} from 'lucide-react';
+import { X, Shield, ChevronRight, ChevronDown, MessageCircle, Check, Info, Sparkles, BookOpen, Heart, AlertCircle } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import { apologeticsCategories, practiceScenarios, type PracticeScenario } from '@/lib/reachEngine';
 import type { PracticeCoaching } from '@/lib/reachTypes';

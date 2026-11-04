@@ -1,6 +1,4 @@
-import {
-  X, Compass, ChevronRight, Lock, Info, BookOpen,
-} from 'lucide-react';
+import { X, Compass, Lock, Info, BookOpen } from 'lucide-react';
 import { missionsSections } from '@/lib/reachEngine';
 
 interface Props { onBack: () => void; }

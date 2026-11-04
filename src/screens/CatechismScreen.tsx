@@ -1,8 +1,5 @@
-import { useEffect, useState } from 'react';
-import {
-  X, Scroll, ChevronRight, ChevronDown, BookOpen, Heart,
-  Check, ShieldCheck, Info,
-} from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { X, Scroll, ChevronDown, BookOpen, Heart, Check, Info } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { vibrate } from '@/lib/utils';
 import {
@@ -24,11 +21,7 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
 
   const catechism = selectedType === 'westminster_shorter' ? westminsterShorterCatechism : heidelbergCatechism;
 
-  useEffect(() => {
-    if (familyProfile) loadProgress();
-  }, [familyProfile, selectedType]);
-
-  async function loadProgress() {
+  const loadProgress = useCallback(async () => {
     if (!familyProfile) return;
     const { data } = await supabase
       .from('catechism_progress')
@@ -37,7 +30,11 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
       .eq('catechism_type', selectedType)
       .order('question_number', { ascending: true });
     setProgress((data as CatechismProgress[]) || []);
-  }
+  }, [familyProfile, selectedType]);
+
+  useEffect(() => {
+    if (familyProfile) loadProgress();
+  }, [loadProgress, familyProfile]);
 
   function isCompleted(qNum: number): boolean {
     return progress.some((p) => p.question_number === qNum && p.completed);

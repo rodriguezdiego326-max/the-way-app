@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { X, Heart, Plus, Pencil, Trash2, Check } from 'lucide-react';
+import { X, Heart, Plus, Pencil, Trash2 } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';
 import { getMyChurchMembership, getChurch, getChurchPrayerItems, createChurchPrayerItem, updateChurchPrayerItem, deleteChurchPrayerItem, isChurchOwner } from '@/lib/churchEngine';

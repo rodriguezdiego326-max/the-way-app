@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import {
-  X, FlaskConical, Check, AlertCircle, Info, Sparkles, BookOpen, ChevronRight, Search,
-} from 'lucide-react';
+import { X, FlaskConical, Info, Sparkles, BookOpen } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import ViewSources from '@/components/ViewSources';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';

@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
-import {
-  X, Plus, Check, AlertCircle, Archive, Eye, Shield, ChevronRight, FileText,
-} from 'lucide-react';
+import { X, Plus, Check, AlertCircle, Archive, Eye, Shield } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { vibrate } from '@/lib/utils';
 import { authorityLevelLabels, sourceTypeLabels } from '@/lib/libraryEngine';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';
-import type { LibrarySource, SourceType, ContentChunk, ContentStatus } from '@/lib/libraryTypes';
+import type { LibrarySource, SourceType, ContentStatus } from '@/lib/libraryTypes';
 
 interface Props { onBack: () => void; }
 
