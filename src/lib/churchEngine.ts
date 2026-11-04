@@ -71,7 +71,7 @@ export async function updateChurch(
   return (data as ChurchProfile) || null;
 }
 
-export async function searchChurches(query: string): Promise<ChurchProfile[]> {
+export async function searchChurches(query: string): Promise<Omit<ChurchProfile, 'created_at'>[]> {
   const { data, error } = await supabase
     .rpc('search_church_directory', { p_query: query });
   if (error) {

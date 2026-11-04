@@ -38,7 +38,7 @@ import SourceViewer from '@/components/SourceViewer';
 import BiblicalBasis from '@/components/BiblicalBasis';
 import MemoryProposalCard from '@/components/MemoryProposalCard';
 import { fetchIntelligenceResponse, isMemoryEnabled, retrieveStudyMemoryEvidence } from '@/lib/intelligenceService';
-import { isAskHandoffContext, buildHandoffPrompt } from '@/lib/askHandoff';
+import { isAskHandoffContext, buildHandoffPrompt, type AskHandoffContext } from '@/lib/askHandoff';
 import type { AskIntent, Profile, Walk } from '@/lib/types';
 import type { StructuredTheologicalResponse, VerificationState, StudyMemoryEvidence, PersonalContextItem, PersonalClaim } from '@/lib/intelligenceTypes';
 import ScriptureBlock from '@/components/ScriptureBlock';

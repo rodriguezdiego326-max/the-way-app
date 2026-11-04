@@ -41,7 +41,7 @@ export default function MyChurchScreen({
   const [error, setError] = useState<string | null>(null);
   const [showJoin, setShowJoin] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<ChurchProfile[]>([]);
+  const [searchResults, setSearchResults] = useState<Omit<ChurchProfile, 'created_at'>[]>([]);
   const [selectedRole, setSelectedRole] = useState<string>('Regular Attender');
   const [creating, setCreating] = useState(false);
   const [newChurchName, setNewChurchName] = useState('');

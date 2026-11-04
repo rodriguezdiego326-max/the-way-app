@@ -351,7 +351,8 @@ export default function Phase9TestScreen({ profile, onBack }: Props) {
       // TEST 15: Delete Summary Preservation
       try {
         const event = await createLegacyEvent(pid, 'personal_note', '__P9_DELETE_SUMMARY_TEST__', new Date().toISOString().slice(0, 10), 'user_created', { userText: 'Original text to preserve' });
-        if (event) createdIds.push(event.id);
+        if (!event) throw new Error('Event creation returned no row');
+        createdIds.push(event.id);
         await setAiSummary(event.id, 'AI summary to delete');
         await deleteAiSummary(event.id);
         const { data: check } = await supabase.from('legacy_events').select('user_text, ai_summary').eq('id', event?.id).single();

@@ -278,7 +278,7 @@ export function getMarkingColor(key: HighlightColor): MarkingColorClasses {
 export function getMarkStyleClasses(style: MarkStyle, colorKey: HighlightColor, symbol: string | null): MarkStyleClass {
   const c = getMarkingColor(colorKey);
   const sym = symbol ?? '★';
-  const isIcon = symbol?.startsWith('icon:');
+  const iconSymbol = symbol?.startsWith('icon:') ? symbol : null;
 
   switch (style) {
     case 'underline':
@@ -296,14 +296,14 @@ export function getMarkStyleClasses(style: MarkStyle, colorKey: HighlightColor, 
     case 'highlight':
       return { className: `${c.bg} rounded-sm px-0.5` };
     case 'symbol':
-      return isIcon ? { className: '', badgeIcon: symbol } : { className: '', badge: sym };
+      return iconSymbol ? { className: '', badgeIcon: iconSymbol } : { className: '', badge: sym };
     case 'symbol_underline':
-      return isIcon
-        ? { className: `underline decoration-4 underline-offset-2 ${c.underline}`, badgeIcon: symbol }
+      return iconSymbol
+        ? { className: `underline decoration-4 underline-offset-2 ${c.underline}`, badgeIcon: iconSymbol }
         : { className: `underline decoration-4 underline-offset-2 ${c.underline}`, badge: sym };
     case 'symbol_highlight':
-      return isIcon
-        ? { className: `${c.bg} rounded-sm px-0.5`, badgeIcon: symbol }
+      return iconSymbol
+        ? { className: `${c.bg} rounded-sm px-0.5`, badgeIcon: iconSymbol }
         : { className: `${c.bg} rounded-sm px-0.5`, badge: sym };
     case 'circle':
     default:

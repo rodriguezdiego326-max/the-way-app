@@ -52,7 +52,7 @@ export default function TestimonyScreen({ profile, onBack }: Props) {
     vibrate(10);
     const updates: Partial<LegacyTestimony> = {};
     for (const p of PROMPTS) {
-      (updates as unknown as Record<string, string>)[p.key] = fields[p.key] || null;
+      (updates as unknown as Record<string, string | null>)[p.key] = fields[p.key] || null;
     }
     await upsertTestimony(profile.id, updates);
     setEditing(false);

@@ -123,7 +123,6 @@ export default function AuthForm({ onAuthed, initialMode = 'signin' }: AuthFormP
             className="flex-1 bg-transparent text-ivory-100 placeholder:text-ivory-600 focus:outline-none text-sm"
             autoComplete="email"
             enterKeyHint="next"
-            returnKeyType="next"
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); focusPassword(); } }}
           />
         </div>
@@ -138,7 +137,6 @@ export default function AuthForm({ onAuthed, initialMode = 'signin' }: AuthFormP
             className="flex-1 bg-transparent text-ivory-100 placeholder:text-ivory-600 focus:outline-none text-sm"
             autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
             enterKeyHint="go"
-            returnKeyType="go"
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitForm(); } }}
           />
         </div>

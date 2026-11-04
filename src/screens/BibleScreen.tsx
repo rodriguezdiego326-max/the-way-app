@@ -555,6 +555,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
         started_at: null,
         finished_at: null,
         created_at: new Date().toISOString(),
+        walk_date: null,
       });
     }
     setShowActions(false);
@@ -2670,6 +2671,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
           }}
           onCancel={() => { setNoteEditorState(null); setView('reader'); }}
           saveError={noteSaveError}
+          onContentEdit={() => setNoteSaveError(false)}
         />
       )}
 
@@ -2928,7 +2930,7 @@ function KeywordsView({
     setEditingId(kw.id);
     setName(kw.name);
     setColor(kw.color_key);
-    setStyle(kw.style);
+    setStyle(kw.mark_style);
     setSymbol(kw.symbol || '');
     setDesc(kw.description || '');
     setShowForm(true);
@@ -3100,13 +3102,14 @@ function KeywordsView({
 // ============================================================
 
 function NoteEditor({
-  sel, existing, onSave, onCancel, saveError,
+  sel, existing, onSave, onCancel, saveError, onContentEdit,
 }: {
   sel: VerseSelection;
   existing?: BibleNote;
   onSave: (noteType: NoteType, content: string, title: string | null) => void;
   onCancel: () => void;
   saveError: boolean;
+  onContentEdit: () => void;
 }) {
   const [noteType, setNoteType] = useState<NoteType>(existing?.note_type || 'observation');
   const [content, setContent] = useState(existing?.content || '');
@@ -3158,7 +3161,7 @@ function NoteEditor({
       <textarea
         ref={ref}
         value={content}
-        onChange={(e) => { setContent(e.target.value); setSaveError(false); }}
+        onChange={(e) => { setContent(e.target.value); onContentEdit(); }}
         placeholder="Write your observation, interpretation, or application..."
         className="input-field min-h-[120px] resize-none mb-3"
         style={{ minHeight: '120px' }}

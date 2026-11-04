@@ -773,7 +773,7 @@ function localizeReference(ref: string, translation: string): string {
               </div>
 
               <p className="text-ivory-300 text-sm leading-relaxed mb-4">
-                {localizeReadingObjective(todayWalk.reading_objective, reflLang)}
+                {localizeReadingObjective(todayWalk.reading_objective ?? '', reflLang)}
               </p>
 
               {scriptureLoading ? (
