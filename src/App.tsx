@@ -95,7 +95,7 @@ type Overlay =
   | { type: 'none' }
   | { type: 'bible-mode'; walk: Walk; mode: 'physical' | 'in-app' }
   | { type: 'bible-reader'; walk: Walk }
-  | { type: 'bible-reference'; book: string; chapter: number; verseStart: number | null; verseEnd: number | null }
+  | { type: 'bible-reference'; book: string; chapter: number; verseStart: number | null; verseEnd: number | null; returnTo?: 'church_studies' }
   | { type: 'family' }
   | { type: 'reach' }
   | { type: 'library_search' }
@@ -319,10 +319,10 @@ export default function App() {
     setOverlay({ type: 'bible-reader', walk });
   }
 
-  function handleOpenPassage(passageReference: string): boolean {
+  function handleOpenChurchStudyPassage(passageReference: string): boolean {
     const parsed = parsePassageReference(passageReference);
     if (!parsed) return false;
-    handleOpenBibleReference(parsed.book, parsed.chapter, parsed.verseStart, parsed.verseEnd);
+    setOverlay({ type: 'bible-reference', book: parsed.book, chapter: parsed.chapter, verseStart: parsed.verseStart, verseEnd: parsed.verseEnd, returnTo: 'church_studies' });
     return true;
   }
 
@@ -425,7 +425,7 @@ export default function App() {
             setAskContext(ref);
           }}
           initialReference={{ book: overlay.book, chapter: overlay.chapter, verseStart: overlay.verseStart, verseEnd: overlay.verseEnd }}
-          onBack={() => setOverlay({ type: 'none' })}
+          onBack={() => setOverlay(overlay.returnTo === 'church_studies' ? { type: 'church_studies' } : { type: 'none' })}
         />
       </ErrorBoundary>
     );
@@ -650,7 +650,7 @@ export default function App() {
   }
 
   if (overlay.type === 'church_studies' && profile) {
-    return <ErrorBoundary><ChurchStudiesScreen profile={profile} churchId={activeChurchId} onBack={() => setOverlay({ type: 'my_church' })} onOpenBible={handleOpenPassage} /></ErrorBoundary>;
+    return <ErrorBoundary><ChurchStudiesScreen profile={profile} churchId={activeChurchId} onBack={() => setOverlay({ type: 'my_church' })} onOpenBible={handleOpenChurchStudyPassage} /></ErrorBoundary>;
   }
   if (overlay.type === 'manage_church_studies' && profile) {
     return <ErrorBoundary><ManageChurchStudiesScreen profile={profile} churchId={activeChurchId} onBack={() => setOverlay({ type: 'my_church' })} /></ErrorBoundary>;
