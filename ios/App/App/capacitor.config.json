@@ -43,6 +43,7 @@
 		"PushNotificationsPlugin",
 		"SharePlugin",
 		"SplashScreenPlugin",
-		"StatusBarPlugin"
+		"StatusBarPlugin",
+		"ChurchSearchPlugin"
 	]
 }

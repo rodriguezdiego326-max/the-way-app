@@ -2,14 +2,17 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, Church, Plus, ChevronRight, Search, MapPin, Globe, BookOpen, Heart, Users, Sun, LogOut, Check } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';
+import ChurchSearchResults, { type AppleSearchStatus, type ChurchSearchStatus } from '@/components/ChurchSearchResults';
 import {
-  createChurch, searchChurches, joinChurch, getAllChurchMemberships, getChurch, updateChurch,
+  createChurch, searchChurchDirectory, joinChurch, getAllChurchMemberships, getChurch, updateChurch,
   leaveChurch, isChurchOwner,
   getChurchStudies, getChurchPrayerItems, getChurchGroups,
 } from '@/lib/churchEngine';
 import type { Profile } from '@/lib/types';
 import type { ChurchProfile, ChurchMembership, ChurchStudy, ChurchPrayerItem, ChurchGroup } from '@/lib/togetherTypes';
 import { CHURCH_ROLES } from '@/lib/togetherTypes';
+import { isAppleChurchSearchAvailable, searchChurches as searchAppleChurches, type AppleChurchResult } from '@/lib/churchSearchNative';
+import { mergeChurchSearchResults, type ChurchSearchResult } from '@/lib/churchSearchMerge';
 
 interface Props {
   profile: Profile;
@@ -41,7 +44,12 @@ export default function MyChurchScreen({
   const [error, setError] = useState<string | null>(null);
   const [showJoin, setShowJoin] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Omit<ChurchProfile, 'created_at'>[]>([]);
+  const [searchStatus, setSearchStatus] = useState<ChurchSearchStatus>('idle');
+  const [searchResults, setSearchResults] = useState<ChurchSearchResult[]>([]);
+  const [appleStatus, setAppleStatus] = useState<AppleSearchStatus>('ok');
+  const [pendingApple, setPendingApple] = useState<AppleChurchResult | null>(null);
+  const [addingApple, setAddingApple] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>('Regular Attender');
   const [creating, setCreating] = useState(false);
   const [newChurchName, setNewChurchName] = useState('');
@@ -98,11 +106,73 @@ export default function MyChurchScreen({
 
   useEffect(() => { load(); }, [load]);
 
+  function resetSearch() {
+    setSearchQuery('');
+    setSearchStatus('idle');
+    setSearchResults([]);
+    setPendingApple(null);
+    setAddError(null);
+  }
+
   async function handleSearch() {
-    if (!searchQuery.trim()) return;
+    const query = searchQuery.trim();
+    if (!query) return;
     vibrate(8);
-    const results = await searchChurches(searchQuery.trim());
-    setSearchResults(results);
+    setSearchStatus('searching');
+    setSearchResults([]);
+    setPendingApple(null);
+    const [directory, apple] = await Promise.allSettled([
+      searchChurchDirectory(query),
+      searchAppleChurches({ query }),
+    ]);
+    const solapathChurches = directory.status === 'fulfilled' ? directory.value : [];
+    const appleChurches = apple.status === 'fulfilled' ? apple.value : [];
+    if (apple.status === 'rejected') {
+      console.error('[Church] apple search failed', {
+        operation: 'searchChurches',
+        message: apple.reason instanceof Error ? apple.reason.message : 'Unknown error',
+      });
+    }
+    const merged = mergeChurchSearchResults(solapathChurches, appleChurches);
+    setAppleStatus(!isAppleChurchSearchAvailable() ? 'web' : apple.status === 'rejected' ? 'failed' : 'ok');
+    setSearchResults(merged);
+    if (merged.length > 0) setSearchStatus('results');
+    else if (apple.status === 'rejected') setSearchStatus('failed');
+    else setSearchStatus('empty');
+  }
+
+  async function handleAddAppleChurch() {
+    if (!pendingApple || addingApple) return;
+    vibrate(15);
+    setAddingApple(true);
+    setAddError(null);
+    try {
+      const created = await createChurch(
+        pendingApple.name,
+        pendingApple.city ?? undefined,
+        pendingApple.website ?? undefined,
+      );
+      if (!created) {
+        setAddError('Could not add this church. Please try again.');
+        return;
+      }
+      const joined = await joinChurch(profile, created.id, selectedRole);
+      if (!joined) {
+        setAddError('Church added but could not join. Please try again.');
+        return;
+      }
+      resetSearch();
+      setShowJoin(false);
+      await load();
+    } catch (err) {
+      console.error('[Church] add apple church failed', {
+        operation: 'create_and_join_apple',
+        message: err instanceof Error ? err.message : 'Unknown error',
+      });
+      setAddError('Could not add this church. Please try again.');
+    } finally {
+      setAddingApple(false);
+    }
   }
 
   async function handleJoin(churchId: string) {
@@ -113,9 +183,8 @@ export default function MyChurchScreen({
         setError('Could not join church. Please try again.');
         return;
       }
+      resetSearch();
       setShowJoin(false);
-      setSearchQuery('');
-      setSearchResults([]);
       await load();
     } catch {
       setError('Could not join church. Please try again.');
@@ -322,23 +391,18 @@ export default function MyChurchScreen({
 
             <div className="flex gap-2 mb-4">
               <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search churches..." className="input-field flex-1" onKeyDown={(e) => e.key === 'Enter' && handleSearch()} />
-              <button type="button" onClick={handleSearch} className="btn-secondary"><Search size={16} /></button>
+              <button type="button" onClick={handleSearch} disabled={searchStatus === 'searching'} className="btn-secondary disabled:opacity-40"><Search size={16} /></button>
             </div>
 
-            {searchResults.length > 0 && (
-              <div className="flex flex-col gap-2 mb-4">
-                {searchResults.map((c) => (
-                  <button type="button" key={c.id} onClick={() => handleJoin(c.id)} className="premium-card p-3 flex items-center gap-3 text-left no-tap-highlight hover:border-gold-500/30 transition-all">
-                    <Church size={14} className="text-ivory-400" />
-                    <div className="flex-1">
-                      <p className="text-ivory-200 text-sm">{c.name}</p>
-                      {c.city && <p className="text-ivory-600 text-xs">{c.city}</p>}
-                    </div>
-                    <ChevronRight size={14} className="text-ivory-600" />
-                  </button>
-                ))}
-              </div>
-            )}
+            <ChurchSearchResults
+              status={searchStatus}
+              query={searchQuery.trim()}
+              results={searchResults}
+              appleStatus={appleStatus}
+              onJoinChurch={handleJoin}
+              onReviewApple={(church) => { setAddError(null); setPendingApple(church); }}
+              onRetry={handleSearch}
+            />
 
             <div className="gold-divider my-4" />
             <p className="ui-label mb-2">Create a New Church</p>
@@ -380,6 +444,34 @@ export default function MyChurchScreen({
               {editError && <p className="text-error text-sm text-center">{editError}</p>}
               <button onClick={handleEditChurch} disabled={!editName.trim() || savingEdit} className="btn-primary w-full disabled:opacity-40">
                 {savingEdit ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Apple Maps church confirmation */}
+      {pendingApple && (
+        <div className="fixed inset-0 z-[70] bg-ink-950/90 backdrop-blur-sm flex items-center justify-center px-6">
+          <div className="premium-card p-6 max-w-sm w-full animate-fade-in-up">
+            <div className="w-12 h-12 rounded-xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center mb-4">
+              <Church size={20} className="text-gold-400" />
+            </div>
+            <h3 className="font-serif text-xl text-ivory-50 mb-2">Add {pendingApple.name} to SOLAPATH?</h3>
+            <p className="text-ivory-500 text-sm leading-relaxed mb-1">
+              {[pendingApple.city, pendingApple.state].filter(Boolean).join(', ') || 'Location not listed'}
+            </p>
+            {pendingApple.address && <p className="text-ivory-600 text-xs leading-relaxed mb-1">{pendingApple.address}</p>}
+            <p className="text-ivory-600 text-xs leading-relaxed mb-4">
+              This creates a church record you own and joins you to it as {selectedRole}. Other members can then join it from search.
+            </p>
+            {addError && <p className="text-error text-xs mb-3">{addError}</p>}
+            <div className="flex gap-2">
+              <button type="button" onClick={() => { setPendingApple(null); setAddError(null); }} disabled={addingApple} className="btn-secondary flex-1 text-sm disabled:opacity-40">
+                Cancel
+              </button>
+              <button type="button" onClick={handleAddAppleChurch} disabled={addingApple} className="btn-primary flex-1 text-sm disabled:opacity-40">
+                {addingApple ? 'Adding...' : 'Add & Join This Church'}
               </button>
             </div>
           </div>

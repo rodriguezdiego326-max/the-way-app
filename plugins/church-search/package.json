@@ -1,0 +1,16 @@
+{
+  "name": "church-search",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local Capacitor plugin that searches real-world churches with Apple MapKit.",
+  "files": [
+    "ios/Sources",
+    "Package.swift"
+  ],
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  },
+  "license": "UNLICENSED"
+}
