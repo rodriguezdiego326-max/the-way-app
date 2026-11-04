@@ -25,7 +25,11 @@ const ageRangeOptions: { id: AgeRange; label: string }[] = [
   { id: '18+', label: '18+ / Adult' },
 ];
 
-export default function FamilyScreen() {
+interface FamilyScreenProps {
+  onClose: () => void;
+}
+
+export default function FamilyScreen({ onClose }: FamilyScreenProps) {
   const [subView, setSubView] = useState<SubView>('main');
   const [familyProfile, setFamilyProfile] = useState<FamilyProfile | null>(null);
   const [members, setMembers] = useState<FamilyMember[]>([]);
@@ -322,8 +326,14 @@ export default function FamilyScreen() {
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen nav-safe-padding">
       <header className="px-6 pt-14 safe-top">
-        <p className="ui-label animate-fade-in-down">SOLAPATH Family</p>
-        <h1 className="font-serif text-4xl text-ivory-50 mt-2 tracking-tight">Family</h1>
+        <div className="flex items-center justify-between">
+          <button onClick={onClose} className="btn-ghost" aria-label="Close Family">
+            <X size={20} />
+          </button>
+          <p className="ui-label animate-fade-in-down">SOLAPATH Family</p>
+          <span className="w-10" />
+        </div>
+        <h1 className="font-serif text-4xl text-ivory-50 mt-6 tracking-tight">Family</h1>
         <p className="text-ivory-500 text-sm mt-2 leading-relaxed">
           Disciple your household.
         </p>

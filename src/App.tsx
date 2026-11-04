@@ -426,7 +426,7 @@ export default function App() {
     return (
       <ErrorBoundary>
         <>
-          <FamilyScreen />
+          <FamilyScreen onClose={() => setOverlay({ type: 'none' })} />
           <BottomNav
             active={activeTab}
             onChange={(tab) => {

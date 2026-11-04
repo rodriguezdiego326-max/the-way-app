@@ -228,14 +228,17 @@ export default function FamilyPrayerScreen({ familyProfile, onBack }: FamilyPray
   // Main list
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28">
-      <header className="flex items-center justify-between px-6 pt-14 safe-top">
-        <div>
+      <header className="px-6 pt-14 safe-top">
+        <div className="flex items-center justify-between">
+          <button onClick={onBack} className="btn-ghost" aria-label="Close Family Prayer">
+            <X size={20} />
+          </button>
           <p className="ui-label animate-fade-in-down">Family Prayer</p>
-          <h1 className="font-serif text-4xl text-ivory-50 mt-2 tracking-tight">Pray Together</h1>
+          <button onClick={() => setShowNew(true)} className="btn-ghost" aria-label="Add prayer">
+            <Plus size={20} />
+          </button>
         </div>
-        <button onClick={() => setShowNew(true)} className="btn-ghost">
-          <Plus size={20} />
-        </button>
+        <h1 className="font-serif text-4xl text-ivory-50 mt-6 tracking-tight">Pray Together</h1>
       </header>
 
       <div className="px-6 mt-6">
