@@ -457,7 +457,6 @@ const TEACHER_NAMES = [
 ];
 
 function detectTeacherQuestion(question: string): string | null {
-  const lower = question.toLowerCase();
   for (const name of TEACHER_NAMES) {
     // Use word-boundary matching to avoid false positives (e.g. "James" contains "ames")
     const regex = new RegExp(`\\b${name}\\b`, "i");
@@ -572,9 +571,9 @@ async function retrieveFromLibrary(question: string): Promise<RAGRetrievalResult
     }
   }
 
-  let citations: RAGCitation[] = [];
-  let retrievedSourceIds: string[] = [];
-  let rejectedSourceIds: string[] = [];
+  const citations: RAGCitation[] = [];
+  const retrievedSourceIds: string[] = [];
+  const rejectedSourceIds: string[] = [];
 
   try {
     const srcRes = await fetch(`${supabaseUrl}/rest/v1/library_sources?content_status=eq.verified&verified=eq.true&select=id,title,source_type,authority_level,author_id,chapter,section,verified,content_status&order=authority_level.asc&limit=50`, {
@@ -603,7 +602,7 @@ async function retrieveFromLibrary(question: string): Promise<RAGRetrievalResult
       chunksBySource.get(sid)!.push(c);
     }
 
-    for (const [sourceId, sourceChunks] of chunksBySource) {
+    for (const sourceId of chunksBySource.keys()) {
       const source = sourceMap.get(sourceId);
       if (!source) { rejectedSourceIds.push(sourceId); continue; }
       if (source.content_status !== "verified" || !source.verified) { rejectedSourceIds.push(sourceId); continue; }
@@ -976,7 +975,6 @@ function computeVerificationState(
   sourceUnavailable: boolean,
   isDivine: boolean,
   isCrisis: boolean,
-  hasScriptureGrounding: boolean,
 ): VerificationState {
   if (isDivine || isCrisis) return 'NO_EXTERNAL_SOURCES_REQUIRED';
   const allCitations = [...scriptureSources, ...confessionalSources, ...historicalSources];
@@ -1418,7 +1416,7 @@ const devProvider: AIProvider = {
     const isShortAmbiguous = question.split(/\s+/).length <= 8 || /^(how|what|why|can|should|is|are|cómo|qué|por qué|puedo|debería|es|son)\b/i.test(question);
 
     // Detect "verse you mentioned" follow-up questions — resolve from last_assistant_context
-    const isVerseFollowUp = /(?:verse|passage|scripture|vers[íi]culo|pasaje)/i.test(question) &&
+    const isVerseFollowUp = /(?:verse|passage|scripture|vers[íi]culo|pasaje)\b/i.test(question) &&
       /(?:you mentioned|you referenced|you cited|you suggested|you noted|mencion(?:aste|ó)|referiste|sugeriste|indicaste)/i.test(question);
     const isWhichVerseFollowUp = /(?:what verse|which verse|what passage|which passage|qu[ée] vers[íi]culo|qu[ée] pasaje)/i.test(question);
 
@@ -1727,9 +1725,6 @@ const devProvider: AIProvider = {
       }
       sourceUnavailable = false;
     } else if (ragCitations.length > 0) {
-      const confessionalRefs = ragCitations.filter((c) => c.authority_level === 3);
-      const historicRefs = ragCitations.filter((c) => c.authority_level === 4);
-
       const isSpanish = request.response_language === "Spanish";
       const failMsg = isSpanish
         ? "Estoy teniendo problemas para generar una respuesta fundamentada en este momento. Por favor, inténtalo de nuevo."
@@ -1968,7 +1963,6 @@ const devProvider: AIProvider = {
     }
 
     // Scripture is always a valid verified source — never clear it when only theology is missing.
-    const hasScriptureGrounding = !sourceUnavailable || scriptureContext !== null || biblicalBasis.length > 0 || recommendedScripture.length > 0;
 
     // Build Scripture references even when theology is unavailable
     const recommendedScripture = buildRecommendedScripture(resolvedQuery, divineRevelationDetected, isCrisis || isAbuse);
@@ -2073,7 +2067,7 @@ const devProvider: AIProvider = {
       query_id: queryId,
       source_unavailable: sourceUnavailable,
       warnings: [],
-      verification_state: computeVerificationState(ragCitations, confessionalSources, historicalSources, scriptureSources, sourceUnavailable, divineRevelationDetected, isCrisis || isAbuse || isEmergency, hasScriptureGrounding),
+      verification_state: computeVerificationState(ragCitations, confessionalSources, historicalSources, scriptureSources, sourceUnavailable, divineRevelationDetected, isCrisis || isAbuse || isEmergency),
       has_development_content: false,
       grounding_level: groundingLevel,
       inline_references: inlineReferences,
@@ -2865,7 +2859,6 @@ Deno.serve(async (req: Request) => {
 
     const provider = getProvider();
     const userContext = buildUserContext(filteredRequest);
-    const config = getProviderConfig();
 
     let response: StructuredTheologicalResponse;
     let usedFallback = false;
