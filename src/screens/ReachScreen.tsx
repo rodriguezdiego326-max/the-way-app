@@ -15,10 +15,10 @@ type SubView = 'main' | 'people' | 'they_asked' | 'gospel_conversation' | 'prodi
 export default function ReachScreen() {
   const [subView, setSubView] = useState<SubView>('main');
 
-  if (subView === 'people') return <PeoplePrayingScreen />;
+  if (subView === 'people') return <PeoplePrayingScreen onBack={() => setSubView('main')} />;
   if (subView === 'they_asked') return <TheyAskedMeScreen onBack={() => setSubView('main')} />;
   if (subView === 'gospel_conversation') return <GospelConversationScreen onBack={() => setSubView('main')} />;
-  if (subView === 'prodigal') return <ProdigalJourneyScreen />;
+  if (subView === 'prodigal') return <ProdigalJourneyScreen onBack={() => setSubView('main')} />;
   if (subView === 'apologetics') return <ApologeticsCoachScreen onBack={() => setSubView('main')} />;
   if (subView === 'foundations') return <GospelFoundationsScreen onBack={() => setSubView('main')} />;
   if (subView === 'trails') return <EvangelismBibleTrailsScreen onBack={() => setSubView('main')} />;

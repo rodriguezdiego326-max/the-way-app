@@ -6,7 +6,11 @@ import { supabase } from '@/lib/supabase';
 import { vibrate, formatDate, formatRelative } from '@/lib/utils';
 import type { ProdigalJourney, ProdigalUpdate } from '@/lib/reachTypes';
 
-export default function ProdigalJourneyScreen() {
+interface Props {
+  onBack: () => void;
+}
+
+export default function ProdigalJourneyScreen({ onBack }: Props) {
   const [journeys, setJourneys] = useState<ProdigalJourney[]>([]);
   const [showNew, setShowNew] = useState(false);
   const [selected, setSelected] = useState<ProdigalJourney | null>(null);
@@ -142,7 +146,8 @@ export default function ProdigalJourneyScreen() {
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28">
       <header className="flex items-center justify-between px-6 pt-14 safe-top">
-        <div>
+        <button onClick={onBack} className="btn-ghost" aria-label="Back to Reach"><X size={20} /></button>
+        <div className="flex-1 px-4">
           <p className="ui-label animate-fade-in-down">Prodigal Journey</p>
           <h1 className="font-serif text-4xl text-ivory-50 mt-2 tracking-tight">Prodigal</h1>
         </div>

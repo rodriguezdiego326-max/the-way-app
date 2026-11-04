@@ -5,7 +5,11 @@ import { vibrate, formatDate, formatRelative } from '@/lib/utils';
 import { spiritualContextOptions } from '@/lib/reachEngine';
 import type { ReachPerson, ReachPrayerUpdate, ReachConversation } from '@/lib/reachTypes';
 
-export default function PeoplePrayingScreen() {
+interface Props {
+  onBack: () => void;
+}
+
+export default function PeoplePrayingScreen({ onBack }: Props) {
   const [people, setPeople] = useState<ReachPerson[]>([]);
   const [showNew, setShowNew] = useState(false);
   const [selected, setSelected] = useState<ReachPerson | null>(null);
@@ -197,7 +201,8 @@ export default function PeoplePrayingScreen() {
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28">
       <header className="flex items-center justify-between px-6 pt-14 safe-top">
-        <div>
+        <button onClick={onBack} className="btn-ghost" aria-label="Back to Reach"><X size={20} /></button>
+        <div className="flex-1 px-4">
           <p className="ui-label animate-fade-in-down">People I'm Praying For</p>
           <h1 className="font-serif text-4xl text-ivory-50 mt-2 tracking-tight">Pray</h1>
         </div>
