@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Profile, Walk } from '@/lib/types';
 import type { OnboardingData } from '@/components/Onboarding';
@@ -15,19 +15,16 @@ import YouScreen from '@/screens/YouScreen';
 import FamilyScreen from '@/screens/FamilyScreen';
 import ReachScreen from '@/screens/ReachScreen';
 import LibrarySearchScreen from '@/screens/LibrarySearchScreen';
-import AdminSourceScreen from '@/screens/AdminSourceScreen';
-import RetrievalDebugScreen from '@/screens/RetrievalDebugScreen';
-import RAGTestScreen from '@/screens/RAGTestScreen';
-import Phase6TestScreen from '@/screens/Phase6TestScreen';
-import QADashboardScreen from '@/screens/QADashboardScreen';
-import SourceBatchScreen from '@/screens/SourceBatchScreen';
-import ReleaseGateScreen from '@/screens/ReleaseGateScreen';
-import ProductionStatusScreen from '@/screens/ProductionStatusScreen';
+import { isDevOverlayType } from '@/lib/devOverlayTypes';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import WelcomeScreen from '@/components/WelcomeScreen';
 import BrandMark from '@/components/BrandMark';
 import type { BibleTranslation } from '@/lib/bibleTypes';
 import type { AskHandoffContext } from '@/lib/askHandoff';
+
+const DevOverlayRenderer = import.meta.env.DEV
+  ? lazy(() => import('@/components/DevOverlayRenderer'))
+  : null;
 
 function getInitialTranslation(): BibleTranslation {
   if (typeof localStorage === 'undefined') return 'WEB';
@@ -55,7 +52,6 @@ import ChurchStudiesScreen from '@/screens/ChurchStudiesScreen';
 import ManageChurchStudiesScreen from '@/screens/ManageChurchStudiesScreen';
 import SmallGroupModeScreen from '@/screens/SmallGroupModeScreen';
 import ChurchPrayerScreen from '@/screens/ChurchPrayerScreen';
-import Phase8TestScreen from '@/screens/Phase8TestScreen';
 import type { Circle, Sermon } from '@/lib/togetherTypes';
 
 // Phase 9 imports
@@ -73,25 +69,16 @@ import LegacyVaultScreen from '@/screens/LegacyVaultScreen';
 import YearInReviewScreen from '@/screens/YearInReviewScreen';
 import LegacySearchScreen from '@/screens/LegacySearchScreen';
 import BuildLegacyScreen from '@/screens/BuildLegacyScreen';
-import Phase9TestScreen from '@/screens/Phase9TestScreen';
 
 // Phase 10 imports
 import PrivacyCenterScreen from '@/screens/PrivacyCenterScreen';
-import SystemHealthScreen from '@/screens/SystemHealthScreen';
-import AIUsageDashboardScreen from '@/screens/AIUsageDashboardScreen';
 import BetaFeedbackScreen from '@/screens/BetaFeedbackScreen';
-import FeatureFlagsScreen from '@/screens/FeatureFlagsScreen';
-import LegalPlaceholdersScreen from '@/screens/LegalPlaceholdersScreen';
-import ProductionReadinessScreen from '@/screens/ProductionReadinessScreen';
-import Phase10TestScreen from '@/screens/Phase10TestScreen';
 
 // Phase 11 imports
-import Phase11TestScreen from '@/screens/Phase11TestScreen';
-import MobileBuildGuideScreen from '@/screens/MobileBuildGuideScreen';
 
 type AppState = 'splash' | 'onboarding' | 'app';
 
-type Overlay =
+export type Overlay =
   | { type: 'none' }
   | { type: 'bible-mode'; walk: Walk; mode: 'physical' | 'in-app' }
   | { type: 'bible-reader'; walk: Walk }
@@ -458,29 +445,12 @@ export default function App() {
   if (overlay.type === 'library_search') {
     return <ErrorBoundary><LibrarySearchScreen onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
   }
-  if (overlay.type === 'admin_sources') {
-    return <ErrorBoundary><AdminSourceScreen onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
-  }
-  if (overlay.type === 'retrieval_debug') {
-    return <ErrorBoundary><RetrievalDebugScreen onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
-  }
-  if (overlay.type === 'rag_tests') {
-    return <ErrorBoundary><RAGTestScreen onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
-  }
-  if (overlay.type === 'phase6_tests') {
-    return <ErrorBoundary><Phase6TestScreen onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
-  }
-  if (overlay.type === 'qa_dashboard') {
-    return <ErrorBoundary><QADashboardScreen onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
-  }
-  if (overlay.type === 'source_batches') {
-    return <ErrorBoundary><SourceBatchScreen onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
-  }
-  if (overlay.type === 'release_gate') {
-    return <ErrorBoundary><ReleaseGateScreen onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
-  }
-  if (overlay.type === 'production_status') {
-    return <ErrorBoundary><ProductionStatusScreen onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
+  if (import.meta.env.DEV && DevOverlayRenderer && isDevOverlayType(overlay.type)) {
+    return (
+      <Suspense fallback={null}>
+        <DevOverlayRenderer overlay={overlay} profile={profile} onNavigate={setOverlay} />
+      </Suspense>
+    );
   }
 
   // Phase 8 overlays
@@ -661,10 +631,6 @@ export default function App() {
     return <ErrorBoundary><ChurchPrayerScreen profile={profile} activeChurchId={activeChurchId} onBack={() => setOverlay({ type: 'my_church' })} /></ErrorBoundary>;
   }
 
-  if (overlay.type === 'phase8_tests' && profile) {
-    return <ErrorBoundary><Phase8TestScreen profile={profile} onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
-  }
-
   // Phase 9 overlays
   if (overlay.type === 'legacy_home' && profile) {
     return (
@@ -726,54 +692,13 @@ export default function App() {
   if (overlay.type === 'legacy_build' && profile) {
     return <ErrorBoundary><BuildLegacyScreen profile={profile} onBack={() => setOverlay({ type: 'legacy_home' })} /></ErrorBoundary>;
   }
-  if (overlay.type === 'phase9_tests' && profile) {
-    return <ErrorBoundary><Phase9TestScreen profile={profile} onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
-  }
 
   // Phase 10 overlays
   if (overlay.type === 'privacy_center' && profile) {
     return <ErrorBoundary><PrivacyCenterScreen profile={profile} onBack={() => setOverlay({ type: 'none' })} onProfileUpdate={handleProfileUpdate} /></ErrorBoundary>;
   }
-  if (overlay.type === 'system_health') {
-    return <ErrorBoundary><SystemHealthScreen onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
-  }
-  if (overlay.type === 'ai_usage') {
-    return <ErrorBoundary><AIUsageDashboardScreen onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
-  }
   if (overlay.type === 'beta_feedback' && profile) {
     return <ErrorBoundary><BetaFeedbackScreen profile={profile} onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
-  }
-  if (overlay.type === 'feature_flags') {
-    return <ErrorBoundary><FeatureFlagsScreen onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
-  }
-  if (overlay.type === 'legal_placeholders') {
-    return <ErrorBoundary><LegalPlaceholdersScreen onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
-  }
-  if (overlay.type === 'production_readiness' && profile) {
-    return (
-      <ErrorBoundary>
-        <ProductionReadinessScreen onBack={() => setOverlay({ type: 'none' })}
-          onOpenHealth={() => setOverlay({ type: 'system_health' })}
-          onOpenAiUsage={() => setOverlay({ type: 'ai_usage' })}
-          onOpenFeedback={() => setOverlay({ type: 'beta_feedback' })}
-          onOpenFeatureFlags={() => setOverlay({ type: 'feature_flags' })}
-          onOpenLegal={() => setOverlay({ type: 'legal_placeholders' })}
-          onOpenPrivacy={() => setOverlay({ type: 'privacy_center' })}
-          onOpenPhase10Tests={() => setOverlay({ type: 'phase10_tests' })}
-          onOpenPhase11Tests={() => setOverlay({ type: 'phase11_tests' })}
-          onOpenMobileBuildGuide={() => setOverlay({ type: 'mobile_build_guide' })}
-        />
-      </ErrorBoundary>
-    );
-  }
-  if (overlay.type === 'phase10_tests' && profile) {
-    return <ErrorBoundary><Phase10TestScreen profile={profile} onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
-  }
-  if (overlay.type === 'phase11_tests' && profile) {
-    return <ErrorBoundary><Phase11TestScreen profile={profile} onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
-  }
-  if (overlay.type === 'mobile_build_guide') {
-    return <ErrorBoundary><MobileBuildGuideScreen onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
   }
 
   return (

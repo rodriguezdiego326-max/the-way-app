@@ -1,10 +1,10 @@
-import { useEffect, useState, useCallback } from 'react';
+import { lazy, Suspense, useEffect, useState, useCallback } from 'react';
 import { Brain, Heart, BookOpen, Users, Church, Settings, ChevronRight, Trash2, Eye, EyeOff, X, ShieldCheck, Sparkles, BookMarked, Scroll, Landmark, Pencil, FlaskConical, Search, Shield, BarChart3, Package, Cpu, BookHeart, MessageSquare } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { vibrate, formatDate } from '@/lib/utils';
 import ProfileEditor from '@/components/ProfileEditor';
 import DeleteAllMemoriesDialog from '@/components/DeleteAllMemoriesDialog';
-import TestSuite from '@/screens/TestSuite';
+const TestSuite = import.meta.env.DEV ? lazy(() => import('@/screens/TestSuite')) : null;
 import type { Profile, Memory, TheologicalDepth, LifeStage, LifeArea, GrowthArea, TheologicalAuthor, ConfessionalDocument, Walk, Prayer, WalkReflection } from '@/lib/types';
 
 interface YouScreenProps {
@@ -317,13 +317,15 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
   }
 
   // TEST SUITE VIEW
-  if (subView === 'test_suite') {
+  if (import.meta.env.DEV && TestSuite && subView === 'test_suite') {
     return (
-      <TestSuite
-        profile={profile}
-        theologicalDepth={profile?.theological_depth || 'simple'}
-        onClose={() => setSubView('main')}
-      />
+      <Suspense fallback={null}>
+        <TestSuite
+          profile={profile}
+          theologicalDepth={profile?.theological_depth || 'simple'}
+          onClose={() => setSubView('main')}
+        />
+      </Suspense>
     );
   }
 
