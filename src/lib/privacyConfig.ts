@@ -1,6 +1,6 @@
 import { Browser } from '@capacitor/browser';
 
-export const PRIVACY_POLICY_URL = 'https://rfgforge.com/solapath/privacy';
+export const PRIVACY_POLICY_URL = 'https://solapath.app/privacy';
 export const AI_PROCESSING_CONSENT_VERSION = '2026-11-05-v1';
 
 export async function openPrivacyPolicy(): Promise<void> {
