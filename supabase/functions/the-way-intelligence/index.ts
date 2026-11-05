@@ -473,16 +473,27 @@ function detectTeacherQuestion(question: string): string | null {
 // RAG RETRIEVAL (server-side, from Supabase)
 // ============================================================
 
+async function hashRetrievalQuery(question: string): Promise<string> {
+  const normalized = question.toLowerCase().trim();
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(normalized));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 async function retrieveFromLibrary(question: string): Promise<RAGRetrievalResult> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const detectedAuthor = detectTeacherQuestion(question);
 
-  const cacheKey = question.toLowerCase().trim().slice(0, 200);
+  const cacheKey = await hashRetrievalQuery(question);
   const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
   if (!detectedAuthor) {
+    const nowIso = encodeURIComponent(new Date().toISOString());
+    fetch(`${supabaseUrl}/rest/v1/retrieval_cache?expires_at=lte.${nowIso}`, {
+      method: "DELETE",
+      headers: { "apikey": serviceKey, "Authorization": `Bearer ${serviceKey}` },
+    }).catch(() => { /* non-critical */ });
     try {
-      const cacheRes = await fetch(`${supabaseUrl}/rest/v1/retrieval_cache?cache_key=eq.${encodeURIComponent(cacheKey)}&select=retrieval_result,hit_count,created_at&limit=1`, {
+      const cacheRes = await fetch(`${supabaseUrl}/rest/v1/retrieval_cache?cache_key=eq.${cacheKey}&expires_at=gt.${nowIso}&select=retrieval_result,hit_count&limit=1`, {
         headers: {
           "apikey": serviceKey,
           "Authorization": `Bearer ${serviceKey}`,
@@ -492,20 +503,16 @@ async function retrieveFromLibrary(question: string): Promise<RAGRetrievalResult
       if (cacheRes.ok) {
         const cacheData = await cacheRes.json();
         if (cacheData.length > 0) {
-          const cachedAt = new Date(cacheData[0].created_at).getTime();
-          const ageMs = Date.now() - cachedAt;
-          if (ageMs < CACHE_TTL_MS) {
-            await fetch(`${supabaseUrl}/rest/v1/retrieval_cache?cache_key=eq.${encodeURIComponent(cacheKey)}`, {
-              method: "PATCH",
-              headers: {
-                "apikey": serviceKey,
-                "Authorization": `Bearer ${serviceKey}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ hit_count: (cacheData[0].hit_count || 0) + 1 }),
-            });
-            return cacheData[0].retrieval_result as RAGRetrievalResult;
-          }
+          await fetch(`${supabaseUrl}/rest/v1/retrieval_cache?cache_key=eq.${cacheKey}`, {
+            method: "PATCH",
+            headers: {
+              "apikey": serviceKey,
+              "Authorization": `Bearer ${serviceKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ hit_count: (cacheData[0].hit_count || 0) + 1 }),
+          });
+          return cacheData[0].retrieval_result as RAGRetrievalResult;
         }
       }
     } catch { /* cache miss */ }
@@ -680,7 +687,7 @@ async function retrieveFromLibrary(question: string): Promise<RAGRetrievalResult
       await fetch(`${supabaseUrl}/rest/v1/retrieval_cache`, {
         method: "POST",
         headers: { "apikey": serviceKey, "Authorization": `Bearer ${serviceKey}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
-        body: JSON.stringify({ cache_key: cacheKey, query_normalized: cacheKey, retrieval_result: result }),
+        body: JSON.stringify({ cache_key: cacheKey, query_normalized: cacheKey, retrieval_result: result, expires_at: new Date(Date.now() + CACHE_TTL_MS).toISOString() }),
       });
     } catch { /* non-critical */ }
   }
