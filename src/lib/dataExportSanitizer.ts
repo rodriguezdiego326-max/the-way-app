@@ -69,6 +69,7 @@ const TABLE_COLUMNS: Record<string, readonly string[]> = {
     'display_name', 'life_stage', 'season', 'preferred_translation', 'theological_depth',
     'learning_style', 'available_time_minutes', 'bible_familiarity', 'theological_familiarity',
     'reformed_familiarity', 'memory_enabled', 'onboarding_completed', 'current_study',
+    'ai_processing_consent', 'ai_processing_consent_at', 'ai_processing_consent_version',
     'created_at', 'updated_at',
   ],
   memories: [

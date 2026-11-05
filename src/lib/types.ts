@@ -73,6 +73,9 @@ export interface Profile {
   current_study: string | null;
   memory_enabled: boolean;
   onboarding_completed: boolean;
+  ai_processing_consent: boolean;
+  ai_processing_consent_at: string | null;
+  ai_processing_consent_version: string | null;
   created_at: string;
   updated_at: string;
 }

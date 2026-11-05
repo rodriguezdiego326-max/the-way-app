@@ -1,6 +1,9 @@
 import { useState, useCallback } from 'react';
-import { X, Shield, Download, Trash2, Brain, Heart, BookOpen, Users, Church, BookHeart, Lock, AlertCircle } from 'lucide-react';
+import { X, Shield, Download, Trash2, Brain, Heart, BookOpen, Users, Church, BookHeart, Lock, AlertCircle, FileText } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
+import { grantAiConsent, withdrawAiConsent, hasCurrentAiConsent } from '@/lib/aiConsent';
+import { openPrivacyPolicy } from '@/lib/privacyConfig';
+import AIProcessingConsentDialog from '@/components/AIProcessingConsentDialog';
 import { exportUserData, deleteAccount } from '@/lib/productionEngine';
 import { supabase } from '@/lib/supabase';
 import { deliverDataExport, ExportFileError } from '@/lib/dataExportFile';
@@ -11,13 +14,17 @@ import type { Profile } from '@/lib/types';
 interface Props {
   profile: Profile;
   onBack: () => void;
+  onProfileUpdate?: () => void;
 }
 
 type Section = 'main' | 'stores' | 'ai_data' | 'download' | 'delete';
 type DownloadPhase = 'idle' | 'file' | 'share';
 
-export default function PrivacyCenterScreen({ profile, onBack }: Props) {
+export default function PrivacyCenterScreen({ profile, onBack, onProfileUpdate }: Props) {
   const [section, setSection] = useState<Section>('main');
+  const [aiConsentDialogOpen, setAiConsentDialogOpen] = useState(false);
+  const [aiConsentBusy, setAiConsentBusy] = useState(false);
+  const [aiConsentError, setAiConsentError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportData, setExportData] = useState<Record<string, unknown> | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -73,8 +80,29 @@ export default function PrivacyCenterScreen({ profile, onBack }: Props) {
     window.location.reload();
   };
 
+  const handleAllowAiFromPrivacy = async () => {
+    await grantAiConsent(profile.id);
+    onProfileUpdate?.();
+    setAiConsentDialogOpen(false);
+  };
+
+  const handleWithdrawAi = async () => {
+    setAiConsentBusy(true);
+    setAiConsentError(null);
+    vibrate(10);
+    try {
+      await withdrawAiConsent(profile.id);
+      onProfileUpdate?.();
+    } catch (err) {
+      setAiConsentError(err instanceof Error ? err.message : 'Could not withdraw your AI permission. Please try again.');
+    } finally {
+      setAiConsentBusy(false);
+    }
+  };
+
   const sections = [
     { icon: Shield, label: 'What SOLAPATH Stores', desc: 'Understand your data', onClick: () => setSection('stores') },
+    { icon: FileText, label: 'Privacy Policy', desc: 'Read how SOLAPATH collects, uses, protects, and deletes data.', onClick: () => void openPrivacyPolicy() },
     { icon: Brain, label: 'AI & My Data', desc: 'How AI uses your context', onClick: () => setSection('ai_data') },
     { icon: Download, label: 'Download My Data', desc: 'Export your data as JSON', onClick: () => setSection('download') },
     { icon: Trash2, label: 'Delete My Account', desc: 'Permanently remove your data', onClick: () => setSection('delete') },
@@ -113,9 +141,34 @@ export default function PrivacyCenterScreen({ profile, onBack }: Props) {
         </header>
         <div className="flex-1 overflow-y-auto px-6 mt-4">
           <div className="animate-fade-in-up space-y-3">
+            <div className="premium-card p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-ivory-100 font-medium text-sm">Third-Party AI Processing</p>
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${hasCurrentAiConsent(profile) ? 'text-success border-success/40' : 'text-ivory-300 border-ivory-500/30'}`}>
+                  {hasCurrentAiConsent(profile) ? 'Allowed' : 'Not Allowed'}
+                </span>
+              </div>
+              <p className="text-ivory-500 text-xs leading-relaxed">SOLAPATH uses OpenAI to generate AI-assisted answers. When permission is enabled, your question and only the relevant personal context needed for the response may be sent to OpenAI.</p>
+              <p className="text-ivory-500 text-xs leading-relaxed">Withdrawing permission does not automatically delete existing conversations or memories. You can delete those separately, or delete your account.</p>
+              {aiConsentError && <p role="alert" className="text-error text-xs">{aiConsentError}</p>}
+              {hasCurrentAiConsent(profile) ? (
+                <button onClick={handleWithdrawAi} disabled={aiConsentBusy} className="btn-secondary w-full text-sm disabled:opacity-40">
+                  {aiConsentBusy ? 'Withdrawing...' : 'Withdraw AI Permission'}
+                </button>
+              ) : (
+                <button onClick={() => setAiConsentDialogOpen(true)} className="btn-primary w-full text-sm">
+                  Allow AI Processing
+                </button>
+              )}
+            </div>
+            <AIProcessingConsentDialog
+              open={aiConsentDialogOpen}
+              onAllow={handleAllowAiFromPrivacy}
+              onNotNow={() => setAiConsentDialogOpen(false)}
+            />
             <div className="premium-card p-4">
               <p className="text-ivory-100 font-medium text-sm mb-2">When Personal Context Is Used</p>
-              <p className="text-ivory-500 text-xs leading-relaxed">When you ask a question or start a walk, SOLAPATH may use your memories (life stage, season, goals) to personalize the response. Only context relevant to the current response is sent — never your entire history.</p>
+              <p className="text-ivory-500 text-xs leading-relaxed">When you ask a question, SOLAPATH sends it to OpenAI, a third-party AI provider, to generate a response. If Memory is on, SOLAPATH may also include only the memories (life stage, season, goals) relevant to that response. Never your entire history.</p>
             </div>
             <div className="premium-card p-4">
               <p className="text-ivory-100 font-medium text-sm mb-2">When Theological RAG Is Used</p>

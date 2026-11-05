@@ -6,6 +6,7 @@ import { isMemoryEnabled } from '@/lib/intelligenceService';
 import { fetchVerses, fetchChapter } from '@/lib/bibleEngine';
 import type { Walk, Profile, DailyCheckin, WalkReflection } from '@/lib/types';
 import { vibrate } from '@/lib/utils';
+import { useAiConsentGate } from '@/hooks/useAiConsentGate';
 import { getBookDisplayName } from '@/lib/bibleTypes';
 import type { BibleTranslation } from '@/lib/bibleTypes';
 import { Capacitor } from '@capacitor/core';
@@ -30,6 +31,7 @@ interface TodayScreenProps {
   onStartWalk: (walk: Walk) => void;
   onReadInApp: (walk: Walk) => void;
   onContinueInAsk?: (handoff: AskHandoffContext) => void;
+  onProfileUpdate?: () => void;
 }
 
 const moods = [
@@ -43,7 +45,8 @@ const moods = [
   { id: 'unsure', emoji: '😕' },
 ];
 
-export default function TodayScreen({ profile, onStartWalk, onReadInApp, onContinueInAsk }: TodayScreenProps) {
+export default function TodayScreen({ profile, onStartWalk, onReadInApp, onContinueInAsk, onProfileUpdate }: TodayScreenProps) {
+  const { ensureAiConsent, consentDialog } = useAiConsentGate(profile, onProfileUpdate);
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [todayWalk, setTodayWalk] = useState<Walk | null>(null);
   const [loading, setLoading] = useState(true);
@@ -434,6 +437,7 @@ function localizeReference(ref: string, translation: string): string {
   // ============================================================
   async function handleReflectWithSolapath() {
     if (!todayWalk || !hasSavedReflection) return;
+    if (!(await ensureAiConsent())) return;
     vibrate(12);
     setReflecting(true);
     setReflectionError(null);
@@ -1023,6 +1027,7 @@ function localizeReference(ref: string, translation: string): string {
           </div>
         </div>
       </section>
+      {consentDialog}
     </div>
   );
 }

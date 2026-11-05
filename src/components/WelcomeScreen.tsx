@@ -1,9 +1,23 @@
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ExternalLink } from 'lucide-react';
 import AuthForm from '@/components/AuthForm';
+import { openPrivacyPolicy } from '@/lib/privacyConfig';
 
 interface WelcomeScreenProps {
   onAuthed: () => void;
+}
+
+function PrivacyPolicyLink() {
+  return (
+    <button
+      type="button"
+      onClick={() => void openPrivacyPolicy()}
+      className="mt-6 inline-flex items-center gap-1.5 text-xs text-ink-200 underline underline-offset-4 hover:text-gold-600 transition-colors"
+    >
+      Privacy Policy
+      <ExternalLink size={12} />
+    </button>
+  );
 }
 
 type AuthMode = 'signin' | 'signup';
@@ -38,6 +52,7 @@ export default function WelcomeScreen({ onAuthed }: WelcomeScreenProps) {
               <p className="text-ivory-500 text-sm">Scripture for the road ahead.</p>
             </div>
             <AuthForm initialMode={authMode} onAuthed={onAuthed} />
+            <PrivacyPolicyLink />
           </div>
         </div>
       </div>
@@ -83,6 +98,7 @@ export default function WelcomeScreen({ onAuthed }: WelcomeScreenProps) {
               I Already Have an Account
             </button>
           </div>
+          <PrivacyPolicyLink />
         </div>
       </div>
     </div>

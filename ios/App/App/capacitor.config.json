@@ -37,6 +37,7 @@
 	"packageClassList": [
 		"SecureStorage",
 		"AppPlugin",
+		"CAPBrowserPlugin",
 		"FilesystemPlugin",
 		"HapticsPlugin",
 		"KeyboardPlugin",

@@ -8,6 +8,7 @@ import SourceViewer from '@/components/SourceViewer';
 import BiblicalBasis from '@/components/BiblicalBasis';
 import MemoryProposalCard from '@/components/MemoryProposalCard';
 import { fetchIntelligenceResponse, isMemoryEnabled, retrieveStudyMemoryEvidence } from '@/lib/intelligenceService';
+import { useAiConsentGate } from '@/hooks/useAiConsentGate';
 import { isAskHandoffContext, buildHandoffPrompt, type AskHandoffContext } from '@/lib/askHandoff';
 import type { AskIntent, Profile } from '@/lib/types';
 import type { StructuredTheologicalResponse, VerificationState, StudyMemoryEvidence, PersonalContextItem, PersonalClaim } from '@/lib/intelligenceTypes';
@@ -138,9 +139,11 @@ interface AskScreenProps {
   onConversationChange?: (id: string | null) => void;
   translation: BibleTranslation;
   onTranslationChange: (tr: BibleTranslation) => void;
+  onProfileUpdate?: () => void;
 }
 
-export default function AskScreen({ theologicalDepth, profile, onOpenBibleReference, initialContext, onContextConsumed, onKeyboardVisibilityChange, activeConversationId, onConversationChange, translation, onTranslationChange }: AskScreenProps) {
+export default function AskScreen({ theologicalDepth, profile, onOpenBibleReference, initialContext, onContextConsumed, onKeyboardVisibilityChange, activeConversationId, onConversationChange, translation, onTranslationChange, onProfileUpdate }: AskScreenProps) {
+  const { ensureAiConsent, consentDialog } = useAiConsentGate(profile, onProfileUpdate);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [emptyComposerFocused, setEmptyComposerFocused] = useState(false);
   const [vvHeight, setVvHeight] = useState(typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.height : (typeof window !== 'undefined' ? window.innerHeight : 800));
@@ -490,6 +493,7 @@ export default function AskScreen({ theologicalDepth, profile, onOpenBibleRefere
   }, [initialContext]);
 
   async function startConversation(intent: AskIntent, promptText: string) {
+    if (!(await ensureAiConsent())) return;
     vibrate(10);
     setError(null);
     setDismissedProposals(new Set());
@@ -583,6 +587,7 @@ export default function AskScreen({ theologicalDepth, profile, onOpenBibleRefere
   async function sendMessage(overrideText?: string) {
     const text = overrideText ?? input.trim();
     if (!text || !conversationId) return;
+    if (!(await ensureAiConsent())) return;
 
     isNearBottomRef.current = true;
     const userItemId = 'user-' + Date.now();
@@ -720,6 +725,7 @@ export default function AskScreen({ theologicalDepth, profile, onOpenBibleRefere
 
   return (
     <>
+      {consentDialog}
       {/* EMPTY STATE — approved layout, do not modify */}
       {!inConversation && (
         <div

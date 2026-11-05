@@ -141,6 +141,7 @@ For abuse, self-harm, suicide, domestic violence, grief, trauma, severe distress
 // VERSIONING
 // ============================================================
 
+const AI_PROCESSING_CONSENT_VERSION = "2026-11-05-v1";
 const DEFAULT_OPENAI_MODEL = "gpt-6-luna";
 
 function getOpenAIModel(): string {
@@ -2790,6 +2791,7 @@ Deno.serve(async (req: Request) => {
   // ============================================================
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
   const authHeader = req.headers.get("Authorization");
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -2841,6 +2843,22 @@ Deno.serve(async (req: Request) => {
     }
 
     const sessionId = verifiedUserId;
+
+    const consentRes = await fetch(
+      `${supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(verifiedUserId)}&select=ai_processing_consent,ai_processing_consent_version&limit=1`,
+      { headers: { "apikey": serviceRoleKey, "Authorization": `Bearer ${serviceRoleKey}` } },
+    );
+    if (!consentRes.ok) {
+      return new Response(JSON.stringify({ error: "Consent check unavailable", message: "SOLAPATH couldn't verify AI permission right now. Please try again." }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const consentRows = await consentRes.json();
+    const consentRow = Array.isArray(consentRows) ? consentRows[0] : null;
+    const aiConsentGranted = consentRow?.ai_processing_consent === true
+      && consentRow?.ai_processing_consent_version === AI_PROCESSING_CONSENT_VERSION;
+    if (!aiConsentGranted) {
+      return new Response(JSON.stringify({ error: "ai_consent_required", message: "AI processing permission is required before SOLAPATH can generate this response." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     const rateLimit = await checkRateLimit(sessionId);
     if (!rateLimit.allowed) {
       return new Response(JSON.stringify({

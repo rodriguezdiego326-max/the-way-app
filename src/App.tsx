@@ -732,7 +732,7 @@ export default function App() {
 
   // Phase 10 overlays
   if (overlay.type === 'privacy_center' && profile) {
-    return <ErrorBoundary><PrivacyCenterScreen profile={profile} onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
+    return <ErrorBoundary><PrivacyCenterScreen profile={profile} onBack={() => setOverlay({ type: 'none' })} onProfileUpdate={handleProfileUpdate} /></ErrorBoundary>;
   }
   if (overlay.type === 'system_health') {
     return <ErrorBoundary><SystemHealthScreen onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
@@ -782,6 +782,7 @@ export default function App() {
       {activeTab === 'today' && (
         <TodayScreen
           profile={profile}
+          onProfileUpdate={handleProfileUpdate}
           onStartWalk={handleStartWalk}
           onReadInApp={handleReadInApp}
           onContinueInAsk={(handoff) => {
@@ -795,7 +796,7 @@ export default function App() {
         setActiveTab('ask');
         setAskContext(ref);
       }} />}
-      {activeTab === 'ask' && <AskScreen theologicalDepth={profile?.theological_depth || 'simple'} profile={profile} onOpenBibleReference={handleOpenBibleReference} initialContext={askContext} onContextConsumed={() => setAskContext(null)} onKeyboardVisibilityChange={setAskKeyboardOpen} activeConversationId={activeAskConversationId} onConversationChange={setActiveAskConversationId} translation={globalTranslation} onTranslationChange={handleTranslationChange} />}
+      {activeTab === 'ask' && <AskScreen theologicalDepth={profile?.theological_depth || 'simple'} profile={profile} onProfileUpdate={handleProfileUpdate} onOpenBibleReference={handleOpenBibleReference} initialContext={askContext} onContextConsumed={() => setAskContext(null)} onKeyboardVisibilityChange={setAskKeyboardOpen} activeConversationId={activeAskConversationId} onConversationChange={setActiveAskConversationId} translation={globalTranslation} onTranslationChange={handleTranslationChange} />}
 
       {activeTab === 'prayer' && <PrayerScreen profile={profile} />}
       {activeTab === 'you' && <YouScreen profile={profile} onProfileUpdate={handleProfileUpdate} session={session} onSignOut={handleSignOut} onOpenFamily={() => setOverlay({ type: 'family' })} onOpenReach={() => setOverlay({ type: 'reach' })} onOpenLibrarySearch={() => setOverlay({ type: 'library_search' })} onOpenAdminSources={() => setOverlay({ type: 'admin_sources' })} onOpenRetrievalDebug={() => setOverlay({ type: 'retrieval_debug' })} onOpenRAGTests={() => setOverlay({ type: 'rag_tests' })} onOpenPhase6Tests={() => setOverlay({ type: 'phase6_tests' })} onOpenQADashboard={() => setOverlay({ type: 'qa_dashboard' })} onOpenSourceBatches={() => setOverlay({ type: 'source_batches' })} onOpenReleaseGate={() => setOverlay({ type: 'release_gate' })} onOpenProductionStatus={() => setOverlay({ type: 'production_status' })} onOpenTogether={() => setOverlay({ type: 'together' })} onOpenMyChurch={() => setOverlay({ type: 'my_church' })} onOpenPhase8Tests={() => setOverlay({ type: 'phase8_tests' })} onOpenLegacy={() => setOverlay({ type: 'legacy_home' })} onOpenPhase9Tests={() => setOverlay({ type: 'phase9_tests' })} onOpenPrivacyCenter={() => setOverlay({ type: 'privacy_center' })} onOpenProductionReadiness={() => setOverlay({ type: 'production_readiness' })} onOpenPhase10Tests={() => setOverlay({ type: 'phase10_tests' })} onOpenBetaFeedback={() => setOverlay({ type: 'beta_feedback' })} />}
