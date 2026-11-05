@@ -687,6 +687,7 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
             <ChevronRight size={16} className="text-ivory-600 shrink-0" />
           </button>
 
+          {import.meta.env.DEV && (<>
           <button
             onClick={() => setSubView('test_suite')}
             className="premium-card p-4 flex items-center gap-3 text-left no-tap-highlight hover:border-gold-500/30 transition-all duration-300 group"
@@ -826,6 +827,7 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
             </div>
             <ChevronRight size={16} className="text-ivory-600 shrink-0" />
           </button>
+          </>)}
 
           <button
             onClick={onOpenPrivacyCenter}
@@ -855,6 +857,7 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
             <ChevronRight size={16} className="text-ivory-600 shrink-0" />
           </button>
 
+          {import.meta.env.DEV && (<>
           <button
             onClick={onOpenProductionStatus}
             className="premium-card p-4 flex items-center gap-3 text-left no-tap-highlight hover:border-gold-500/30 transition-all duration-300 group"
@@ -896,6 +899,8 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
             </div>
             <ChevronRight size={16} className="text-ivory-600 shrink-0" />
           </button>
+
+          </>)}
 
           <button
             onClick={() => setSubView('settings')}
