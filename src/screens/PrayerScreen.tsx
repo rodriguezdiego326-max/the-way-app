@@ -294,8 +294,7 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen nav-safe-padding">
       <header className="px-6 pt-14 safe-top">
-        <p className="ui-label animate-fade-in-down">{copy.prayerLabel}</p>
-
+        <h1 className="font-serif text-4xl text-ivory-50 tracking-tight animate-fade-in-down">{copy.pageTitle}</h1>
       </header>
 
       {/* Tabs */}

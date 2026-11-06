@@ -47,7 +47,7 @@ export default function EditFamilyMemberScreen({ member, onClose, onSaved }: Edi
   }
 
   return (
-    <div className="app-container bg-ink-950 bg-parchment min-h-screen flex flex-col">
+    <div className="app-container bg-ink-950 bg-parchment h-screen flex flex-col">
       <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
         <button onClick={onClose} className="btn-ghost" aria-label="Close">
           <X size={20} />
@@ -55,7 +55,8 @@ export default function EditFamilyMemberScreen({ member, onClose, onSaved }: Edi
         <p className="ui-label">Edit Family Member</p>
         <span className="w-10" />
       </header>
-      <div className="px-6 pt-6 nav-safe-padding animate-fade-in">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pt-6 nav-safe-padding animate-fade-in">
+
         <div className="flex flex-col gap-5">
           <FamilyMemberFields
             nickname={nickname}
