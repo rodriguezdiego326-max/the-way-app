@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import {
-  X, Plus, Compass, BookOpen, ChevronRight, Calendar, Heart, Info, Shield,
+  X, Plus, Compass, BookOpen, ChevronRight, Calendar, Heart, Info, Shield, Trash2, AlertCircle,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { vibrate, formatDate, formatRelative } from '@/lib/utils';
+import { useKeyboardInset, keepFieldAboveKeyboard, revealFieldInKeyboardScroller } from '@/hooks/useKeyboardInset';
 import type { ProdigalJourney, ProdigalUpdate } from '@/lib/reachTypes';
 
 interface Props {
@@ -23,8 +24,17 @@ export default function ProdigalJourneyScreen({ onBack }: Props) {
   const [scripture, setScripture] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const keyboardInset = useKeyboardInset();
 
   useEffect(() => { loadJourneys(); }, []);
+
+  useEffect(() => {
+    if (keyboardInset === 0 || !(document.activeElement instanceof HTMLElement)) return;
+    keepFieldAboveKeyboard(document.activeElement);
+  }, [keyboardInset]);
 
   async function loadJourneys() {
     const { data } = await supabase.from('prodigal_journey').select('*').order('created_at', { ascending: false });
@@ -46,8 +56,26 @@ export default function ProdigalJourneyScreen({ onBack }: Props) {
     setShowNew(false); setSaving(false);
   }
 
+  async function handleDeleteJourney() {
+    if (!selected || deleting) return;
+    vibrate(15);
+    setDeleting(true);
+    setDeleteError(null);
+    const { data, error: err } = await supabase.from('prodigal_journey').delete().eq('id', selected.id).select('id');
+    setDeleting(false);
+    if (err || !data || data.length === 0) {
+      setConfirmDeleteOpen(false);
+      setDeleteError("We couldn't delete this journey. Please try again.");
+      return;
+    }
+    const deletedId = selected.id;
+    setJourneys((prev) => prev.filter((j) => j.id !== deletedId));
+    setConfirmDeleteOpen(false);
+    setSelected(null);
+  }
+
   async function openJourney(j: ProdigalJourney) {
-    vibrate(8); setSelected(j);
+    vibrate(8); setDeleteError(null); setSelected(j);
     const { data } = await supabase.from('prodigal_updates').select('*').eq('prodigal_id', j.id).order('created_at', { ascending: true });
     setUpdates((data as ProdigalUpdate[]) || []);
   }
@@ -100,42 +128,72 @@ export default function ProdigalJourneyScreen({ onBack }: Props) {
                 onKeyDown={(e) => e.key === 'Enter' && addUpdate()} placeholder="A reflection, prayer, or update" className="input-field flex-1 text-sm" />
               <button onClick={addUpdate} disabled={!updateText.trim()} className="btn-primary px-4 disabled:opacity-40"><Plus size={18} /></button>
             </div>
+
+            <div className="gold-divider my-6" />
+            {deleteError && (
+              <div className="flex items-start gap-2 mb-3 px-1">
+                <AlertCircle size={14} className="text-error shrink-0 mt-0.5" />
+                <p className="text-ivory-300 text-xs leading-relaxed">{deleteError}</p>
+              </div>
+            )}
+            <button onClick={() => { vibrate(8); setConfirmDeleteOpen(true); }} disabled={deleting} className="btn-secondary w-full disabled:opacity-40">
+              <Trash2 size={16} /> Delete Journey
+            </button>
           </div>
         </div>
+
+        {confirmDeleteOpen && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={() => !deleting && setConfirmDeleteOpen(false)}>
+            <div className="w-full max-w-md bg-ink-900 rounded-t-3xl p-6 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+              <h3 className="font-serif text-xl text-ivory-50 mb-2">Delete this journey?</h3>
+              <p className="text-ivory-400 text-sm leading-relaxed mb-6">This will permanently remove this journey and all of its updates and reflections from your private records.</p>
+              <div className="flex flex-col gap-2">
+                <button onClick={handleDeleteJourney} disabled={deleting} className="btn-primary w-full disabled:opacity-40">
+                  {deleting ? 'Deleting...' : 'Delete Journey'}
+                </button>
+                <button onClick={() => setConfirmDeleteOpen(false)} disabled={deleting} className="btn-secondary w-full disabled:opacity-40">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
   if (showNew) {
     return (
-      <div className="app-container bg-ink-950 bg-parchment min-h-screen flex flex-col">
+      <div className="app-container bg-ink-950 bg-parchment flex flex-col overflow-hidden" style={{ height: `calc(100dvh - ${keyboardInset}px)`, minHeight: 0 }}>
         <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
           <button onClick={() => setShowNew(false)} className="btn-ghost"><X size={20} /></button>
           <p className="ui-label">New Prodigal Journey</p><span className="w-10" />
         </header>
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pt-6 nav-safe-padding animate-fade-in">
+        <div data-keyboard-scroll className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pt-6 animate-fade-in">
           <div className="flex flex-col gap-5">
             <div>
               <label className="text-sm text-ivory-400 mb-2 block">Nickname (required)</label>
-              <input autoFocus type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="A loved one" className="input-field" />
+              <input autoFocus type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="A loved one" className="input-field" onFocus={revealFieldInKeyboardScroller} />
             </div>
             <div>
               <label className="text-sm text-ivory-400 mb-2 block">Relationship (optional)</label>
-              <input type="text" value={relationship} onChange={(e) => setRelationship(e.target.value)} placeholder="Son, Daughter, Sibling" className="input-field" />
+              <input type="text" value={relationship} onChange={(e) => setRelationship(e.target.value)} placeholder="Son, Daughter, Sibling" className="input-field" onFocus={revealFieldInKeyboardScroller} />
             </div>
             <div>
               <label className="text-sm text-ivory-400 mb-2 block">Current Situation (optional)</label>
-              <textarea value={currentSituation} onChange={(e) => setCurrentSituation(e.target.value)} placeholder="What is happening right now?" className="input-field min-h-[100px] resize-none" />
+              <textarea value={currentSituation} onChange={(e) => setCurrentSituation(e.target.value)} placeholder="What is happening right now?" className="input-field min-h-[100px] resize-none" onFocus={revealFieldInKeyboardScroller} />
             </div>
             <div>
               <label className="text-sm text-ivory-400 mb-2 block">Related Scripture (optional)</label>
-              <input type="text" value={scripture} onChange={(e) => setScripture(e.target.value)} placeholder="e.g. Luke 15:11–32" className="input-field" />
+              <input type="text" value={scripture} onChange={(e) => setScripture(e.target.value)} placeholder="e.g. Luke 15:11–32" className="input-field" onFocus={revealFieldInKeyboardScroller} />
             </div>
             {error && <div className="premium-card p-3 border-error/30"><p className="text-error text-sm">{error}</p></div>}
-            <button onClick={createJourney} disabled={!nickname.trim() || saving} className="btn-primary w-full disabled:opacity-40">
-              <Compass size={18} />{saving ? 'Creating...' : 'Begin Journey'}
-            </button>
           </div>
+        </div>
+        <div className="px-6 pb-10 pt-3 safe-bottom shrink-0">
+          <button onClick={createJourney} disabled={!nickname.trim() || saving} className="btn-primary w-full disabled:opacity-40">
+            <Compass size={18} />{saving ? 'Creating...' : 'Begin Journey'}
+          </button>
         </div>
       </div>
     );

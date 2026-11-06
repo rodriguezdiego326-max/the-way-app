@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Plus, Heart, BookOpen, ChevronRight, Calendar, Shield } from 'lucide-react';
+import { X, Plus, Heart, BookOpen, ChevronRight, Calendar, Shield, Trash2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { vibrate, formatDate, formatRelative } from '@/lib/utils';
 import { spiritualContextOptions } from '@/lib/reachEngine';
@@ -17,6 +17,9 @@ export default function PeoplePrayingScreen({ onBack }: Props) {
   const [updates, setUpdates] = useState<ReachPrayerUpdate[]>([]);
   const [conversations, setConversations] = useState<ReachConversation[]>([]);
   const [updateText, setUpdateText] = useState('');
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // New person form
   const [nickname, setNickname] = useState('');
@@ -66,6 +69,7 @@ export default function PeoplePrayingScreen({ onBack }: Props) {
 
   async function openPerson(p: ReachPerson) {
     vibrate(8);
+    setDeleteError(null);
     setSelected(p);
     const [updRes, convRes] = await Promise.all([
       supabase.from('reach_prayer_updates').select('*').eq('reach_person_id', p.id).order('created_at', { ascending: true }),
@@ -85,6 +89,24 @@ export default function PeoplePrayingScreen({ onBack }: Props) {
       setUpdates((prev) => [...prev, data as ReachPrayerUpdate]);
       setUpdateText('');
     }
+  }
+
+  async function handleDeletePerson() {
+    if (!selected || deleting) return;
+    vibrate(15);
+    setDeleting(true);
+    setDeleteError(null);
+    const { data, error: err } = await supabase.from('reach_people').delete().eq('id', selected.id).select('id');
+    setDeleting(false);
+    if (err || !data || data.length === 0) {
+      setConfirmDeleteOpen(false);
+      setDeleteError("We couldn't delete this person. Please try again.");
+      return;
+    }
+    const deletedId = selected.id;
+    setPeople((prev) => prev.filter((p) => p.id !== deletedId));
+    setConfirmDeleteOpen(false);
+    setSelected(null);
   }
 
   // Detail view
@@ -147,8 +169,36 @@ export default function PeoplePrayingScreen({ onBack }: Props) {
                 </div>
               </>
             )}
+
+            <div className="gold-divider my-6" />
+            {deleteError && (
+              <div className="flex items-start gap-2 mb-3 px-1">
+                <AlertCircle size={14} className="text-error shrink-0 mt-0.5" />
+                <p className="text-ivory-300 text-xs leading-relaxed">{deleteError}</p>
+              </div>
+            )}
+            <button onClick={() => { vibrate(8); setConfirmDeleteOpen(true); }} disabled={deleting} className="btn-secondary w-full disabled:opacity-40">
+              <Trash2 size={16} /> Delete Person
+            </button>
           </div>
         </div>
+
+        {confirmDeleteOpen && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={() => !deleting && setConfirmDeleteOpen(false)}>
+            <div className="w-full max-w-md bg-ink-900 rounded-t-3xl p-6 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+              <h3 className="font-serif text-xl text-ivory-50 mb-2">Delete this person?</h3>
+              <p className="text-ivory-400 text-sm leading-relaxed mb-6">This will permanently remove this person and all of their prayer updates and conversation notes from your private records.</p>
+              <div className="flex flex-col gap-2">
+                <button onClick={handleDeletePerson} disabled={deleting} className="btn-primary w-full disabled:opacity-40">
+                  {deleting ? 'Deleting...' : 'Delete Person'}
+                </button>
+                <button onClick={() => setConfirmDeleteOpen(false)} disabled={deleting} className="btn-secondary w-full disabled:opacity-40">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
