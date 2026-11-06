@@ -12,6 +12,7 @@ import { parsePassageReference } from '@/lib/passageParser';
 import AskScreen from '@/screens/AskScreen';
 import PrayerScreen from '@/screens/PrayerScreen';
 import YouScreen from '@/screens/YouScreen';
+import ProfileHubScreen from '@/screens/ProfileHubScreen';
 import FamilyScreen from '@/screens/FamilyScreen';
 import ReachScreen from '@/screens/ReachScreen';
 import LibrarySearchScreen from '@/screens/LibrarySearchScreen';
@@ -83,6 +84,7 @@ export type Overlay =
   | { type: 'bible-mode'; walk: Walk; mode: 'physical' | 'in-app' }
   | { type: 'bible-reader'; walk: Walk }
   | { type: 'bible-reference'; book: string; chapter: number; verseStart: number | null; verseEnd: number | null; returnTo?: 'church_studies' }
+  | { type: 'profile_hub' }
   | { type: 'family' }
   | { type: 'reach' }
   | { type: 'library_search' }
@@ -417,6 +419,18 @@ export default function App() {
     );
   }
 
+  if (overlay.type === 'profile_hub' && profile) {
+    return (
+      <ErrorBoundary>
+        <ProfileHubScreen
+          profile={profile}
+          onBack={() => setOverlay({ type: 'none' })}
+          onProfileUpdate={handleProfileUpdate}
+        />
+      </ErrorBoundary>
+    );
+  }
+
   if (overlay.type === 'family') {
     return (
       <ErrorBoundary>
@@ -707,6 +721,7 @@ export default function App() {
       {activeTab === 'today' && (
         <TodayScreen
           profile={profile}
+          onOpenProfile={() => setOverlay({ type: 'profile_hub' })}
           onProfileUpdate={handleProfileUpdate}
           onStartWalk={handleStartWalk}
           onReadInApp={handleReadInApp}

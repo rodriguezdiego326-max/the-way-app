@@ -32,6 +32,7 @@ interface TodayScreenProps {
   onReadInApp: (walk: Walk) => void;
   onContinueInAsk?: (handoff: AskHandoffContext) => void;
   onProfileUpdate?: () => void;
+  onOpenProfile: () => void;
 }
 
 const moods = [
@@ -45,7 +46,7 @@ const moods = [
   { id: 'unsure', emoji: '😕' },
 ];
 
-export default function TodayScreen({ profile, onStartWalk, onReadInApp, onContinueInAsk, onProfileUpdate }: TodayScreenProps) {
+export default function TodayScreen({ profile, onStartWalk, onReadInApp, onContinueInAsk, onProfileUpdate, onOpenProfile }: TodayScreenProps) {
   const { ensureAiConsent, consentDialog } = useAiConsentGate(profile, onProfileUpdate);
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [todayWalk, setTodayWalk] = useState<Walk | null>(null);
@@ -697,9 +698,14 @@ function localizeReference(ref: string, translation: string): string {
             {copy.titleLines[0]}<br />{copy.titleLines[1]}
           </h1>
         </div>
-        <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-full border-2 border-gold-200 bg-gold-100 text-lg font-serif text-ink-50 shadow-sm" aria-label={name ? `${name}'s profile` : 'Your profile'}>
+        <button
+          type="button"
+          onClick={() => { vibrate(6); onOpenProfile(); }}
+          aria-label={name ? `Open ${name}'s profile` : 'Open your profile'}
+          className="mt-1 flex h-11 w-11 items-center justify-center rounded-full border-2 border-gold-200 bg-gold-100 text-lg font-serif text-ink-950 shadow-sm transition-transform duration-200 active:scale-95 hover:border-gold-300 no-tap-highlight"
+        >
           {(name || 'S').charAt(0).toUpperCase()}
-        </div>
+        </button>
       </header>
 
       <section className="relative h-[440px] overflow-hidden animate-fade-in-up">

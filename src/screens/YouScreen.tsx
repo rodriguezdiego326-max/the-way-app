@@ -1,11 +1,10 @@
-import { lazy, Suspense, useEffect, useState, useCallback } from 'react';
-import { Brain, Heart, BookOpen, Users, Church, Settings, ChevronRight, Trash2, Eye, EyeOff, X, ShieldCheck, Sparkles, BookMarked, Scroll, Landmark, Pencil, FlaskConical, Search, Shield, BarChart3, Package, Cpu, BookHeart, MessageSquare } from 'lucide-react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { Brain, Heart, Users, Church, Settings, ChevronRight, Trash2, Eye, EyeOff, X, ShieldCheck, Sparkles, Landmark, FlaskConical, Search, Shield, BarChart3, Package, Cpu, BookHeart, MessageSquare } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { vibrate, formatDate } from '@/lib/utils';
-import ProfileEditor from '@/components/ProfileEditor';
 import DeleteAllMemoriesDialog from '@/components/DeleteAllMemoriesDialog';
 const TestSuite = import.meta.env.DEV ? lazy(() => import('@/screens/TestSuite')) : null;
-import type { Profile, Memory, TheologicalDepth, LifeStage, LifeArea, GrowthArea, TheologicalAuthor, ConfessionalDocument, Walk, Prayer, WalkReflection } from '@/lib/types';
+import type { Profile, Memory, TheologicalDepth, TheologicalAuthor, ConfessionalDocument } from '@/lib/types';
 
 interface YouScreenProps {
   profile: Profile | null;
@@ -34,7 +33,7 @@ interface YouScreenProps {
   onSignOut: () => void;
 }
 
-type SubView = 'main' | 'memories' | 'settings' | 'library' | 'test_suite' | 'walks' | 'prayers' | 'reflections';
+type SubView = 'main' | 'memories' | 'settings' | 'library' | 'test_suite';
 
 const depthLabels: Record<TheologicalDepth, string> = {
   simple: 'Simple',
@@ -44,41 +43,15 @@ const depthLabels: Record<TheologicalDepth, string> = {
 
 export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOpenReach, onOpenLibrarySearch, onOpenAdminSources, onOpenRetrievalDebug, onOpenRAGTests, onOpenPhase6Tests, onOpenQADashboard, onOpenSourceBatches, onOpenReleaseGate, onOpenProductionStatus, onOpenTogether, onOpenMyChurch, onOpenPhase8Tests, onOpenLegacy, onOpenPhase9Tests, onOpenPrivacyCenter, onOpenProductionReadiness, onOpenPhase10Tests, onOpenBetaFeedback, session, onSignOut }: YouScreenProps) {
   const [subView, setSubView] = useState<SubView>('main');
-  const [editingProfile, setEditingProfile] = useState(false);
   const [memories, setMemories] = useState<Memory[]>([]);
   const [confirmDeleteAllOpen, setConfirmDeleteAllOpen] = useState(false);
-  const [walkCount, setWalkCount] = useState(0);
-  const [prayerCount, setPrayerCount] = useState(0);
-  const [reflectionCount, setReflectionCount] = useState(0);
-  const [stages, setStages] = useState<string[]>([]);
-  const [areas, setAreas] = useState<string[]>([]);
-  const [growthAreas, setGrowthAreas] = useState<string[]>([]);
   const [authors, setAuthors] = useState<TheologicalAuthor[]>([]);
   const [confessions, setConfessions] = useState<ConfessionalDocument[]>([]);
 
-  const loadStats = useCallback(async () => {
-    if (!profile) return;
-    const [walksRes, prayersRes, reflectionsRes, stagesRes, areasRes, growthRes] = await Promise.all([
-      supabase.from('walks').select('id', { count: 'exact', head: true }),
-      supabase.from('prayers').select('id', { count: 'exact', head: true }),
-      supabase.from('walk_reflections').select('id', { count: 'exact', head: true }),
-      supabase.from('life_stages').select('stage').eq('profile_id', profile.id),
-      supabase.from('life_areas').select('area').eq('profile_id', profile.id),
-      supabase.from('growth_areas').select('area').eq('profile_id', profile.id),
-    ]);
-    setWalkCount(walksRes.count || 0);
-    setPrayerCount(prayersRes.count || 0);
-    setReflectionCount(reflectionsRes.count || 0);
-    setStages(((stagesRes.data as LifeStage[]) || []).map((s) => s.stage));
-    setAreas(((areasRes.data as LifeArea[]) || []).map((a) => a.area));
-    setGrowthAreas(((growthRes.data as GrowthArea[]) || []).map((g) => g.area));
-  }, [profile]);
-
   useEffect(() => {
     if (subView === 'memories') loadMemories();
-    if (subView === 'main') loadStats();
     if (subView === 'library') loadLibrary();
-  }, [subView, profile, loadStats]);
+  }, [subView]);
 
   async function loadMemories() {
     const { data } = await supabase.from('memories').select('*').order('created_at', { ascending: false });
@@ -122,17 +95,6 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
     vibrate(8);
     await supabase.from('profiles').update({ theological_depth: depth }).eq('id', profile.id);
     onProfileUpdate();
-  }
-
-  // PROFILE EDITOR
-  if (editingProfile && profile) {
-    return (
-      <ProfileEditor
-        profile={profile}
-        onClose={() => setEditingProfile(false)}
-        onSaved={onProfileUpdate}
-      />
-    );
   }
 
   // MEMORIES VIEW
@@ -440,75 +402,6 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
     );
   }
 
-  // WALKS VIEW
-  if (subView === 'walks') {
-    return (
-      <div className="app-container bg-ink-950 bg-parchment min-h-screen flex flex-col">
-        <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
-          <button onClick={() => setSubView('main')} className="btn-ghost"><X size={20} /></button>
-          <p className="ui-label">My Walks</p><span className="w-10" />
-        </header>
-        <div className="flex-1 overflow-y-auto px-6 py-6">
-          {walkCount === 0 ? (
-            <div className="premium-card p-6 text-center">
-              <BookOpen size={24} className="text-gold-300 mx-auto mb-4" />
-              <p className="text-ivory-400 text-sm">No walks yet.</p>
-              <p className="text-ivory-600 text-xs mt-2 leading-relaxed">Start from Today or Bible to begin your first walk.</p>
-            </div>
-          ) : (
-            <WalksList />
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // PRAYERS VIEW
-  if (subView === 'prayers') {
-    return (
-      <div className="app-container bg-ink-950 bg-parchment min-h-screen flex flex-col">
-        <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
-          <button onClick={() => setSubView('main')} className="btn-ghost"><X size={20} /></button>
-          <p className="ui-label">My Prayers</p><span className="w-10" />
-        </header>
-        <div className="flex-1 overflow-y-auto px-6 py-6">
-          {prayerCount === 0 ? (
-            <div className="premium-card p-6 text-center">
-              <Heart size={24} className="text-gold-300 mx-auto mb-4" />
-              <p className="text-ivory-400 text-sm">No prayers yet.</p>
-              <p className="text-ivory-600 text-xs mt-2 leading-relaxed">Bring your requests before God from the Prayer tab.</p>
-            </div>
-          ) : (
-            <PrayersList />
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // REFLECTIONS VIEW
-  if (subView === 'reflections') {
-    return (
-      <div className="app-container bg-ink-950 bg-parchment min-h-screen flex flex-col">
-        <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
-          <button onClick={() => setSubView('main')} className="btn-ghost"><X size={20} /></button>
-          <p className="ui-label">My Reflections</p><span className="w-10" />
-        </header>
-        <div className="flex-1 overflow-y-auto px-6 py-6">
-          {reflectionCount === 0 ? (
-            <div className="premium-card p-6 text-center">
-              <Scroll size={24} className="text-gold-300 mx-auto mb-4" />
-              <p className="text-ivory-400 text-sm">No reflections yet.</p>
-              <p className="text-ivory-600 text-xs mt-2 leading-relaxed">Your reflections from Bible walks will appear here.</p>
-            </div>
-          ) : (
-            <ReflectionsList />
-          )}
-        </div>
-      </div>
-    );
-  }
-
   // MAIN VIEW
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen nav-safe-padding">
@@ -523,107 +416,20 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
               <p className="text-ivory-500 text-sm mt-1">{profile.season}</p>
             )}
           </div>
-          <button
-            onClick={() => setEditingProfile(true)}
-            className="btn-ghost"
-          >
-            <Pencil size={16} />
-          </button>
         </div>
       </header>
-
-      {/* My Walk stats */}
-      <section className="px-6 mt-6 animate-fade-in-up">
-        <p className="ui-label mb-3">My Walk</p>
-        <div className="grid grid-cols-3 gap-3">
-          <button type="button" onClick={() => setSubView('walks')} className="premium-card p-4 text-center no-tap-highlight hover:border-gold-500/30 transition-all duration-300">
-            <BookOpen size={18} className="text-gold-300 mx-auto mb-2" />
-            <p className="font-serif text-2xl text-ivory-50">{walkCount}</p>
-            <p className="text-ivory-600 text-[11px] mt-0.5">Walks</p>
-          </button>
-          <button type="button" onClick={() => setSubView('prayers')} className="premium-card p-4 text-center no-tap-highlight hover:border-gold-500/30 transition-all duration-300">
-            <Heart size={18} className="text-gold-300 mx-auto mb-2" />
-            <p className="font-serif text-2xl text-ivory-50">{prayerCount}</p>
-            <p className="text-ivory-600 text-[11px] mt-0.5">Prayers</p>
-          </button>
-          <button type="button" onClick={() => setSubView('reflections')} className="premium-card p-4 text-center no-tap-highlight hover:border-gold-500/30 transition-all duration-300">
-            <Scroll size={18} className="text-gold-300 mx-auto mb-2" />
-            <p className="font-serif text-2xl text-ivory-50">{reflectionCount}</p>
-            <p className="text-ivory-600 text-[11px] mt-0.5">Reflections</p>
-          </button>
-        </div>
-        <p className="text-ivory-600 text-xs mt-3 text-center italic">
-          These are not a score. They are gentle reminders of God's faithfulness in your life.
-        </p>
-      </section>
-
-      {/* Life & Faith Profile summary */}
-      <section className="px-6 mt-8 animate-fade-in-up" style={{ animationDelay: '0.05s' }}>
-        <div className="flex items-center justify-between mb-3">
-          <p className="ui-label">Life & Faith Profile</p>
-        </div>
-        <div className="premium-card p-5">
-          {stages.length > 0 && (
-            <div className="mb-3">
-              <p className="text-ivory-600 text-xs mb-1">Life Stage</p>
-              <div className="flex flex-wrap gap-1.5">
-                {stages.map((s) => (
-                  <span key={s} className="px-2.5 py-1 rounded-lg bg-ink-700/50 text-ivory-300 text-xs">{s}</span>
-                ))}
-              </div>
-            </div>
-          )}
-          {areas.length > 0 && (
-            <div className="mb-3">
-              <p className="text-ivory-600 text-xs mb-1">Life Areas</p>
-              <div className="flex flex-wrap gap-1.5">
-                {areas.map((a) => (
-                  <span key={a} className="px-2.5 py-1 rounded-lg bg-ink-700/50 text-ivory-300 text-xs">{a}</span>
-                ))}
-              </div>
-            </div>
-          )}
-          {growthAreas.length > 0 && (
-            <div className="mb-3">
-              <p className="text-ivory-600 text-xs mb-1">Growth Areas</p>
-              <div className="flex flex-wrap gap-1.5">
-                {growthAreas.map((g) => (
-                  <span key={g} className="px-2.5 py-1 rounded-lg bg-gold-500/10 border border-gold-500/20 text-gold-200 text-xs">{g}</span>
-                ))}
-              </div>
-            </div>
-          )}
-          <div className="flex flex-wrap gap-3 text-xs text-ivory-500 mt-3 pt-3 border-t border-ink-700/40">
-            <span>Depth: {depthLabels[profile?.theological_depth || 'simple']}</span>
-            <span>·</span>
-            <span>Time: {profile?.available_time_minutes || 7} min</span>
-            <span>·</span>
-            <span>{profile?.preferred_translation || 'ESV'}</span>
-            {profile?.current_study && (
-              <>
-                <span>·</span>
-                <span>Studying: {profile.current_study}</span>
-              </>
-            )}
-          </div>
-        </div>
-      </section>
 
       {/* Journey sections */}
       <section className="px-6 mt-8 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
         <p className="ui-label mb-3">Journey</p>
         <div className="flex flex-col gap-2">
           {[
-            { icon: BookMarked, label: 'Bible Activity', desc: 'Your reading journey', onClick: () => setSubView('walks') },
-            { icon: Heart, label: 'Prayer Journey', desc: 'Active and answered prayers', onClick: () => setSubView('prayers') },
-            { icon: BookOpen, label: 'Current Study', desc: profile?.current_study || 'No current study', onClick: () => setEditingProfile(true) },
             { icon: Brain, label: 'Theological Learning', desc: 'Doctrine and depth', onClick: () => setSubView('library') },
             { icon: Users, label: 'Together', desc: 'Walk with other believers', onClick: onOpenTogether },
             { icon: Church, label: 'My Church', desc: 'Strengthen your local church', onClick: onOpenMyChurch },
             { icon: BookHeart, label: 'Legacy', desc: 'Remember God\'s faithfulness', onClick: onOpenLegacy },
             { icon: Users, label: 'Family Discipleship', desc: 'SOLAPATH Family', onClick: onOpenFamily },
             { icon: Heart, label: 'Reach & Evangelism', desc: 'Share Christ faithfully', onClick: onOpenReach },
-            { icon: Scroll, label: 'Personal Reflections', desc: 'Your recorded thoughts', onClick: () => setSubView('reflections') },
           ].map((item) => (
             <button
               key={item.label}
@@ -949,108 +755,6 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
           </p>
         </div>
       </section>
-    </div>
-  );
-}
-
-import { useEffect as useEffect2, useState as useState2 } from 'react';
-
-function WalksList() {
-  const [walks, setWalks] = useState2<Walk[]>([]);
-  const [loading, setLoading] = useState2(true);
-
-  useEffect2(() => {
-    supabase.from('walks').select('*').order('created_at', { ascending: false }).limit(50).then(({ data }) => {
-      setWalks((data as Walk[]) || []);
-      setLoading(false);
-    });
-  }, []);
-
-  if (loading) return <div className="premium-card h-40 animate-pulse" />;
-  if (walks.length === 0) {
-    return (
-      <div className="premium-card p-6 text-center">
-        <p className="text-ivory-400 text-sm">No walks yet.</p>
-      </div>
-    );
-  }
-  return (
-    <div className="flex flex-col gap-3">
-      {walks.map((w) => (
-        <div key={w.id} className="premium-card p-4">
-          <h3 className="font-serif text-lg text-ivory-50">{w.passage_reference}</h3>
-          <p className="text-ivory-500 text-xs mt-1">{w.estimated_minutes} min · {formatDate(w.created_at)}</p>
-          {w.reading_objective && <p className="text-ivory-400 text-sm mt-2 leading-relaxed">{w.reading_objective}</p>}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function PrayersList() {
-  const [prayers, setPrayers] = useState2<Prayer[]>([]);
-  const [loading, setLoading] = useState2(true);
-
-  useEffect2(() => {
-    supabase.from('prayers').select('*').order('created_at', { ascending: false }).then(({ data }) => {
-      setPrayers((data as Prayer[]) || []);
-      setLoading(false);
-    });
-  }, []);
-
-  if (loading) return <div className="premium-card h-40 animate-pulse" />;
-  if (prayers.length === 0) {
-    return (
-      <div className="premium-card p-6 text-center">
-        <p className="text-ivory-400 text-sm">No prayers yet.</p>
-      </div>
-    );
-  }
-  return (
-    <div className="flex flex-col gap-3">
-      {prayers.map((p) => (
-        <div key={p.id} className="premium-card p-4">
-          <h3 className="font-serif text-lg text-ivory-50">{p.title}</h3>
-          {p.description && <p className="text-ivory-400 text-sm mt-1 leading-relaxed line-clamp-2">{p.description}</p>}
-          <p className="text-ivory-600 text-xs mt-2">{formatDate(p.started_at)}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-type ReflectionWithWalk = WalkReflection & { walks: { passage_reference: string } | null };
-
-function ReflectionsList() {
-  const [reflections, setReflections] = useState2<ReflectionWithWalk[]>([]);
-  const [loading, setLoading] = useState2(true);
-
-  useEffect2(() => {
-    supabase.from('walk_reflections').select('*, walks(passage_reference)').order('created_at', { ascending: false }).limit(50).then(({ data }) => {
-      setReflections((data as ReflectionWithWalk[] | null) || []);
-      setLoading(false);
-    });
-  }, []);
-
-  if (loading) return <div className="premium-card h-40 animate-pulse" />;
-  if (reflections.length === 0) {
-    return (
-      <div className="premium-card p-6 text-center">
-        <p className="text-ivory-400 text-sm">No reflections yet.</p>
-      </div>
-    );
-  }
-  return (
-    <div className="flex flex-col gap-3">
-      {reflections.map((r) => (
-        <div key={r.id} className="premium-card p-4">
-          {r.walks?.passage_reference && (
-            <p className="text-gold-300 text-xs font-medium mb-1">{r.walks.passage_reference}</p>
-          )}
-          <p className="text-ivory-300 text-sm leading-relaxed whitespace-pre-line">{r.body}</p>
-          <p className="text-ivory-600 text-xs mt-2">{formatDate(r.created_at)}</p>
-        </div>
-      ))}
     </div>
   );
 }
