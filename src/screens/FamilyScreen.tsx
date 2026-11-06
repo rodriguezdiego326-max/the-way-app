@@ -13,17 +13,10 @@ import CatechismScreen from '@/screens/CatechismScreen';
 import FamilyJourneyScreen from '@/screens/FamilyJourneyScreen';
 import ParentGuideScreen from '@/screens/ParentGuideScreen';
 import FamilyPrayerScreen from '@/screens/FamilyPrayerScreen';
+import EditFamilyMemberScreen from '@/screens/EditFamilyMemberScreen';
+import FamilyMemberFields from '@/components/FamilyMemberFields';
 
 type SubView = 'main' | 'walk' | 'child_asked' | 'catechism' | 'journey' | 'parent_guide' | 'family_prayer';
-
-const ageRangeOptions: { id: AgeRange; label: string }[] = [
-  { id: '3-5', label: '3–5' },
-  { id: '6-8', label: '6–8' },
-  { id: '9-12', label: '9–12' },
-  { id: '13-15', label: '13–15' },
-  { id: '16-17', label: '16–17' },
-  { id: '18+', label: '18+ / Adult' },
-];
 
 interface FamilyScreenProps {
   onClose: () => void;
@@ -37,6 +30,7 @@ export default function FamilyScreen({ onClose }: FamilyScreenProps) {
   const [loading, setLoading] = useState(true);
   const [showCreateFamily, setShowCreateFamily] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
+  const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
 
   // New family form
   const [familyName, setFamilyName] = useState('');
@@ -248,6 +242,19 @@ export default function FamilyScreen({ onClose }: FamilyScreenProps) {
     );
   }
 
+  if (editingMember) {
+    return (
+      <EditFamilyMemberScreen
+        member={editingMember}
+        onClose={() => setEditingMember(null)}
+        onSaved={(updated) => {
+          setMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+          setEditingMember(null);
+        }}
+      />
+    );
+  }
+
   // Add member form
   if (showAddMember) {
     return (
@@ -261,50 +268,14 @@ export default function FamilyScreen({ onClose }: FamilyScreenProps) {
         </header>
         <div className="flex-1 px-6 py-6 animate-fade-in">
           <div className="flex flex-col gap-5">
-            <div>
-              <label className="text-sm text-ivory-400 mb-2 block">Nickname or First Name (optional)</label>
-              <input
-                type="text"
-                value={memberNickname}
-                onChange={(e) => setMemberNickname(e.target.value)}
-                placeholder="Child A"
-                className="input-field"
-              />
-              <p className="text-ivory-600 text-xs mt-2 leading-relaxed">
-                You do not need to enter a real name. A nickname or label like "Child A" works fine.
-              </p>
-            </div>
-            <div>
-              <label className="text-sm text-ivory-400 mb-2 block">Age Range</label>
-              <div className="grid grid-cols-3 gap-2">
-                {ageRangeOptions.map((opt) => (
-                  <button
-                    key={opt.id}
-                    onClick={() => {
-                      vibrate(6);
-                      setMemberAgeRange(opt.id);
-                    }}
-                    className={`py-3 rounded-xl border text-sm font-medium transition-all no-tap-highlight ${
-                      memberAgeRange === opt.id
-                        ? 'bg-gold-500/10 border-gold-500/40 text-ivory-50'
-                        : 'bg-ink-800/40 border-ink-700/40 text-ivory-400'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="text-sm text-ivory-400 mb-2 block">Relationship (optional)</label>
-              <input
-                type="text"
-                value={memberRelationship}
-                onChange={(e) => setMemberRelationship(e.target.value)}
-                placeholder="Son, Daughter, etc."
-                className="input-field"
-              />
-            </div>
+            <FamilyMemberFields
+              nickname={memberNickname}
+              onNicknameChange={setMemberNickname}
+              ageRange={memberAgeRange}
+              onAgeRangeChange={setMemberAgeRange}
+              relationship={memberRelationship}
+              onRelationshipChange={setMemberRelationship}
+            />
             {memberError && (
               <div className="premium-card p-3 border-error/30 animate-fade-in">
                 <p className="text-error text-sm">{memberError}</p>
@@ -423,21 +394,34 @@ export default function FamilyScreen({ onClose }: FamilyScreenProps) {
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {members.map((m) => (
-                  <div key={m.id} className="premium-card px-4 py-3 flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-ink-700/50 flex items-center justify-center shrink-0">
-                      <Users size={14} className="text-ivory-400" />
-                    </div>
-                    <div>
-                      <p className="text-ivory-200 text-sm font-medium">
-                        {m.nickname || `Age ${m.age_range}`}
-                      </p>
-                      <p className="text-ivory-600 text-xs">
-                        {m.age_range}{m.relationship ? ` · ${m.relationship}` : ''}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                {members.map((m) => {
+                  const displayName = m.nickname || `Age ${m.age_range}`;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        vibrate(8);
+                        setEditingMember(m);
+                      }}
+                      aria-label={`Edit ${displayName}`}
+                      className="premium-card min-h-[44px] px-4 py-3 flex items-center gap-2 text-left no-tap-highlight hover:border-gold-500/30 transition-all duration-300 group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-ink-700/50 flex items-center justify-center shrink-0">
+                        <Users size={14} className="text-ivory-400" />
+                      </div>
+                      <div>
+                        <p className="text-ivory-200 text-sm font-medium">
+                          {displayName}
+                        </p>
+                        <p className="text-ivory-600 text-xs">
+                          {m.age_range}{m.relationship ? ` · ${m.relationship}` : ''}
+                        </p>
+                      </div>
+                      <ChevronRight size={14} className="text-ivory-600 group-hover:text-gold-300 transition-colors ml-1" />
+                    </button>
+                  );
+                })}
               </div>
             )}
           </section>
