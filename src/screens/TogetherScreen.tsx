@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Users, Heart, BookOpen, CheckCircle, HandHeart, Shield, Church, Mail, Plus, ChevronRight, Sparkles, Check, KeyRound } from 'lucide-react';
+import { X, Users, Heart, BookOpen, CheckCircle, HandHeart, Shield, Mail, Plus, ChevronRight, Sparkles, Check, KeyRound } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import { getMyCircles, getInvitationsForProfile, acceptInvitation } from '@/lib/togetherEngine';
-import { getMyChurchMembership, getChurch } from '@/lib/churchEngine';
 import type { Profile } from '@/lib/types';
 import type { Circle, CircleInvitation } from '@/lib/togetherTypes';
 
@@ -18,20 +17,18 @@ interface Props {
   onOpenCheckIn: (circle?: Circle) => void;
   onOpenEncouragement: () => void;
   onOpenAccountability: () => void;
-  onOpenMyChurch: () => void;
   initialTab?: 'main' | 'invitations' | 'join_code';
 }
 
 export default function TogetherScreen({
   profile, onBack, onOpenCircle, onOpenCreateCircle,
   onOpenPrayer, onOpenScripture, onOpenCheckIn, onOpenEncouragement,
-  onOpenAccountability, onOpenMyChurch,
+  onOpenAccountability,
   initialTab,
 }: Props) {
   const [view, setView] = useState<'main' | 'invitations' | 'join_code'>(initialTab || 'main');
   const [circles, setCircles] = useState<Circle[]>([]);
   const [invitations, setInvitations] = useState<Array<CircleInvitation & { circles: Circle }>>([]);
-  const [churchName, setChurchName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState('');
@@ -48,11 +45,6 @@ export default function TogetherScreen({
       ]);
       setCircles(myCircles || []);
       setInvitations(myInvitations || []);
-      const membership = await getMyChurchMembership(profile.id);
-      if (membership) {
-        const church = await getChurch(membership.church_id);
-        setChurchName(church?.name || null);
-      }
     } catch {
       setError('Could not load your Together data.');
     } finally {
@@ -195,7 +187,6 @@ export default function TogetherScreen({
     { icon: CheckCircle, label: 'Check In', desc: 'How are you arriving?', onClick: () => onOpenCheckIn() },
     { icon: HandHeart, label: 'Encouragement', desc: 'Intentional, not social', onClick: onOpenEncouragement },
     { icon: Shield, label: 'Accountability', desc: 'Private · Opt-in', onClick: onOpenAccountability },
-    { icon: Church, label: 'My Church', desc: churchName || 'Connect your church', onClick: onOpenMyChurch },
     { icon: Mail, label: 'Invitations', desc: `${invitations.length} pending`, onClick: () => setView('invitations') },
   ];
 

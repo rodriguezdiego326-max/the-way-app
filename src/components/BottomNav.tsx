@@ -1,7 +1,7 @@
-import { Home, BookOpen, MessageSquare, Heart, User } from 'lucide-react';
+import { Home, BookOpen, MessageSquare, Heart, Compass } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 
-export type Tab = 'today' | 'bible' | 'ask' | 'prayer' | 'you';
+export type Tab = 'today' | 'bible' | 'ask' | 'prayer' | 'explore';
 
 interface BottomNavProps {
   active: Tab;
@@ -13,7 +13,7 @@ const tabs: { id: Tab; label: string; icon: typeof Home }[] = [
   { id: 'bible', label: 'Bible', icon: BookOpen },
   { id: 'ask', label: 'Ask', icon: MessageSquare },
   { id: 'prayer', label: 'Prayer', icon: Heart },
-  { id: 'you', label: 'You', icon: User },
+  { id: 'explore', label: 'Explore', icon: Compass },
 ];
 
 export default function BottomNav({ active, onChange }: BottomNavProps) {

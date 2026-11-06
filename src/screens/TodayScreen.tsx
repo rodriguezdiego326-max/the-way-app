@@ -702,7 +702,7 @@ function localizeReference(ref: string, translation: string): string {
           type="button"
           onClick={() => { vibrate(6); onOpenProfile(); }}
           aria-label={name ? `Open ${name}'s profile` : 'Open your profile'}
-          className="mt-1 flex h-11 w-11 items-center justify-center rounded-full border-2 border-gold-200 bg-gold-100 text-lg font-serif text-ink-950 shadow-sm transition-transform duration-200 active:scale-95 hover:border-gold-300 no-tap-highlight"
+          className="mt-1 flex h-11 w-11 items-center justify-center rounded-full border-2 border-gold-400/60 bg-ink-850 text-lg font-serif text-gold-200 shadow-md transition-transform duration-200 active:scale-95 hover:border-gold-300 no-tap-highlight"
         >
           {(name || 'S').charAt(0).toUpperCase()}
         </button>

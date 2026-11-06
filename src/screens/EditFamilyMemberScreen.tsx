@@ -55,7 +55,7 @@ export default function EditFamilyMemberScreen({ member, onClose, onSaved }: Edi
         <p className="ui-label">Edit Family Member</p>
         <span className="w-10" />
       </header>
-      <div className="flex-1 px-6 py-6 animate-fade-in">
+      <div className="px-6 pt-6 nav-safe-padding animate-fade-in">
         <div className="flex flex-col gap-5">
           <FamilyMemberFields
             nickname={nickname}
@@ -70,12 +70,10 @@ export default function EditFamilyMemberScreen({ member, onClose, onSaved }: Edi
               <p className="text-error text-sm">{saveError}</p>
             </div>
           )}
+          <button onClick={saveChanges} disabled={saving} className="btn-primary w-full disabled:opacity-40">
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
         </div>
-      </div>
-      <div className="px-6 pb-10 safe-bottom">
-        <button onClick={saveChanges} disabled={saving} className="btn-primary w-full disabled:opacity-40">
-          {saving ? 'Saving...' : 'Save Changes'}
-        </button>
       </div>
     </div>
   );

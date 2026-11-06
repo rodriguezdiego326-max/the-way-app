@@ -407,15 +407,7 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
     <div className="app-container bg-ink-950 bg-parchment min-h-screen nav-safe-padding">
       <header className="px-6 pt-14 safe-top">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="ui-label animate-fade-in-down">You</p>
-            <h1 className="font-serif text-4xl text-ivory-50 mt-2 tracking-tight">
-              {profile?.display_name || 'Your Walk'}
-            </h1>
-            {profile?.season && (
-              <p className="text-ivory-500 text-sm mt-1">{profile.season}</p>
-            )}
-          </div>
+          <h1 className="font-serif text-4xl text-ivory-50 tracking-tight animate-fade-in-down">Explore</h1>
         </div>
       </header>
 
