@@ -346,6 +346,20 @@ export async function getSermonNoteForSermon(sermonId: string, profileId: string
   return (data as SermonNote) || null;
 }
 
+export async function deleteMySermon(sermonId: string): Promise<{ deletedNotes: number; sermonDeleted: boolean }> {
+  const { data, error } = await supabase.rpc('delete_my_sermon', { p_sermon_id: sermonId });
+  const result = data as { deleted_notes?: unknown; sermon_deleted?: unknown } | null;
+  if (error || typeof result?.deleted_notes !== 'number' || typeof result?.sermon_deleted !== 'boolean') {
+    console.error('[Church] delete sermon failed', {
+      operation: 'rpc:delete_my_sermon',
+      code: error?.code,
+      message: error?.message,
+    });
+    throw new Error('Could not delete this sermon. Please try again.');
+  }
+  return { deletedNotes: result.deleted_notes, sermonDeleted: result.sermon_deleted };
+}
+
 // ============================================================
 // CHURCH STUDIES
 // ============================================================

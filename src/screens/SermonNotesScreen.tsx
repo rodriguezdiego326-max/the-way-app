@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, BookOpen, Plus, ChevronRight, Calendar, User, FileText, ArrowRight } from 'lucide-react';
+import { X, BookOpen, Plus, ChevronRight, Calendar, User, FileText, ArrowRight, Trash2, AlertCircle } from 'lucide-react';
 import { vibrate, formatDate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';
 import {
   createSermon, createSermonNote, getSermonNotes, getSermonNoteForSermon,
-  updateSermonNote,
+  updateSermonNote, deleteMySermon,
 } from '@/lib/churchEngine';
 import type { Profile } from '@/lib/types';
 import type { Sermon, SermonNote } from '@/lib/togetherTypes';
@@ -39,6 +39,9 @@ export default function SermonNotesScreen({
   const [application, setApplication] = useState('');
   const [prayer, setPrayer] = useState('');
   const [saving, setSaving] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const keyboardInset = useKeyboardInset();
 
   useEffect(() => {
@@ -86,6 +89,7 @@ export default function SermonNotesScreen({
 
   async function handleOpenSermon(sermon: Sermon) {
     vibrate(10);
+    setDeleteError(null);
     setActiveSermon(sermon);
     const existingNote = await getSermonNoteForSermon(sermon.id, profile.id);
     setActiveNote(existingNote);
@@ -124,6 +128,26 @@ export default function SermonNotesScreen({
     }
   }
 
+  async function handleDeleteSermon() {
+    if (!activeSermon || deleting) return;
+    vibrate(15);
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteMySermon(activeSermon.id);
+      const deletedId = activeSermon.id;
+      setNotes((prev) => prev.filter((n) => n.sermons.id !== deletedId));
+      setConfirmDeleteOpen(false);
+      setActiveNote(null);
+      setActiveSermon(null);
+    } catch (err) {
+      setConfirmDeleteOpen(false);
+      setDeleteError(err instanceof Error ? err.message : 'Could not delete this sermon. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   // Note editor view
   if (activeSermon) {
     return (
@@ -153,6 +177,20 @@ export default function SermonNotesScreen({
               {saving ? 'Saving...' : 'Save Notes'}
             </button>
 
+            {activeNote && (
+              <div className="mt-3">
+                {deleteError && (
+                  <div className="flex items-start gap-2 mb-3 px-1">
+                    <AlertCircle size={14} className="text-error shrink-0 mt-0.5" />
+                    <p className="text-ivory-300 text-xs leading-relaxed">{deleteError}</p>
+                  </div>
+                )}
+                <button onClick={() => { vibrate(8); setConfirmDeleteOpen(true); }} disabled={deleting} className="btn-secondary w-full disabled:opacity-40">
+                  <Trash2 size={16} /> Delete Sermon
+                </button>
+              </div>
+            )}
+
             {/* Follow-up actions */}
             <div className="gold-divider my-6" />
             <p className="ui-label mb-3">After the Sermon</p>
@@ -180,6 +218,23 @@ export default function SermonNotesScreen({
             </div>
           </div>
         </div>
+
+        {confirmDeleteOpen && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={() => !deleting && setConfirmDeleteOpen(false)}>
+            <div className="w-full max-w-md bg-ink-900 rounded-t-3xl p-6 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+              <h3 className="font-serif text-xl text-ivory-50 mb-2">Delete this sermon?</h3>
+              <p className="text-ivory-400 text-sm leading-relaxed mb-6">This will permanently remove this sermon and your notes from your Sermon Notes. Notes belonging to other users will not be deleted.</p>
+              <div className="flex flex-col gap-2">
+                <button onClick={handleDeleteSermon} disabled={deleting} className="btn-primary w-full disabled:opacity-40">
+                  {deleting ? 'Deleting...' : 'Delete Sermon'}
+                </button>
+                <button onClick={() => setConfirmDeleteOpen(false)} disabled={deleting} className="btn-secondary w-full disabled:opacity-40">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
