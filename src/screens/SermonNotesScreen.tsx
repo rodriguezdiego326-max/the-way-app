@@ -8,7 +8,7 @@ import {
 } from '@/lib/churchEngine';
 import type { Profile } from '@/lib/types';
 import type { Sermon, SermonNote } from '@/lib/togetherTypes';
-import { useKeyboardInset, keepFieldAboveKeyboard, revealFieldInKeyboardScroller } from '@/hooks/useKeyboardInset';
+import { useKeyboardInset, keepFieldAboveKeyboard, revealFieldInKeyboardScroller, revealFocusedField } from '@/hooks/useKeyboardInset';
 
 interface Props {
   profile: Profile;
@@ -239,16 +239,16 @@ export default function SermonNotesScreen({
       </div>
 
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowCreate(false)}>
-          <div className="w-full max-w-md bg-ink-900 rounded-t-3xl p-6 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm transition-[padding] duration-200" style={{ paddingBottom: keyboardInset }} onClick={() => setShowCreate(false)}>
+          <div className="w-full max-w-md bg-ink-900 rounded-t-3xl p-6 animate-fade-in-up max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-serif text-xl text-ivory-50">New Sermon</h3>
               <button onClick={() => setShowCreate(false)} className="btn-ghost"><X size={18} /></button>
             </div>
             <div className="flex flex-col gap-3">
-              <input value={passage} onChange={(e) => setPassage(e.target.value)} placeholder="Passage (e.g., John 15)" className="input-field" autoFocus />
-              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Sermon title (optional)" className="input-field" />
-              <input value={speaker} onChange={(e) => setSpeaker(e.target.value)} placeholder="Speaker (optional)" className="input-field" />
+              <input value={passage} onChange={(e) => setPassage(e.target.value)} onFocus={revealFocusedField} placeholder="Passage (e.g., John 15)" className="input-field" autoFocus />
+              <input value={title} onChange={(e) => setTitle(e.target.value)} onFocus={revealFocusedField} placeholder="Sermon title (optional)" className="input-field" />
+              <input value={speaker} onChange={(e) => setSpeaker(e.target.value)} onFocus={revealFocusedField} placeholder="Speaker (optional)" className="input-field" />
               <input type="date" value={sermonDate} onChange={(e) => setSermonDate(e.target.value)} className="input-field" />
               <button onClick={handleCreateSermon} disabled={creating || !passage.trim()} className="btn-primary w-full disabled:opacity-40">
                 <Plus size={16} /> {creating ? 'Creating...' : 'Create & Take Notes'}
