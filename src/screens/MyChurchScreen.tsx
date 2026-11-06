@@ -8,7 +8,7 @@ import ChurchAdministrationCard from '@/components/church/ChurchAdministrationCa
 import {
   createChurch, searchChurchDirectory, joinChurch, getAllChurchMemberships, getChurch, updateChurch,
   leaveChurch, isChurchOwner, importChurchDirectoryEntry, releaseChurchOwnershipAndLeave, updateChurchMembershipRole,
-  getChurchStudies, getChurchPrayerItems, getChurchGroups,
+  getChurchStudies, getChurchPrayerItems, getChurchGroups, getSermonNotes,
 } from '@/lib/churchEngine';
 import type { Profile } from '@/lib/types';
 import type { ChurchProfile, ChurchMembership, ChurchStudy, ChurchPrayerItem, ChurchGroup } from '@/lib/togetherTypes';
@@ -66,6 +66,7 @@ export default function MyChurchScreen({
   const [editWebsite, setEditWebsite] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [sermonNoteCount, setSermonNoteCount] = useState(0);
 
   const activeChurchIdRef = useRef(activeChurchId);
 
@@ -73,7 +74,8 @@ export default function MyChurchScreen({
     setLoading(true);
     setError(null);
     try {
-      const mems = await getAllChurchMemberships(profile.id);
+      const [mems, ownNotes] = await Promise.all([getAllChurchMemberships(profile.id), getSermonNotes(profile.id)]);
+      setSermonNoteCount(ownNotes.length);
       const enriched: ChurchWithMeta[] = [];
       for (const m of mems) {
         const c = await getChurch(m.church_id);
@@ -367,7 +369,7 @@ export default function MyChurchScreen({
               <p className="ui-label mb-3">Church Features</p>
               <div className="flex flex-col gap-2 mb-4">
                 <ChurchActionCard icon={Sun} label="Sunday Mode" desc="Prepare your heart for worship" onClick={onOpenSundayMode} />
-                <ChurchActionCard icon={BookOpen} label="Sermon Notes" desc={`${active.studies.length} studies available`} onClick={onOpenSermonNotes} />
+                <ChurchActionCard icon={BookOpen} label="Sermon Notes" desc={sermonNoteCount === 0 ? 'No studies available' : `${sermonNoteCount} ${sermonNoteCount === 1 ? 'study' : 'studies'} available`} onClick={onOpenSermonNotes} />
                 <ChurchActionCard icon={BookOpen} label="From My Church" desc={`${active.studies.length} church studies`} onClick={onOpenChurchStudies} />
                 <ChurchActionCard icon={Heart} label="Church Prayer" desc={`${active.prayerItems.length} prayer items`} onClick={onOpenChurchPrayer} />
                 <ChurchActionCard icon={Users} label="Small Groups" desc={`${active.groups.length} groups`} onClick={onOpenSmallGroups} />
