@@ -3,6 +3,7 @@ import { X, Plus, Heart, BookOpen, ChevronRight, Calendar, Shield } from 'lucide
 import { supabase } from '@/lib/supabase';
 import { vibrate, formatDate, formatRelative } from '@/lib/utils';
 import { spiritualContextOptions } from '@/lib/reachEngine';
+import { useKeyboardInset, keepFieldAboveKeyboard, revealFieldInKeyboardScroller } from '@/hooks/useKeyboardInset';
 import type { ReachPerson, ReachPrayerUpdate, ReachConversation } from '@/lib/reachTypes';
 
 interface Props {
@@ -25,8 +26,14 @@ export default function PeoplePrayingScreen({ onBack }: Props) {
   const [scripture, setScripture] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const keyboardInset = useKeyboardInset();
 
   useEffect(() => { loadPeople(); }, []);
+
+  useEffect(() => {
+    if (keyboardInset === 0 || !(document.activeElement instanceof HTMLElement)) return;
+    keepFieldAboveKeyboard(document.activeElement);
+  }, [keyboardInset]);
 
   async function loadPeople() {
     const { data } = await supabase.from('reach_people').select('*').order('created_at', { ascending: false });
@@ -149,21 +156,21 @@ export default function PeoplePrayingScreen({ onBack }: Props) {
   // New person form
   if (showNew) {
     return (
-      <div className="app-container bg-ink-950 bg-parchment min-h-screen flex flex-col">
+      <div className="app-container bg-ink-950 bg-parchment flex flex-col overflow-hidden" style={{ height: `calc(100dvh - ${keyboardInset}px)`, minHeight: 0 }}>
         <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
           <button onClick={() => setShowNew(false)} className="btn-ghost"><X size={20} /></button>
           <p className="ui-label">Add Person</p><span className="w-10" />
         </header>
-        <div className="flex-1 px-6 py-6 animate-fade-in">
+        <div data-keyboard-scroll className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 py-6 animate-fade-in">
           <div className="flex flex-col gap-5">
             <div>
               <label className="text-sm text-ivory-400 mb-2 block">Nickname (required)</label>
-              <input autoFocus type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="Brother, Coworker, Friend" className="input-field" />
+              <input autoFocus type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="Brother, Coworker, Friend" className="input-field" onFocus={revealFieldInKeyboardScroller} />
               <p className="text-ivory-600 text-xs mt-2 leading-relaxed">Do not use real names if you prefer not to. A nickname or label works fine.</p>
             </div>
             <div>
               <label className="text-sm text-ivory-400 mb-2 block">Relationship (optional)</label>
-              <input type="text" value={relationship} onChange={(e) => setRelationship(e.target.value)} placeholder="Brother, Coworker, Spouse" className="input-field" />
+              <input type="text" value={relationship} onChange={(e) => setRelationship(e.target.value)} placeholder="Brother, Coworker, Spouse" className="input-field" onFocus={revealFieldInKeyboardScroller} />
             </div>
             <div>
               <label className="text-sm text-ivory-400 mb-2 block">Spiritual Context (optional)</label>
@@ -179,16 +186,16 @@ export default function PeoplePrayingScreen({ onBack }: Props) {
             </div>
             <div>
               <label className="text-sm text-ivory-400 mb-2 block">Prayer Notes (optional)</label>
-              <textarea value={prayerNotes} onChange={(e) => setPrayerNotes(e.target.value)} placeholder="What are you praying for?" className="input-field min-h-[80px] resize-none" />
+              <textarea value={prayerNotes} onChange={(e) => setPrayerNotes(e.target.value)} placeholder="What are you praying for?" className="input-field min-h-[80px] resize-none" onFocus={revealFieldInKeyboardScroller} />
             </div>
             <div>
               <label className="text-sm text-ivory-400 mb-2 block">Related Scripture (optional)</label>
-              <input type="text" value={scripture} onChange={(e) => setScripture(e.target.value)} placeholder="e.g. Romans 10:1" className="input-field" />
+              <input type="text" value={scripture} onChange={(e) => setScripture(e.target.value)} placeholder="e.g. Romans 10:1" className="input-field" onFocus={revealFieldInKeyboardScroller} />
             </div>
             {error && <div className="premium-card p-3 border-error/30"><p className="text-error text-sm">{error}</p></div>}
           </div>
         </div>
-        <div className="px-6 pb-10 safe-bottom">
+        <div className="px-6 pb-10 pt-3 safe-bottom shrink-0">
           <button onClick={createPerson} disabled={!nickname.trim() || saving} className="btn-primary w-full disabled:opacity-40">
             <Plus size={18} />{saving ? 'Adding...' : 'Add Person'}
           </button>
