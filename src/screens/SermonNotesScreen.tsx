@@ -8,7 +8,7 @@ import {
 } from '@/lib/churchEngine';
 import type { Profile } from '@/lib/types';
 import type { Sermon, SermonNote } from '@/lib/togetherTypes';
-import { useKeyboardInset, revealFocusedField } from '@/hooks/useKeyboardInset';
+import { useKeyboardInset, keepFieldAboveKeyboard, revealFieldInKeyboardScroller } from '@/hooks/useKeyboardInset';
 
 interface Props {
   profile: Profile;
@@ -40,6 +40,11 @@ export default function SermonNotesScreen({
   const [prayer, setPrayer] = useState('');
   const [saving, setSaving] = useState(false);
   const keyboardInset = useKeyboardInset();
+
+  useEffect(() => {
+    if (keyboardInset === 0 || !(document.activeElement instanceof HTMLElement)) return;
+    keepFieldAboveKeyboard(document.activeElement);
+  }, [keyboardInset]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -122,13 +127,13 @@ export default function SermonNotesScreen({
   // Note editor view
   if (activeSermon) {
     return (
-      <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28 flex flex-col" style={keyboardInset > 0 ? { paddingBottom: keyboardInset } : undefined}>
+      <div className="app-container bg-ink-950 bg-parchment flex flex-col overflow-hidden" style={{ height: `calc(100dvh - ${keyboardInset}px)`, minHeight: 0 }}>
         <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
           <button onClick={() => setActiveSermon(null)} className="btn-ghost"><X size={20} /></button>
           <p className="ui-label">Sermon Notes</p><span className="w-10" />
         </header>
 
-        <div className="flex-1 overflow-y-auto px-6 mt-4">
+        <div data-keyboard-scroll className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 mt-4 pb-8">
           <div className="animate-fade-in-up">
             <div className="mb-6">
               <p className="text-xs uppercase tracking-[0.2em] text-gold-400/80 font-medium mb-2">{activeSermon.passage}</p>
@@ -263,7 +268,7 @@ function NoteField({ label, value, onChange, placeholder, minLines = 2 }: { labe
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onFocus={revealFocusedField}
+        onFocus={revealFieldInKeyboardScroller}
         placeholder={placeholder}
         className="input-field resize-none text-sm"
         style={{ minHeight: `${minLines * 40}px` }}

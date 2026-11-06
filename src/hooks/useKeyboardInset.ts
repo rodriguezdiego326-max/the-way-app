@@ -54,3 +54,21 @@ export function revealFocusedField(e: FocusEvent<HTMLElement>): void {
   const el = e.currentTarget;
   window.setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300);
 }
+
+export function keepFieldAboveKeyboard(field: HTMLElement): void {
+  const scroller = field.closest<HTMLElement>('[data-keyboard-scroll]');
+  if (!scroller) return;
+  const margin = 16;
+  const box = scroller.getBoundingClientRect();
+  const target = field.getBoundingClientRect();
+  if (target.bottom > box.bottom - margin) {
+    scroller.scrollTop += target.bottom - box.bottom + margin;
+  } else if (target.top < box.top + margin) {
+    scroller.scrollTop -= box.top + margin - target.top;
+  }
+}
+
+export function revealFieldInKeyboardScroller(e: FocusEvent<HTMLElement>): void {
+  const el = e.currentTarget;
+  window.setTimeout(() => keepFieldAboveKeyboard(el), 350);
+}

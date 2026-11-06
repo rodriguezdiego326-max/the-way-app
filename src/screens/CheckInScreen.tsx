@@ -4,8 +4,20 @@ import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState } from '@/components/States';
 import { createCheckIn, getCheckIns } from '@/lib/togetherEngine';
 import type { Profile } from '@/lib/types';
-import type { Circle, CircleCheckIn } from '@/lib/togetherTypes';
+import type { Circle, CircleCheckIn, CheckInState } from '@/lib/togetherTypes';
 import { CHECK_IN_STATES } from '@/lib/togetherTypes';
+import FeelingChip from '@/components/FeelingChip';
+
+const CHECK_IN_FACES: Record<CheckInState, string> = {
+  Ready: '😐',
+  Heavy: '😔',
+  Worried: '😟',
+  Discouraged: '😞',
+  Grateful: '😊',
+  Struggling: '😣',
+  Questioning: '🤔',
+  Hopeful: '🙂',
+};
 
 interface Props {
   profile: Profile;
@@ -69,13 +81,13 @@ export default function CheckInScreen({ profile, circle, onBack }: Props) {
 
           <div className="grid grid-cols-4 gap-2 mb-4">
             {CHECK_IN_STATES.map((s) => (
-              <button
+              <FeelingChip
                 key={s}
-                onClick={() => { vibrate(8); setState(s); }}
-                className={`mood-chip no-tap-highlight ${state === s ? 'bg-gold-500/10 border-gold-500/40' : ''}`}
-              >
-                <span className={`text-sm font-medium ${state === s ? 'text-gold-300' : 'text-ivory-500'}`}>{s}</span>
-              </button>
+                emoji={CHECK_IN_FACES[s]}
+                label={s}
+                selected={state === s}
+                onSelect={() => setState(s)}
+              />
             ))}
           </div>
 
