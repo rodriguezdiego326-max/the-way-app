@@ -131,10 +131,10 @@ export default function ProfileHubScreen({ profile, onBack, onProfileUpdate }: P
           <span className="w-10" />
         </div>
 
-        <div className="mt-6 flex items-center gap-4 animate-fade-in-up">
+        <div className="mt-6 flex items-center gap-4 rounded-2xl border border-gold-500/30 bg-ink-800 p-4 shadow-md shadow-ink-950/40 animate-fade-in-up">
           <div
             aria-hidden="true"
-            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 border-gold-200 bg-gold-100 font-serif text-2xl text-ink-950 shadow-sm"
+            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 border-gold-400/60 bg-ink-850 font-serif text-2xl text-gold-200 shadow-sm"
           >
             {initial}
           </div>
@@ -142,7 +142,7 @@ export default function ProfileHubScreen({ profile, onBack, onProfileUpdate }: P
             <h1 className="font-serif text-3xl text-ivory-50 tracking-tight truncate">
               {profile.display_name || 'Your Walk'}
             </h1>
-            {profile.season && <p className="text-ivory-500 text-sm mt-1">{profile.season}</p>}
+            {profile.season && <p className="text-ivory-300 text-sm mt-1">{profile.season}</p>}
           </div>
         </div>
       </header>

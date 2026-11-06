@@ -251,6 +251,10 @@ export default function FamilyScreen({ onClose }: FamilyScreenProps) {
           setMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
           setEditingMember(null);
         }}
+        onDeleted={(memberId) => {
+          setMembers((prev) => prev.filter((m) => m.id !== memberId));
+          setEditingMember(null);
+        }}
       />
     );
   }
