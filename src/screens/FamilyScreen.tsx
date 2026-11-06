@@ -270,7 +270,7 @@ export default function FamilyScreen({ onClose }: FamilyScreenProps) {
           <p className="ui-label">Add Family Member</p>
           <span className="w-10" />
         </header>
-        <div className="flex-1 px-6 py-6 animate-fade-in">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pt-6 nav-safe-padding animate-fade-in">
           <div className="flex flex-col gap-5">
             <FamilyMemberFields
               nickname={memberNickname}
@@ -285,13 +285,11 @@ export default function FamilyScreen({ onClose }: FamilyScreenProps) {
                 <p className="text-error text-sm">{memberError}</p>
               </div>
             )}
+            <button onClick={addMember} disabled={addingMember} className="btn-primary w-full disabled:opacity-40">
+              <Plus size={18} />
+              {addingMember ? 'Adding...' : 'Add Family Member'}
+            </button>
           </div>
-        </div>
-        <div className="px-6 pb-10 safe-bottom">
-          <button onClick={addMember} disabled={addingMember} className="btn-primary w-full disabled:opacity-40">
-            <Plus size={18} />
-            {addingMember ? 'Adding...' : 'Add Family Member'}
-          </button>
         </div>
       </div>
     );

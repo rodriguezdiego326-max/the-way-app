@@ -8,6 +8,7 @@ import {
 } from '@/lib/churchEngine';
 import type { Profile } from '@/lib/types';
 import type { Sermon, SermonNote } from '@/lib/togetherTypes';
+import { useKeyboardInset, revealFocusedField } from '@/hooks/useKeyboardInset';
 
 interface Props {
   profile: Profile;
@@ -38,6 +39,7 @@ export default function SermonNotesScreen({
   const [application, setApplication] = useState('');
   const [prayer, setPrayer] = useState('');
   const [saving, setSaving] = useState(false);
+  const keyboardInset = useKeyboardInset();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -120,7 +122,7 @@ export default function SermonNotesScreen({
   // Note editor view
   if (activeSermon) {
     return (
-      <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28 flex flex-col">
+      <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28 flex flex-col" style={keyboardInset > 0 ? { paddingBottom: keyboardInset } : undefined}>
         <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
           <button onClick={() => setActiveSermon(null)} className="btn-ghost"><X size={20} /></button>
           <p className="ui-label">Sermon Notes</p><span className="w-10" />
@@ -261,6 +263,7 @@ function NoteField({ label, value, onChange, placeholder, minLines = 2 }: { labe
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={revealFocusedField}
         placeholder={placeholder}
         className="input-field resize-none text-sm"
         style={{ minHeight: `${minLines * 40}px` }}

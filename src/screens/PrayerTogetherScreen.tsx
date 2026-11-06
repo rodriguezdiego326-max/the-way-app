@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, Plus, Heart, Check, Lock, Users } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';
+import { useKeyboardInset, revealFocusedField } from '@/hooks/useKeyboardInset';
 import {
   createSharedPrayer, getSharedPrayers, updatePrayerStatus,
   acknowledgePrayer, getAcknowledgementCount,
@@ -28,6 +29,7 @@ export default function PrayerTogetherScreen({ profile, circle, onBack }: Props)
   const [creating, setCreating] = useState(false);
   const [prayedSet, setPrayedSet] = useState<Set<string>>(new Set());
   const [prayerCounts, setPrayerCounts] = useState<Record<string, number>>({});
+  const keyboardInset = useKeyboardInset();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -189,7 +191,7 @@ export default function PrayerTogetherScreen({ profile, circle, onBack }: Props)
 
       {/* Create prayer modal */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowCreate(false)}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm transition-[padding] duration-200" style={{ paddingBottom: keyboardInset }} onClick={() => setShowCreate(false)}>
           <div className="w-full max-w-md bg-ink-900 rounded-t-3xl p-6 animate-fade-in-up max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-serif text-xl text-ivory-50">Share a Prayer Request</h3>
@@ -209,9 +211,9 @@ export default function PrayerTogetherScreen({ profile, circle, onBack }: Props)
                   )}
                 </div>
               </div>
-              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Prayer title" className="input-field" autoFocus />
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What would you like prayer for?" className="input-field min-h-[80px] resize-none text-sm" />
-              <input value={scripture} onChange={(e) => setScripture(e.target.value)} placeholder="Related Scripture (optional)" className="input-field" />
+              <input value={title} onChange={(e) => setTitle(e.target.value)} onFocus={revealFocusedField} placeholder="Prayer title" className="input-field" autoFocus />
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} onFocus={revealFocusedField} placeholder="What would you like prayer for?" className="input-field min-h-[80px] resize-none text-sm" />
+              <input value={scripture} onChange={(e) => setScripture(e.target.value)} onFocus={revealFocusedField} placeholder="Related Scripture (optional)" className="input-field" />
               <button onClick={handleCreate} disabled={creating || !title.trim()} className="btn-primary w-full disabled:opacity-40">
                 <Plus size={16} /> {creating ? 'Sharing...' : 'Share Prayer'}
               </button>

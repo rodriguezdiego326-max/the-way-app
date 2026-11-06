@@ -831,9 +831,9 @@ function localizeReference(ref: string, translation: string): string {
         </h2>
         <div className="grid grid-cols-4 gap-2">
           {moods.map((mood) => (
-            <button key={mood.id} onClick={() => { vibrate(8); setSelectedMood(mood.id); setContextText(''); setContextSaved(false); setRememberContext(false); }} className={`mood-chip no-tap-highlight ${selectedMood === mood.id ? 'bg-gold-500/10 border-gold-500/40' : ''}`}>
-              <span aria-hidden="true" className="text-2xl leading-none">{mood.emoji}</span>
-              <span className={`text-[11px] font-medium ${selectedMood === mood.id ? 'text-ivory-50' : 'text-ivory-400'}`}>{copy.moods[mood.id]}</span>
+            <button key={mood.id} aria-pressed={selectedMood === mood.id} onClick={() => { vibrate(8); setSelectedMood(mood.id); setContextText(''); setContextSaved(false); setRememberContext(false); }} className={`mood-chip no-tap-highlight ${selectedMood === mood.id ? 'bg-gold-500/10 border-gold-500/50 shadow-md shadow-gold-500/10' : ''}`}>
+              <span aria-hidden="true" className={`flex h-12 w-12 items-center justify-center rounded-full border text-2xl leading-none transition-colors duration-300 ${selectedMood === mood.id ? 'border-gold-400/60 bg-ink-850' : 'border-ink-700/50 bg-ink-900/60'}`}>{mood.emoji}</span>
+              <span className={`text-[11px] font-medium text-center leading-tight ${selectedMood === mood.id ? 'text-ivory-50' : 'text-ivory-400'}`}>{copy.moods[mood.id]}</span>
             </button>
           ))}
         </div>

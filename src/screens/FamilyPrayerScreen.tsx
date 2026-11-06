@@ -199,7 +199,7 @@ export default function FamilyPrayerScreen({ familyProfile, onBack }: FamilyPray
           <p className="ui-label">New Family Prayer</p>
           <span className="w-10" />
         </header>
-        <div className="flex-1 px-6 py-6 animate-fade-in">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pt-6 nav-safe-padding animate-fade-in">
           <div className="flex flex-col gap-5">
             <div>
               <label className="text-sm text-ivory-400 mb-2 block">Title</label>
@@ -213,13 +213,11 @@ export default function FamilyPrayerScreen({ familyProfile, onBack }: FamilyPray
               <label className="text-sm text-ivory-400 mb-2 block">Related Scripture (optional)</label>
               <input type="text" value={scripture} onChange={(e) => setScripture(e.target.value)} placeholder="e.g. Philippians 4:6–7" className="input-field" />
             </div>
+            <button onClick={createPrayer} disabled={!title.trim()} className="btn-primary w-full disabled:opacity-40">
+              <Heart size={18} />
+              Begin Praying Together
+            </button>
           </div>
-        </div>
-        <div className="px-6 pb-10 safe-bottom">
-          <button onClick={createPrayer} disabled={!title.trim()} className="btn-primary w-full disabled:opacity-40">
-            <Heart size={18} />
-            Begin Praying Together
-          </button>
         </div>
       </div>
     );

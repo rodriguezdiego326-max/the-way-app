@@ -113,7 +113,7 @@ export default function ProdigalJourneyScreen({ onBack }: Props) {
           <button onClick={() => setShowNew(false)} className="btn-ghost"><X size={20} /></button>
           <p className="ui-label">New Prodigal Journey</p><span className="w-10" />
         </header>
-        <div className="flex-1 px-6 py-6 animate-fade-in">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pt-6 nav-safe-padding animate-fade-in">
           <div className="flex flex-col gap-5">
             <div>
               <label className="text-sm text-ivory-400 mb-2 block">Nickname (required)</label>
@@ -132,12 +132,10 @@ export default function ProdigalJourneyScreen({ onBack }: Props) {
               <input type="text" value={scripture} onChange={(e) => setScripture(e.target.value)} placeholder="e.g. Luke 15:11–32" className="input-field" />
             </div>
             {error && <div className="premium-card p-3 border-error/30"><p className="text-error text-sm">{error}</p></div>}
+            <button onClick={createJourney} disabled={!nickname.trim() || saving} className="btn-primary w-full disabled:opacity-40">
+              <Compass size={18} />{saving ? 'Creating...' : 'Begin Journey'}
+            </button>
           </div>
-        </div>
-        <div className="px-6 pb-10 safe-bottom">
-          <button onClick={createJourney} disabled={!nickname.trim() || saving} className="btn-primary w-full disabled:opacity-40">
-            <Compass size={18} />{saving ? 'Creating...' : 'Begin Journey'}
-          </button>
         </div>
       </div>
     );
