@@ -357,7 +357,7 @@ export default function BibleModeScreen({
             <Sparkles size={16} className="text-gold-400 shrink-0 mt-0.5" />
             <div>
               <p className="text-ivory-200 text-sm leading-relaxed mb-2">
-                You've spent time in Scripture. Now SOLAPATH can help you go deeper — context, Reformed understanding, confessional witness, and application.
+                You've spent time in Scripture. Now SOLAPATH can help you go deeper — context, theological understanding, historic witness, and application.
               </p>
               <p className="text-ivory-600 text-xs">
                 AI Integration Pending — full theological response engine connects here.

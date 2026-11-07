@@ -30,7 +30,7 @@ export default function GospelFoundationsScreen({ onBack }: Props) {
 
           <div className="flex items-start gap-2 mb-4 px-3 py-2 rounded-xl bg-ink-800/40 border border-ink-700/30">
             <Sparkles size={13} className="text-gold-400/60 shrink-0 mt-0.5" />
-            <p className="text-ivory-500 text-xs leading-relaxed">Reformed theology clearly affirms God's sovereignty and grace without turning the Gospel into a denominational argument.</p>
+            <p className="text-ivory-500 text-xs leading-relaxed">Scripture and the historic church affirm God's sovereignty and grace, and SOLAPATH presents these truths without turning the Gospel into a denominational argument.</p>
           </div>
 
           {/* Pathway */}

@@ -215,7 +215,7 @@ export default function FamilyWalkScreen({ walk, familyProfile, onBack }: Family
                 <div className="mt-2 space-y-2 animate-fade-in">
                   <PrepCard label="Main Truth" content={walk.parent_prep.main_truth} />
                   <PrepCard label="Biblical Context" content={walk.parent_prep.biblical_context} />
-                  <PrepCard label="Reformed Foundation" content={walk.parent_prep.reformed_foundation} authority="historic_theology" />
+                  <PrepCard label="Biblical Foundation" content={walk.parent_prep.reformed_foundation} authority="historic_theology" />
                   <PrepCard label="Words Children May Ask About" content={walk.parent_prep.words_children_may_ask_about} />
                   <PrepCard label="Common Misunderstanding" content={walk.parent_prep.common_misunderstanding} />
                   <PrepCard label="One Thing to Emphasize" content={walk.parent_prep.one_thing_to_emphasize} />

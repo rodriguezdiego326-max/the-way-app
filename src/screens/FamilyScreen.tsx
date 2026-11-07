@@ -12,6 +12,7 @@ import ChildAskedScreen from '@/screens/ChildAskedScreen';
 import CatechismScreen from '@/screens/CatechismScreen';
 import FamilyJourneyScreen from '@/screens/FamilyJourneyScreen';
 import ParentGuideScreen from '@/screens/ParentGuideScreen';
+import type { ChildAskedHandoff } from '@/lib/askHandoff';
 import FamilyPrayerScreen from '@/screens/FamilyPrayerScreen';
 import EditFamilyMemberScreen from '@/screens/EditFamilyMemberScreen';
 import FamilyMemberFields from '@/components/FamilyMemberFields';
@@ -20,9 +21,10 @@ type SubView = 'main' | 'walk' | 'child_asked' | 'catechism' | 'journey' | 'pare
 
 interface FamilyScreenProps {
   onClose: () => void;
+  onAskHandoff: (handoff: ChildAskedHandoff) => void;
 }
 
-export default function FamilyScreen({ onClose }: FamilyScreenProps) {
+export default function FamilyScreen({ onClose, onAskHandoff }: FamilyScreenProps) {
   const [subView, setSubView] = useState<SubView>('main');
   const [familyProfile, setFamilyProfile] = useState<FamilyProfile | null>(null);
   const [members, setMembers] = useState<FamilyMember[]>([]);
@@ -183,7 +185,7 @@ export default function FamilyScreen({ onClose }: FamilyScreenProps) {
     return <FamilyWalkScreen walk={walkRec} familyProfile={familyProfile} onBack={() => setSubView('main')} />;
   }
   if (subView === 'child_asked') {
-    return <ChildAskedScreen members={members} onBack={() => setSubView('main')} />;
+    return <ChildAskedScreen members={members} onBack={() => setSubView('main')} onHelpMeAnswer={onAskHandoff} />;
   }
   if (subView === 'catechism') {
     return <CatechismScreen familyProfile={familyProfile} onBack={() => setSubView('main')} />;

@@ -311,7 +311,7 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
             <div>
               <h2 className="font-serif text-2xl text-ivory-50">Theological Library</h2>
               <p className="text-ivory-500 text-sm mt-1 leading-relaxed">
-                Metadata for historic Reformed theologians, selected teachers, and confessional documents. No quotations or source text — verified content connects later.
+                Metadata for historic theologians, selected teachers, and confessional documents. No quotations or source text — verified content connects later.
               </p>
             </div>
           </div>

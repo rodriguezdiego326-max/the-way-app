@@ -106,7 +106,7 @@ export default function TheyAskedMeScreen({ onBack }: Props) {
                 </div>
               </div>
 
-              <Section icon={ShieldCheck} title="Reformed Foundation" content={response.reformed_foundation} />
+              <Section icon={ShieldCheck} title="Biblical Foundation" content={response.reformed_foundation} />
 
               {response.other_christian_views && (
                 <Section icon={Info} title="Other Christian Views" content={response.other_christian_views} />

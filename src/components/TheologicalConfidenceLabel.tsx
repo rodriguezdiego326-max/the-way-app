@@ -12,7 +12,7 @@ const config: Record<TheologicalConfidence, { label: string; color: string; bg: 
     border: 'border-gold-500/30',
   },
   CONFESSIONAL_REFORMED_POSITION: {
-    label: 'Confessional Reformed Position',
+    label: 'Confessional Position',
     color: 'text-sage-400',
     bg: 'bg-sage-500/10',
     border: 'border-sage-500/30',

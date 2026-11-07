@@ -253,7 +253,7 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
 
         {/* Reformed Theology Familiarity */}
         <section className="mb-6">
-          <p className="ui-label mb-3">Reformed Theology Familiarity</p>
+          <p className="ui-label mb-3">Theology Familiarity</p>
           <div className="flex flex-col gap-2">
             {familiarityOptions.map((f) => (
               <button

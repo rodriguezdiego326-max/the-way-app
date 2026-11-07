@@ -21,7 +21,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import WelcomeScreen from '@/components/WelcomeScreen';
 import BrandMark from '@/components/BrandMark';
 import type { BibleTranslation } from '@/lib/bibleTypes';
-import type { AskHandoffContext } from '@/lib/askHandoff';
+import type { AskHandoffContext, ChildAskedHandoff } from '@/lib/askHandoff';
 
 const DevOverlayRenderer = import.meta.env.DEV
   ? lazy(() => import('@/components/DevOverlayRenderer'))
@@ -156,7 +156,7 @@ export default function App() {
   const [session, setSession] = useState<{ user: { id: string; email?: string } | null } | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
-  const [askContext, setAskContext] = useState<string | AskHandoffContext | null>(null);
+  const [askContext, setAskContext] = useState<string | AskHandoffContext | ChildAskedHandoff | null>(null);
   const [activeAskConversationId, setActiveAskConversationId] = useState<string | null>(null);
   const [askKeyboardOpen, setAskKeyboardOpen] = useState(false);
   const [activeChurchId, setActiveChurchId] = useState<string | null>(null);
@@ -435,7 +435,14 @@ export default function App() {
     return (
       <ErrorBoundary>
         <>
-          <FamilyScreen onClose={() => setOverlay({ type: 'none' })} />
+          <FamilyScreen
+            onClose={() => setOverlay({ type: 'none' })}
+            onAskHandoff={(handoff) => {
+              setOverlay({ type: 'none' });
+              setActiveTab('ask');
+              setAskContext(handoff);
+            }}
+          />
           <BottomNav
             active={activeTab}
             onChange={(tab) => {
@@ -733,7 +740,7 @@ export default function App() {
         setActiveTab('ask');
         setAskContext(ref);
       }} />}
-      {activeTab === 'ask' && <AskScreen theologicalDepth={profile?.theological_depth || 'simple'} profile={profile} onProfileUpdate={handleProfileUpdate} onOpenBibleReference={handleOpenBibleReference} initialContext={askContext} onContextConsumed={() => setAskContext(null)} onKeyboardVisibilityChange={setAskKeyboardOpen} activeConversationId={activeAskConversationId} onConversationChange={setActiveAskConversationId} translation={globalTranslation} onTranslationChange={handleTranslationChange} />}
+      {activeTab === 'ask' && <AskScreen theologicalDepth={profile?.theological_depth || 'simple'} profile={profile} onProfileUpdate={handleProfileUpdate} onOpenBibleReference={handleOpenBibleReference} initialContext={askContext} onContextConsumed={() => setAskContext(null)} onKeyboardVisibilityChange={setAskKeyboardOpen} activeConversationId={activeAskConversationId} onConversationChange={setActiveAskConversationId} translation={globalTranslation} onTranslationChange={handleTranslationChange} onBackToFamily={() => setOverlay({ type: 'family' })} />}
 
       {activeTab === 'prayer' && <PrayerScreen profile={profile} />}
       {activeTab === 'explore' && <YouScreen profile={profile} onProfileUpdate={handleProfileUpdate} session={session} onSignOut={handleSignOut} onOpenFamily={() => setOverlay({ type: 'family' })} onOpenReach={() => setOverlay({ type: 'reach' })} onOpenLibrarySearch={() => setOverlay({ type: 'library_search' })} onOpenTogether={() => setOverlay({ type: 'together' })} onOpenMyChurch={() => setOverlay({ type: 'my_church' })} onOpenLegacy={() => setOverlay({ type: 'legacy_home' })} onOpenPrivacyCenter={() => setOverlay({ type: 'privacy_center' })} onOpenBetaFeedback={() => setOverlay({ type: 'beta_feedback' })} {...(import.meta.env.DEV ? { onOpenAdminSources: () => setOverlay({ type: 'admin_sources' }), onOpenRetrievalDebug: () => setOverlay({ type: 'retrieval_debug' }), onOpenRAGTests: () => setOverlay({ type: 'rag_tests' }), onOpenPhase6Tests: () => setOverlay({ type: 'phase6_tests' }), onOpenQADashboard: () => setOverlay({ type: 'qa_dashboard' }), onOpenSourceBatches: () => setOverlay({ type: 'source_batches' }), onOpenReleaseGate: () => setOverlay({ type: 'release_gate' }), onOpenProductionStatus: () => setOverlay({ type: 'production_status' }), onOpenPhase8Tests: () => setOverlay({ type: 'phase8_tests' }), onOpenPhase9Tests: () => setOverlay({ type: 'phase9_tests' }), onOpenProductionReadiness: () => setOverlay({ type: 'production_readiness' }), onOpenPhase10Tests: () => setOverlay({ type: 'phase10_tests' }) } : {})} />}

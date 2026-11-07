@@ -9,7 +9,7 @@ import BiblicalBasis from '@/components/BiblicalBasis';
 import MemoryProposalCard from '@/components/MemoryProposalCard';
 import { fetchIntelligenceResponse, isMemoryEnabled, retrieveStudyMemoryEvidence } from '@/lib/intelligenceService';
 import { useAiConsentGate } from '@/hooks/useAiConsentGate';
-import { isAskHandoffContext, buildHandoffPrompt, type AskHandoffContext } from '@/lib/askHandoff';
+import { isAskHandoffContext, buildHandoffPrompt, isChildAskedHandoff, buildChildAskedPrompt, type AskHandoffContext, type ChildAskedHandoff } from '@/lib/askHandoff';
 import type { AskIntent, Profile } from '@/lib/types';
 import type { StructuredTheologicalResponse, VerificationState, StudyMemoryEvidence, PersonalContextItem, PersonalClaim } from '@/lib/intelligenceTypes';
 import ScriptureBlock from '@/components/ScriptureBlock';
@@ -132,7 +132,7 @@ interface AskScreenProps {
   theologicalDepth: string;
   profile: Profile | null;
   onOpenBibleReference: (book: string, chapter: number, verseStart: number | null, verseEnd: number | null) => void;
-  initialContext?: string | AskHandoffContext | null;
+  initialContext?: string | AskHandoffContext | ChildAskedHandoff | null;
   onContextConsumed?: () => void;
   onKeyboardVisibilityChange?: (visible: boolean) => void;
   activeConversationId?: string | null;
@@ -140,9 +140,10 @@ interface AskScreenProps {
   translation: BibleTranslation;
   onTranslationChange: (tr: BibleTranslation) => void;
   onProfileUpdate?: () => void;
+  onBackToFamily?: () => void;
 }
 
-export default function AskScreen({ theologicalDepth, profile, onOpenBibleReference, initialContext, onContextConsumed, onKeyboardVisibilityChange, activeConversationId, onConversationChange, translation, onTranslationChange, onProfileUpdate }: AskScreenProps) {
+export default function AskScreen({ theologicalDepth, profile, onOpenBibleReference, initialContext, onContextConsumed, onKeyboardVisibilityChange, activeConversationId, onConversationChange, translation, onTranslationChange, onProfileUpdate, onBackToFamily }: AskScreenProps) {
   const { ensureAiConsent, consentDialog } = useAiConsentGate(profile, onProfileUpdate);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [emptyComposerFocused, setEmptyComposerFocused] = useState(false);
@@ -156,6 +157,7 @@ export default function AskScreen({ theologicalDepth, profile, onOpenBibleRefere
   const [dismissedProposals, setDismissedProposals] = useState<Set<string>>(new Set());
   const [showSourceViewer, setShowSourceViewer] = useState(false);
   const [showBiblicalBasis, setShowBiblicalBasis] = useState(false);
+  const [familyHandoffActive, setFamilyHandoffActive] = useState(false);
   const [activeResponseForModal, setActiveResponseForModal] = useState<StructuredTheologicalResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showConcernReport, setShowConcernReport] = useState(false);
@@ -485,6 +487,9 @@ export default function AskScreen({ theologicalDepth, profile, onOpenBibleRefere
     if (initialContext && !latest.conversationId && !latest.conversationStarted) {
       if (isAskHandoffContext(initialContext)) {
         latest.startConversation('passage', buildHandoffPrompt(initialContext));
+      } else if (isChildAskedHandoff(initialContext)) {
+        setFamilyHandoffActive(true);
+        latest.startConversation('passage', buildChildAskedPrompt(initialContext));
       } else {
         latest.startConversation('passage', `Help me understand ${initialContext}`);
       }
@@ -853,6 +858,15 @@ export default function AskScreen({ theologicalDepth, profile, onOpenBibleRefere
             </button>
 
             <div className="flex items-center gap-1.5">
+              {familyHandoffActive && onBackToFamily && (
+                <button
+                  onClick={() => { vibrate(6); setFamilyHandoffActive(false); onBackToFamily(); }}
+                  className="h-9 px-3 rounded-full bg-ink-800/40 backdrop-blur-sm border border-ink-600/20 flex items-center gap-1.5 text-ivory-300 hover:text-ivory-100 transition-colors no-tap-highlight text-xs font-medium"
+                >
+                  <ChevronLeft size={15} />
+                  Back to Family
+                </button>
+              )}
               <button
                 onClick={() => { vibrate(6); loadConversationList(); setShowChatHistory(true); }}
                 aria-label={t.chatHistory}
@@ -1157,7 +1171,7 @@ export default function AskScreen({ theologicalDepth, profile, onOpenBibleRefere
                   {[
                     { value: 'misused_scripture', label: 'Misused Scripture' },
                     { value: 'incorrect_theology', label: 'Incorrect theology' },
-                    { value: 'misrepresented_reformed', label: 'Misrepresented Reformed position' },
+                    { value: 'misrepresented_reformed', label: 'Misrepresented confessional position' },
                     { value: 'misrepresented_other_view', label: 'Misrepresented another Christian view' },
                     { value: 'fake_citation', label: 'Fake / incorrect citation' },
                     { value: 'unsafe_pastoral', label: 'Unsafe pastoral advice' },

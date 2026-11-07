@@ -3,19 +3,26 @@ import { X, Scroll, ChevronDown, BookOpen, Heart, Check, Info } from 'lucide-rea
 import { supabase } from '@/lib/supabase';
 import { vibrate } from '@/lib/utils';
 import {
+  CATECHISM_AGE_BANDS,
   westminsterShorterCatechism,
   heidelbergCatechism,
   type CatechismQuestion,
-} from '@/lib/familyEngine';
-import type { FamilyProfile, CatechismProgress, CatechismType } from '@/lib/familyTypes';
+} from '@/lib/catechismData';
+import type { AgeRange, FamilyProfile, CatechismProgress, CatechismType } from '@/lib/familyTypes';
 
 interface CatechismScreenProps {
   familyProfile: FamilyProfile | null;
   onBack: () => void;
 }
 
+const SOURCE_LABEL: Record<CatechismType, string> = {
+  westminster_shorter: 'Westminster Shorter Catechism (1647)',
+  heidelberg: 'Heidelberg Catechism (1563)',
+};
+
 export default function CatechismScreen({ familyProfile, onBack }: CatechismScreenProps) {
   const [selectedType, setSelectedType] = useState<CatechismType>('westminster_shorter');
+  const [ageRange, setAgeRange] = useState<AgeRange>('6-8');
   const [progress, setProgress] = useState<CatechismProgress[]>([]);
   const [expandedQ, setExpandedQ] = useState<number | null>(null);
 
@@ -59,7 +66,7 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
         question: q.question,
         answer: q.answer,
         scripture_basis: q.scripture_basis,
-        explanation: q.explanation,
+        explanation: q.explanations[ageRange],
         discussion_question: q.discussion_question,
         family_application: q.family_application,
         prayer: q.prayer,
@@ -72,6 +79,7 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
   }
 
   const completedCount = progress.filter((p) => p.completed).length;
+  const ageLabel = CATECHISM_AGE_BANDS.find((b) => b.value === ageRange)?.label ?? ageRange;
 
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28 flex flex-col">
@@ -97,12 +105,12 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
             </div>
           </div>
 
-          {/* Catechism selector */}
           <div className="flex gap-2 mb-5">
             <button
               onClick={() => {
                 vibrate(6);
                 setSelectedType('westminster_shorter');
+                setExpandedQ(null);
               }}
               className={`flex-1 py-3 rounded-xl border text-sm font-medium transition-all no-tap-highlight ${
                 selectedType === 'westminster_shorter'
@@ -116,6 +124,7 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
               onClick={() => {
                 vibrate(6);
                 setSelectedType('heidelberg');
+                setExpandedQ(null);
               }}
               className={`flex-1 py-3 rounded-xl border text-sm font-medium transition-all no-tap-highlight ${
                 selectedType === 'heidelberg'
@@ -127,7 +136,27 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
             </button>
           </div>
 
-          {/* Progress */}
+          <p className="ui-label mb-2">Age of your child</p>
+          <div className="flex flex-wrap gap-2 mb-5">
+            {CATECHISM_AGE_BANDS.map((band) => (
+              <button
+                key={band.value}
+                onClick={() => {
+                  vibrate(6);
+                  setAgeRange(band.value);
+                }}
+                aria-pressed={ageRange === band.value}
+                className={`px-3.5 py-2 rounded-full border text-xs font-medium transition-all no-tap-highlight ${
+                  ageRange === band.value
+                    ? 'bg-gold-500/10 border-gold-500/40 text-ivory-50'
+                    : 'bg-ink-800/40 border-ink-700/40 text-ivory-400'
+                }`}
+              >
+                {band.label}
+              </button>
+            ))}
+          </div>
+
           <div className="flex items-center gap-2 mb-4">
             <div className="flex-1 h-1.5 rounded-full bg-ink-700/40 overflow-hidden">
               <div
@@ -142,7 +171,6 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
             Progress sequentially, at your family's pace. This is not a competition.
           </p>
 
-          {/* Questions */}
           <div className="space-y-2">
             {catechism.map((q) => {
               const completed = isCompleted(q.number);
@@ -168,7 +196,6 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
                       </div>
                       <div className="flex-1">
                         <p className="text-ivory-100 text-sm font-medium leading-relaxed">{q.question}</p>
-                        <p className="text-ivory-400 text-xs mt-1 leading-relaxed italic">{q.answer}</p>
                       </div>
                     </div>
                     <ChevronDown size={16} className={`text-ivory-500 transition-transform shrink-0 mt-1 ${isExpanded ? 'rotate-180' : ''}`} />
@@ -178,31 +205,32 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
                     <div className="px-4 pb-4 animate-fade-in">
                       <div className="gold-divider mb-3" />
 
-                      {/* Scripture basis */}
+                      <div className="mb-3 rounded-xl bg-ink-800/40 border border-ink-700/40 p-3">
+                        <p className="ui-label mb-1">Original Catechism</p>
+                        <p className="text-ivory-200 text-sm leading-relaxed italic">{q.answer}</p>
+                        <p className="text-ivory-600 text-xs mt-2">{SOURCE_LABEL[selectedType]}</p>
+                      </div>
+
                       <div className="flex items-center gap-2 mb-3">
                         <BookOpen size={13} className="text-gold-400/60" />
                         <p className="text-ivory-400 text-xs">{q.scripture_basis}</p>
                       </div>
 
-                      {/* Explanation */}
                       <div className="mb-3">
-                        <p className="ui-label mb-1">Explain to My Child</p>
-                        <p className="text-ivory-300 text-sm leading-relaxed">{q.explanation}</p>
+                        <p className="ui-label mb-1">SOLAPATH Age-Appropriate Explanation ({ageLabel})</p>
+                        <p className="text-ivory-300 text-sm leading-relaxed">{q.explanations[ageRange]}</p>
                       </div>
 
-                      {/* Discussion */}
                       <div className="mb-3">
                         <p className="ui-label mb-1">Discuss Together</p>
                         <p className="text-ivory-300 text-sm leading-relaxed">{q.discussion_question}</p>
                       </div>
 
-                      {/* Family application */}
                       <div className="mb-3">
                         <p className="ui-label mb-1">Family Application</p>
                         <p className="text-ivory-300 text-sm leading-relaxed">{q.family_application}</p>
                       </div>
 
-                      {/* Prayer */}
                       <div className="mb-4">
                         <div className="flex items-center gap-2 mb-1">
                           <Heart size={13} className="text-gold-400/60" />
@@ -238,7 +266,7 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
           <div className="flex items-start gap-2 mt-5 px-1">
             <Info size={13} className="text-gold-400/60 shrink-0 mt-0.5" />
             <p className="text-ivory-600 text-xs leading-relaxed">
-              Public-domain catechisms only. No copyrighted modern catechisms are ingested without rights. Verified source text will be added through legal channels.
+              The original catechism wording is shown exactly as published. SOLAPATH explanations are written to help you teach each question at your child's age and are not part of the historic text.
             </p>
           </div>
         </div>

@@ -126,16 +126,3 @@ export interface JourneyPathwayInfo {
   lessons: JourneyLesson[];
   available: boolean;
 }
-
-import type { Citation } from './libraryTypes';
-
-export interface ChildAskedResponse {
-  understand_it_yourself: string;
-  open_the_bible_together: Array<{ reference: string; reason: string }>;
-  how_to_explain_it: string;
-  ask_them: string[];
-  they_may_ask_next: string[];
-  reformed_foundation: string;
-  sources: Citation[];
-  is_demo: boolean;
-}
