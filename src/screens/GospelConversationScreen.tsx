@@ -67,7 +67,7 @@ export default function GospelConversationScreen({ onBack }: Props) {
               {prep.is_demo && (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-ink-800/50 border border-ink-700/40">
                   <Info size={13} className="text-ivory-500 shrink-0" />
-                  <p className="text-ivory-500 text-xs">Development Mode — Demo content</p>
+                  <p className="text-ivory-500 text-xs">Sample guidance, not a personal response to your situation.</p>
                 </div>
               )}
 

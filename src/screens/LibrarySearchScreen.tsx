@@ -76,7 +76,7 @@ export default function LibrarySearchScreen({ onBack }: Props) {
 
           <div className="flex items-start gap-2 mb-4 px-3 py-2 rounded-xl bg-ink-800/40 border border-ink-700/30">
             <Info size={13} className="text-gold-400/60 shrink-0 mt-0.5" />
-            <p className="text-ivory-500 text-xs leading-relaxed">Library Development Mode — showing actual metadata structure and retrieval behavior. No fabricated theological content.</p>
+            <p className="text-ivory-500 text-xs leading-relaxed">Results show each matching source and how it was found.</p>
           </div>
 
           <div className="flex gap-2 mb-3">

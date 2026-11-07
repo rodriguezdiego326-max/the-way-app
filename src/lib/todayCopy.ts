@@ -33,7 +33,7 @@ const COPY = {
       unsure: 'Unsure',
     } as Record<string, string>,
     quote: '"The Bible is not merely to be read, but to be opened, pondered, and lived."',
-    quoteAttribution: '— Development content',
+    quoteAttribution: '— SOLAPATH',
   },
   es: {
     greeting: (hour: number) => (hour < 12 ? 'Buenos días' : hour < 17 ? 'Buenas tardes' : 'Buenas noches'),

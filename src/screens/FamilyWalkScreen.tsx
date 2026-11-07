@@ -286,11 +286,6 @@ export default function FamilyWalkScreen({ walk, familyProfile, onBack }: Family
                 </div>
               </div>
 
-              {walk.is_demo && (
-                <p className="text-ivory-600 text-xs mt-4 italic">
-                  Development content — verified theological sources connect here.
-                </p>
-              )}
             </div>
           </div>
         )}

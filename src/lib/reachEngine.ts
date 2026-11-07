@@ -184,12 +184,12 @@ export const practiceScenarios: PracticeScenario[] = [
     description: 'A friend who does not trust the Bible.',
     objection: "I don't believe the Bible is trustworthy. It's been copied and changed too many times. How can you base your life on a book like that?",
     coaching: {
-      what_you_addressed_well: 'Development content — SOLAPATH will analyze your response after the full intelligence engine is connected.',
-      what_you_may_have_missed: 'Development content — coaching will highlight areas you may have missed, such as historical evidence, listening, or Gospel connection.',
+      what_you_addressed_well: 'Look for what you did well: a patient tone, a clear answer, and a question that invited more conversation.',
+      what_you_may_have_missed: 'Consider whether you answered the real concern underneath the objection, such as hurt, fear, or a past experience with the Bible or church.',
       listening: 'Did you ask your friend what they mean by "changed"? Differentiating between textual variants and fundamental corruption is important. Did you listen before answering?',
       gospel_connection: 'The reliability of Scripture matters because it is through Scripture that we know Christ. The goal is not winning an argument about manuscripts but pointing to Jesus.',
       scripture_to_study: '2 Timothy 3:16–17; 2 Peter 1:20–21; John 10:35',
-      apologetics_resources: 'Development content — verified apologetics resources will be connected through SOLAPATH\'s approved library.',
+      apologetics_resources: 'Ask what kind of evidence would matter to your friend, then read a Gospel account together and talk about what it shows about Jesus.',
     },
   },
   {
@@ -198,12 +198,12 @@ export const practiceScenarios: PracticeScenario[] = [
     description: 'A friend who lost a child and is angry at God.',
     objection: 'My daughter died. She was eight years old. And you are telling me God is good? If your God exists, He took my child. I want nothing to do with Him.',
     coaching: {
-      what_you_addressed_well: 'Development content — SOLAPATH will analyze your response after the full intelligence engine is connected.',
+      what_you_addressed_well: 'Notice whether you stayed with your friend in the loss before you spoke about God.',
       what_you_may_have_missed: 'In situations of profound grief, the primary calling is compassion and presence, not argument. Did you acknowledge the pain before offering any explanation?',
       listening: 'Did you listen more than you spoke? In grief, people need presence, not answers. Did you avoid shallow clichés like "everything happens for a reason"?',
       gospel_connection: 'The Gospel does not promise a pain-free life. It promises a God who entered into suffering in Christ and who promises to make all things new. But this truth must be shared with timing and tenderness.',
       scripture_to_study: 'John 11:33–36 (Jesus wept); Revelation 21:1–4; Lamentations 3:31–33',
-      apologetics_resources: 'Development content — verified resources on suffering and the Gospel will be connected through SOLAPATH\'s approved library.',
+      apologetics_resources: 'Read Lamentations 3 or Psalm 77 slowly together and let the honest laments of Scripture give your friend room to grieve.',
     },
   },
   {
@@ -212,12 +212,12 @@ export const practiceScenarios: PracticeScenario[] = [
     description: 'Someone who left Christianity after being hurt by a church.',
     objection: 'I grew up in the church. The pastor was controlling and manipulative. The leaders covered up abuse. I do not want anything to do with Christianity anymore.',
     coaching: {
-      what_you_addressed_well: 'Development content — SOLAPATH will analyze your response after the full intelligence engine is connected.',
+      what_you_addressed_well: 'Notice whether you named the harm plainly rather than defending the institution.',
       what_you_may_have_missed: 'Did you distinguish between the failures of human institutions and the truth of Christ? Did you acknowledge the real harm without dismissing it or defending the institution?',
       listening: 'Did you let them share their experience fully before responding? Church hurt is real and deep. Did you avoid minimizing or defending?',
       gospel_connection: 'Jesus warned about false shepherds and religious hypocrisy (Matthew 23). The church\'s failures do not disprove Christ — they confirm the human sin He came to address. But this must be shared with humility, not defensiveness.',
       scripture_to_study: 'Matthew 23:1–36; 1 Peter 2:21–25; Hebrews 13:7',
-      apologetics_resources: 'Development content — verified resources on church hurt and healing will be connected through SOLAPATH\'s approved library.',
+      apologetics_resources: 'Ask what healing would look like for your friend, then point to the Lord who binds up the brokenhearted (Psalm 147:3).',
     },
   },
 ];

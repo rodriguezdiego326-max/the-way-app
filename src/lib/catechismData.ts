@@ -128,7 +128,7 @@ export const westminsterShorterCatechism: CatechismQuestion[] = [
     number: 7,
     question: 'What are the decrees of God?',
     answer: 'The decrees of God are, his eternal purpose, according to the counsel of his will, whereby, for his own glory, he hath foreordained whatsoever comes to pass.',
-    scripture_basis: 'Ephesians 1:11; Acts 2:23',
+    scripture_basis: 'Ephesians 1:4, 11; Romans 9:22-23',
     explanations: {
       '3-5': 'God has a plan for everything that happens. Nothing surprises Him.',
       '6-8': 'God planned everything that will happen, and He planned it for His own glory. His plan is wise and good, and nothing happens outside of it.',
@@ -145,7 +145,7 @@ export const westminsterShorterCatechism: CatechismQuestion[] = [
     number: 8,
     question: 'How doth God execute his decrees?',
     answer: 'God executeth his decrees in the works of creation and providence.',
-    scripture_basis: 'Psalm 135:6; Psalm 145:9',
+    scripture_basis: 'Psalm 148:8; Isaiah 40:26; Daniel 4:35; Acts 4:24-28; Revelation 4:11',
     explanations: {
       '3-5': 'God makes His plan happen by creating the world and by taking care of everything in it.',
       '6-8': 'God carries out His plan in two ways. He created everything, and He keeps everything going every day.',
@@ -162,7 +162,7 @@ export const westminsterShorterCatechism: CatechismQuestion[] = [
     number: 9,
     question: 'What is the work of creation?',
     answer: 'The work of creation is, God\'s making all things of nothing, by the word of his power, in the space of six days, and all very good.',
-    scripture_basis: 'Genesis 1:1–31; Psalm 33:6',
+    scripture_basis: 'Genesis 1; Hebrews 11:3',
     explanations: {
       '3-5': 'God made everything out of nothing. He spoke, and everything came into being in six days, and all of it was very good.',
       '6-8': 'God made everything from nothing, just by speaking. He did it in six days, and when He finished, everything He made was very good.',

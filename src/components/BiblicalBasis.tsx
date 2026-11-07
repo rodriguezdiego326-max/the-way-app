@@ -28,13 +28,13 @@ export default function BiblicalBasis({ passages, onClose, onOpenBible, translat
     title: 'Base Bíblica',
     primary: 'Pasajes principales',
     supporting: 'Pasajes complementarios',
-    empty: 'Los pasajes de base bíblica aparecerán aquí cuando el motor de inteligencia esté conectado.',
+    empty: 'Todavía no hay pasajes de base bíblica para este tema.',
     note: 'SOLAPATH evita usar textos fuera de contexto. Cuando sea posible, lee el capítulo completo para entender cada pasaje en su contexto.',
   } : {
     title: 'Biblical Basis',
     primary: 'Primary Passages',
     supporting: 'Supporting Passages',
-    empty: 'Biblical basis passages will appear here when the full intelligence engine is connected.',
+    empty: 'No biblical basis passages are available for this topic yet.',
     note: 'SOLAPATH avoids proof-texting. Where possible, read the surrounding chapter to understand each passage in context.',
   };
 
