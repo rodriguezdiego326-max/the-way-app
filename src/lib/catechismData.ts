@@ -25,7 +25,7 @@ export const westminsterShorterCatechism: CatechismQuestion[] = [
   {
     number: 1,
     question: 'What is the chief end of man?',
-    answer: 'Man\'s chief end is to glorify God, and to enjoy him for ever.',
+    answer: 'Man\'s chief end is to glorify God, and to enjoy him forever.',
     scripture_basis: '1 Corinthians 10:31; Psalm 73:25–26',
     explanations: {
       '3-5': 'God made you to know Him, love Him, and be happy with Him. Everything we do can be a way to thank Him.',
@@ -76,7 +76,7 @@ export const westminsterShorterCatechism: CatechismQuestion[] = [
   {
     number: 4,
     question: 'What is God?',
-    answer: 'God is a Spirit, infinite, eternal, and unchangeable, in his being, wisdom, power, holiness, justice, goodness, and truth.',
+    answer: 'God is a spirit, infinite, eternal, and unchangeable, in his being, wisdom, power, holiness, justice, goodness and truth.',
     scripture_basis: 'John 4:24; Psalm 139:1–6; Psalm 90:2; James 1:17',
     explanations: {
       '3-5': 'God is a Spirit. He does not have a body like ours, and He is always good, always true, and always with us.',
@@ -127,7 +127,7 @@ export const westminsterShorterCatechism: CatechismQuestion[] = [
   {
     number: 7,
     question: 'What are the decrees of God?',
-    answer: 'The decrees of God are, his eternal purpose, according to the counsel of his will, whereby, for his own glory, he hath foreordained whatsoever comes to pass.',
+    answer: 'The decrees of God are his eternal purpose, according to the counsel of his will, whereby, for his own glory, he hath foreordained whatsoever comes to pass.',
     scripture_basis: 'Ephesians 1:4, 11; Romans 9:22-23',
     explanations: {
       '3-5': 'God has a plan for everything that happens. Nothing surprises Him.',
@@ -161,7 +161,7 @@ export const westminsterShorterCatechism: CatechismQuestion[] = [
   {
     number: 9,
     question: 'What is the work of creation?',
-    answer: 'The work of creation is, God\'s making all things of nothing, by the word of his power, in the space of six days, and all very good.',
+    answer: 'The work of creation is God\'s making all things of nothing, by the word of his power, in the space of six days, and all very good.',
     scripture_basis: 'Genesis 1; Hebrews 11:3',
     explanations: {
       '3-5': 'God made everything out of nothing. He spoke, and everything came into being in six days, and all of it was very good.',
@@ -179,7 +179,7 @@ export const westminsterShorterCatechism: CatechismQuestion[] = [
     number: 10,
     question: 'How did God create man?',
     answer: 'God created man male and female, after his own image, in knowledge, righteousness and holiness, with dominion over the creatures.',
-    scripture_basis: 'Genesis 1:26–28; Genesis 2:7; Colossians 3:10',
+    scripture_basis: 'Genesis 1:26–28; Colossians 3:10; Ephesians 4:24',
     explanations: {
       '3-5': 'God made people, men and women, to be like Him. He gave us the job of caring for His world and the animals in it.',
       '6-8': 'God made the first man and woman on purpose. They were made to know God, to do what is right, and to take care of the animals and the earth.',
@@ -196,7 +196,7 @@ export const westminsterShorterCatechism: CatechismQuestion[] = [
     number: 11,
     question: 'What are God\'s works of providence?',
     answer: 'God\'s works of providence are his most holy, wise and powerful preserving and governing all his creatures, and all their actions.',
-    scripture_basis: 'Psalm 145:17; Hebrews 1:3; Matthew 10:29–30',
+    scripture_basis: 'Psalm 145:17; Hebrews 1:3; Matthew 10:29–31',
     explanations: {
       '3-5': 'God takes care of everything He made. He keeps the sun, the trees, the animals, and people safe, and He is in charge of all of it.',
       '6-8': 'Providence means God keeps and guides everything He made. He is never too busy or too far away to care for the smallest creature and the biggest events.',
@@ -213,7 +213,7 @@ export const westminsterShorterCatechism: CatechismQuestion[] = [
     number: 12,
     question: 'What special act of providence did God exercise toward man in the estate wherein he was created?',
     answer: 'When God had created man, he entered into a covenant of life with him, upon condition of perfect obedience; forbidding him to eat of the tree of the knowledge of good and evil, upon pain of death.',
-    scripture_basis: 'Genesis 2:16–17; Romans 10:5; Galatians 3:12',
+    scripture_basis: 'Genesis 2:16–17; Galatians 3:12',
     explanations: {
       '3-5': 'God made a promise to Adam and gave him one rule: do not eat from the special tree. God\'s rules are always for our good.',
       '6-8': 'God made a covenant, a solemn promise, with Adam. God told Adam to obey Him and not to eat from the tree of the knowledge of good and evil. Obeying God leads to life.',
@@ -230,7 +230,7 @@ export const westminsterShorterCatechism: CatechismQuestion[] = [
     number: 13,
     question: 'Did our first parents continue in the estate wherein they were created?',
     answer: 'Our first parents, being left to the freedom of their own will, fell from the estate wherein they were created, by sinning against God.',
-    scripture_basis: 'Genesis 3:1–7; Ecclesiastes 7:29; Romans 5:12',
+    scripture_basis: 'Genesis 3:6–8, 13; Ecclesiastes 7:29',
     explanations: {
       '3-5': 'No. Adam and Eve chose to disobey God, and they lost the close friendship with God that He had given them.',
       '6-8': 'No. Adam and Eve used their freedom to disobey God. They chose their own way instead of trusting what God said, and that was sin.',
@@ -349,7 +349,7 @@ export const westminsterShorterCatechism: CatechismQuestion[] = [
     number: 20,
     question: 'Did God leave all mankind to perish in the estate of sin and misery?',
     answer: 'God having, out of his mere good pleasure, from all eternity, elected some to everlasting life, did enter into a covenant of grace, to deliver them out of the estate of sin and misery, and to bring them into an estate of salvation by a redeemer.',
-    scripture_basis: 'Ephesians 1:4–5; Titus 1:2; Ephesians 2:4–5',
+    scripture_basis: 'Ephesians 1:4; Romans 3:20–22; Galatians 3:21–22',
     explanations: {
       '3-5': 'No! God loves people and made a plan to save them. He sent Jesus to rescue His people from sin.',
       '6-8': 'God did not leave everyone in sin. Out of His kindness, He chose some people to be saved and made a promise of grace to rescue them through a Savior.',
@@ -434,7 +434,7 @@ export const westminsterShorterCatechism: CatechismQuestion[] = [
     number: 25,
     question: 'How doth Christ execute the office of a priest?',
     answer: 'Christ executeth the office of a priest, in his once offering up of himself a sacrifice to satisfy divine justice, and reconcile us to God; and in making continual intercession for us.',
-    scripture_basis: 'Hebrews 7:24–27; Hebrews 9:26; Romans 8:34',
+    scripture_basis: 'Hebrews 7:24–27; Hebrews 9:28; Romans 8:34',
     explanations: {
       '3-5': 'Jesus is our priest. He gave His own life to take away our sin, and He still prays for us.',
       '6-8': 'Jesus offered Himself once as the sacrifice for our sins, which satisfied God\'s justice and brought us back to God. Now He keeps praying for us in heaven.',
@@ -523,7 +523,7 @@ export const heidelbergCatechism: CatechismQuestion[] = [
     number: 5,
     question: 'Canst thou keep all these things perfectly?',
     answer: 'In no wise; for I am prone by nature to hate God and my neighbour.',
-    scripture_basis: 'Romans 3:9–10; 1 John 1:8',
+    scripture_basis: 'Romans 3:10; 1 John 1:8',
     explanations: {
       '3-5': 'No, we cannot keep God\'s rules perfectly. We are all sinful, and only Jesus kept them perfectly.',
       '6-8': 'No one can keep God\'s law perfectly. By nature we tend to hate God and the people around us. That is why we need Jesus to save us.',
@@ -540,7 +540,7 @@ export const heidelbergCatechism: CatechismQuestion[] = [
     number: 6,
     question: 'Did God then create man so wicked and perverse?',
     answer: 'By no means; but God created man good, and after his own image, in true righteousness and holiness, that he might rightly know God his Creator, heartily love him and live with him in eternal happiness to glorify and praise him.',
-    scripture_basis: 'Genesis 1:26–27; Ecclesiastes 7:29; Colossians 3:10',
+    scripture_basis: 'Genesis 1:26–27; Colossians 3:10; Ephesians 4:24',
     explanations: {
       '3-5': 'No! God made people good. He made us to know Him, love Him, and be happy with Him.',
       '6-8': 'God did not make people bad. He made us good and in His image, so that we could know Him, love Him, and live happily with Him.',
@@ -591,7 +591,7 @@ export const heidelbergCatechism: CatechismQuestion[] = [
     number: 9,
     question: 'Does not God then do injustice to man, by requiring from him in his law, that which he cannot perform?',
     answer: 'Not at all; for God made man capable of performing it; but man, by the instigation of the devil, and his own wilful disobedience, deprived himself and all his posterity of those divine gifts.',
-    scripture_basis: 'Genesis 1:27; Genesis 3:1–6; Ecclesiastes 7:29',
+    scripture_basis: 'Genesis 3:4, 6; Ecclesiastes 7:29; Romans 5:12',
     explanations: {
       '3-5': 'No, God is never unfair. He made people able to obey Him, but we chose to disobey.',
       '6-8': 'God is always fair. He made people able to obey, but the devil tempted Adam and Eve, and they chose to disobey. We lost that ability because of their choice.',
@@ -659,7 +659,7 @@ export const heidelbergCatechism: CatechismQuestion[] = [
     number: 13,
     question: 'Can we ourselves then make this satisfaction?',
     answer: 'By no means; but on the contrary we daily increase our debt.',
-    scripture_basis: 'Psalm 49:7–8; Romans 3:20',
+    scripture_basis: 'Job 9:2–3; Job 15:15–16; Psalm 130:3',
     explanations: {
       '3-5': 'We cannot pay for our own sins. Trying to pay only makes our debt bigger.',
       '6-8': 'We cannot make things right with God by ourselves. Every sin adds to our debt, so we need someone else to pay it.',
@@ -676,7 +676,7 @@ export const heidelbergCatechism: CatechismQuestion[] = [
     number: 14,
     question: 'Can there be found anywhere, one, who is a mere creature, able to satisfy for us?',
     answer: 'None; for, first, God will not punish any other creature for the sin which man has committed; and further, no mere creature can sustain the burden of God\'s eternal wrath against sin, so as to deliver others from it.',
-    scripture_basis: 'Psalm 49:7–8; Ezekiel 18:20',
+    scripture_basis: 'Ezekiel 18:4; Hebrews 2:14–17; Psalm 130:3',
     explanations: {
       '3-5': 'No one else can pay for our sins. Only God could do that, and He sent Jesus.',
       '6-8': 'No mere creature can pay for our sin. God will not punish another creature for our sin, and no creature could bear His wrath.',
@@ -693,7 +693,7 @@ export const heidelbergCatechism: CatechismQuestion[] = [
     number: 15,
     question: 'What sort of a mediator and deliverer then must we seek for?',
     answer: 'For one who is very man, and perfectly righteous; and yet more powerful than all creatures; that is, one who is also very God.',
-    scripture_basis: 'Hebrews 7:26; Isaiah 53:5; Colossians 2:9',
+    scripture_basis: 'Hebrews 7:26; Isaiah 9:6; Jeremiah 23:5–6',
     explanations: {
       '3-5': 'We need someone who is truly a man and also truly God to save us. Jesus is both.',
       '6-8': 'Our Savior has to be a real man who never sinned, and also God, who is more powerful than any creature. Jesus is both.',
