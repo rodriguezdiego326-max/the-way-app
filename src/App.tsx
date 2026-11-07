@@ -438,6 +438,9 @@ export default function App() {
           <FamilyScreen
             onClose={() => setOverlay({ type: 'none' })}
             onAskHandoff={(handoff) => {
+              setActiveAskConversationId(null);
+              localStorage.removeItem('solapath_active_ask_conv');
+              localStorage.removeItem('solapath_ask_return_conv');
               setOverlay({ type: 'none' });
               setActiveTab('ask');
               setAskContext(handoff);
