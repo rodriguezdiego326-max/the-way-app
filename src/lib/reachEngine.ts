@@ -319,8 +319,8 @@ const theyAskedMeResponses: Record<string, Omit<TheyAskedMeResponse, 'is_demo'>>
       'Is not eternal punishment disproportionate to a finite life of sin?',
       'If God is sovereign, does not that mean He chooses who goes to hell?',
     ],
-    reformed_foundation: 'The Reformed tradition teaches that God is perfectly just and that hell is the just punishment for sin. No one is treated unfairly. The wonder is not that God sends anyone to hell — the wonder is that He saves any at all. The Reformed emphasis on God\'s sovereignty means that salvation is entirely of grace, and those who are saved have nothing to boast about. The cross demonstrates that God does not take evil lightly — He dealt with it fully in Christ.',
-    other_christian_views: 'Some Christian traditions emphasize free will as the primary reason people go to hell, while the Reformed tradition emphasizes God\'s sovereign decree. Both agree that hell is real, just, and avoidable through Christ. The difference is in the explanation of why some are saved and others are not.',
+    biblical_foundation: 'Scripture teaches that God is perfectly just and that judgment for sin is real. No one is treated unfairly. The wonder is not that God would be right to condemn anyone, but that He saves those who trust Christ. Because God\'s grace is sovereign, salvation is entirely a gift, so those who are saved have nothing to boast about. The cross shows that God does not take evil lightly; He dealt with it fully in Christ.',
+    other_christian_views: 'Christians differ on how to explain why some are saved and others are not. Some emphasize human free will; others emphasize God\'s sovereign decree. Both agree that hell is real, just, and avoidable through Christ.',
     sources: [],
   },
   'why does god allow suffering': {
@@ -342,8 +342,8 @@ const theyAskedMeResponses: Record<string, Omit<TheyAskedMeResponse, 'is_demo'>>
       'Why does not God just stop it now?',
       'How can you trust a God who allows children to suffer?',
     ],
-    reformed_foundation: 'The Reformed tradition teaches that God is sovereign over all things, including suffering, without being the author of sin. He has a good purpose for all He allows. The cross is the supreme example: the greatest evil accomplished the greatest good. We may not understand every instance of suffering, but we trust the character of God revealed at the cross.',
-    other_christian_views: 'Some traditions emphasize free will as the primary explanation for suffering. The Reformed tradition emphasizes God\'s sovereignty while maintaining human responsibility. Both agree that God is good, that suffering is real, and that God will ultimately defeat it.',
+    biblical_foundation: 'Scripture teaches that God is sovereign over all things, including suffering, without being the author of sin. He has a good purpose for all He allows. The cross is the supreme example: the greatest evil accomplished the greatest good (Acts 2:23; Genesis 50:20). We may not understand every instance of suffering, but we trust the character of God revealed at the cross.',
+    other_christian_views: 'Christians differ on how God\'s sovereignty and human choices fit together. Some emphasize human free will as the main explanation for suffering. Scripture affirms both God\'s control and human responsibility. All agree that God is good, that suffering is real, and that God will ultimately defeat it.',
     sources: [],
   },
   'how do we know the bible is true': {
@@ -365,8 +365,8 @@ const theyAskedMeResponses: Record<string, Omit<TheyAskedMeResponse, 'is_demo'>>
       'Was not the Bible compiled by a church council with political motives?',
       'What about the books that were left out?',
     ],
-    reformed_foundation: 'The Reformed tradition teaches the self-authentication of Scripture (autopiston). The authority of Scripture does not depend on the church, human reason, or historical evidence, though these support it. The ultimate ground is God speaking, and the internal witness of the Holy Spirit confirms this in the believer.',
-    other_christian_views: 'Roman Catholic theology emphasizes the church\'s role in authenticating Scripture, while the Reformed tradition emphasizes Scripture\'s self-authentication. Both agree that Scripture is God\'s Word.',
+    biblical_foundation: 'Scripture is God\'s own Word, and its authority does not depend on the church, human reason, or historical evidence, though these can support it. Its ultimate ground is God speaking, and the Holy Spirit confirms this to the believer (2 Timothy 3:16; 2 Peter 1:20\u201321).',
+    other_christian_views: 'Roman Catholic theology emphasizes the church\'s role in recognizing Scripture, while many Protestants emphasize Scripture\'s own authority as God\'s Word. Both agree that Scripture is God\'s Word.',
     sources: [],
   },
   'why did jesus have to die': {
@@ -388,8 +388,8 @@ const theyAskedMeResponses: Record<string, Omit<TheyAskedMeResponse, 'is_demo'>>
       'Could not God have found another way?',
       'What about people who lived before Jesus?',
     ],
-    reformed_foundation: 'The Reformed tradition teaches penal substitutionary atonement — Christ bore the wrath of God in our place. This is not a metaphor but a legal and relational reality. The cross satisfies God\'s justice so that justification is grounded not in leniency but in real payment.',
-    other_christian_views: 'Some traditions emphasize Christus Victor (Christ defeating the powers) or moral influence theories. The Reformed tradition sees these as true but secondary to penal substitution as the central achievement of the cross.',
+    biblical_foundation: 'Scripture teaches that Christ bore the wrath of God in our place. This is a real and relational reality, not a metaphor. The cross satisfies God\'s justice, so that our justification rests not on leniency but on real payment (Romans 3:25\u201326; Isaiah 53:5).',
+    other_christian_views: 'Some Christians emphasize Christ defeating the powers of evil (Christus Victor) or the moral example of Christ\'s love. Many affirm these as true and see Christ bearing our judgment as the center of the cross\'s saving work.',
     sources: [],
   },
   'all religions teach basically the same thing': {
@@ -411,8 +411,8 @@ const theyAskedMeResponses: Record<string, Omit<TheyAskedMeResponse, 'is_demo'>>
       'Is not it arrogant to say Christianity is the only way?',
       'What about people who never heard of Jesus?',
     ],
-    reformed_foundation: 'The Reformed tradition teaches that salvation is through Christ alone (solus Christus). This is not arrogance — it is the claim that God has acted in history to save us in a way we could not achieve ourselves. The exclusivity of Christ is a claim about what God has done, not about our superiority.',
-    other_christian_views: 'Some modern traditions propose inclusivism (Christ is present in other religions) or pluralism (all religions are valid paths). The Reformed tradition, following Scripture, holds to exclusivity: there is no other name under heaven by which we must be saved.',
+    biblical_foundation: 'Scripture teaches that salvation is through Christ alone. This is not arrogance; it is the claim that God has acted in history to save us in a way we could not achieve ourselves (John 14:6; Acts 4:12). The exclusivity of Christ is a claim about what God has done, not about our superiority.',
+    other_christian_views: 'Some modern views propose inclusivism (Christ is present in other religions) or pluralism (all religions are valid paths). Christians who take Scripture as authoritative hold that there is no other name under heaven by which we must be saved.',
     sources: [],
   },
 };
@@ -431,13 +431,13 @@ export async function getTheyAskedMeResponse(question: string): Promise<TheyAske
   }
 
   return {
-    understand_the_question: 'Development content — SOLAPATH will help you understand the question behind the question once the full intelligence engine is connected. For now, listen carefully to what they are really asking. Is it intellectual? Emotional? Relational? The answer to that question shapes how you respond.',
-    understand_it_yourself: 'Development content — SOLAPATH will provide biblical and theological preparation for this question. For now, read the relevant passages and think through what Scripture actually says before responding.',
+    understand_the_question: 'Listen carefully to what they are really asking. Is it intellectual? Emotional? Relational? The answer to that question shapes how you respond.',
+    understand_it_yourself: 'Read the relevant passages and think through what Scripture actually says before responding.',
     open_your_bible: [
       { reference: '1 Peter 3:15', reason: 'Be prepared to make a defense to anyone who asks you for a reason for the hope that is in you.' },
       { reference: 'Colossians 4:5–6', reason: 'Walk in wisdom toward outsiders, letting your speech be gracious.' },
     ],
-    how_you_could_respond: 'Development content — SOLAPATH will provide natural conversation guidance for this question. For now, listen first, acknowledge what they are saying, and gently point to Christ.',
+    how_you_could_respond: 'Listen first, acknowledge what they are saying, and gently point to Christ.',
     questions_to_ask_them: [
       'Can you tell me more about what makes you ask that?',
       'What is your own thinking on it?',
@@ -447,7 +447,7 @@ export async function getTheyAskedMeResponse(question: string): Promise<TheyAske
       'But how do you know your view is right?',
       'What about people who disagree?',
     ],
-    reformed_foundation: 'Development content — SOLAPATH will connect this to the Reformed theological framework once the full intelligence engine is available.',
+    biblical_foundation: 'Scripture speaks to this question directly. Read the passages together and notice what God reveals about Himself and what He calls His people to believe and do.',
     other_christian_views: null,
     sources: ragCitations,
     is_demo: true,

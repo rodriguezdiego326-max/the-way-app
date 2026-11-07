@@ -90,7 +90,7 @@ export interface TheyAskedMeResponse {
   how_you_could_respond: string;
   questions_to_ask_them: string[];
   they_may_ask_next: string[];
-  reformed_foundation: string;
+  biblical_foundation: string;
   other_christian_views: string | null;
   sources: Citation[];
   is_demo: boolean;

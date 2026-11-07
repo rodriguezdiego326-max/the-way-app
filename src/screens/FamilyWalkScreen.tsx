@@ -53,7 +53,7 @@ export default function FamilyWalkScreen({ walk, familyProfile, onBack }: Family
       parent_prep: walk.parent_prep.main_truth,
       main_truth: walk.parent_prep.main_truth,
       biblical_context: walk.parent_prep.biblical_context,
-      reformed_foundation: walk.parent_prep.reformed_foundation,
+      reformed_foundation: walk.parent_prep.biblical_foundation,
       words_children_may_ask_about: walk.parent_prep.words_children_may_ask_about,
       common_misunderstanding: walk.parent_prep.common_misunderstanding,
       one_thing_to_emphasize: walk.parent_prep.one_thing_to_emphasize,
@@ -215,7 +215,7 @@ export default function FamilyWalkScreen({ walk, familyProfile, onBack }: Family
                 <div className="mt-2 space-y-2 animate-fade-in">
                   <PrepCard label="Main Truth" content={walk.parent_prep.main_truth} />
                   <PrepCard label="Biblical Context" content={walk.parent_prep.biblical_context} />
-                  <PrepCard label="Biblical Foundation" content={walk.parent_prep.reformed_foundation} authority="historic_theology" />
+                  <PrepCard label="Biblical Foundation" content={walk.parent_prep.biblical_foundation} authority="historic_theology" />
                   <PrepCard label="Words Children May Ask About" content={walk.parent_prep.words_children_may_ask_about} />
                   <PrepCard label="Common Misunderstanding" content={walk.parent_prep.common_misunderstanding} />
                   <PrepCard label="One Thing to Emphasize" content={walk.parent_prep.one_thing_to_emphasize} />
@@ -274,11 +274,11 @@ export default function FamilyWalkScreen({ walk, familyProfile, onBack }: Family
                   <p className="text-ivory-300 text-sm leading-relaxed">{walk.parent_prep.biblical_context}</p>
                 </div>
                 <div>
-                  <p className="ui-label mb-1">Reformed Foundation</p>
+                  <p className="ui-label mb-1">Biblical Foundation</p>
                   <div className="flex items-start gap-2 mb-1">
                     <AuthorityLabel level="historic_theology" />
                   </div>
-                  <p className="text-ivory-300 text-sm leading-relaxed">{walk.parent_prep.reformed_foundation}</p>
+                  <p className="text-ivory-300 text-sm leading-relaxed">{walk.parent_prep.biblical_foundation}</p>
                 </div>
                 <div>
                   <p className="ui-label mb-1">Common Misunderstanding</p>

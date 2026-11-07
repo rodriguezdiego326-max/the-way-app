@@ -8,6 +8,7 @@ import {
   heidelbergCatechism,
   type CatechismQuestion,
 } from '@/lib/catechismData';
+import { catechismAgeWording } from '@/lib/catechismAgeWording';
 import type { AgeRange, FamilyProfile, CatechismProgress, CatechismType } from '@/lib/familyTypes';
 
 interface CatechismScreenProps {
@@ -45,6 +46,12 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
 
   function isCompleted(qNum: number): boolean {
     return progress.some((p) => p.question_number === qNum && p.completed);
+  }
+
+  function ageWordingFor(q: CatechismQuestion) {
+    if (ageRange === '18+') return null;
+    const key = `${selectedType === 'westminster_shorter' ? 'westminster' : 'heidelberg'}-${q.number}`;
+    return catechismAgeWording[key]?.[ageRange] ?? null;
   }
 
   async function toggleComplete(q: CatechismQuestion) {
@@ -195,7 +202,7 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
                         )}
                       </div>
                       <div className="flex-1">
-                        <p className="text-ivory-100 text-sm font-medium leading-relaxed">{q.question}</p>
+                        <p className="text-ivory-100 text-sm font-medium leading-relaxed">{ageWordingFor(q)?.question ?? q.question}</p>
                       </div>
                     </div>
                     <ChevronDown size={16} className={`text-ivory-500 transition-transform shrink-0 mt-1 ${isExpanded ? 'rotate-180' : ''}`} />
@@ -207,6 +214,7 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
 
                       <div className="mb-3 rounded-xl bg-ink-800/40 border border-ink-700/40 p-3">
                         <p className="ui-label mb-1">Original Catechism</p>
+                        <p className="text-ivory-100 text-sm font-medium mb-1">{q.question}</p>
                         <p className="text-ivory-200 text-sm leading-relaxed italic">{q.answer}</p>
                         <p className="text-ivory-600 text-xs mt-2">{SOURCE_LABEL[selectedType]}</p>
                       </div>
@@ -215,6 +223,14 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
                         <BookOpen size={13} className="text-gold-400/60" />
                         <p className="text-ivory-400 text-xs">{q.scripture_basis}</p>
                       </div>
+
+                      {ageWordingFor(q) && (
+                        <div className="mb-3">
+                          <p className="ui-label mb-1">For Ages {ageLabel}</p>
+                          <p className="text-ivory-100 text-sm font-medium mb-1">{ageWordingFor(q)?.question}</p>
+                          <p className="text-ivory-300 text-sm leading-relaxed">{ageWordingFor(q)?.short_answer}</p>
+                        </div>
+                      )}
 
                       <div className="mb-3">
                         <p className="ui-label mb-1">SOLAPATH Age-Appropriate Explanation ({ageLabel})</p>

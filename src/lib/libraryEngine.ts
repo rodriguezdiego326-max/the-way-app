@@ -11,8 +11,8 @@ import type {
 export const authorityLevelLabels: Record<number, string> = {
   1: 'Scripture',
   2: 'Historic Christian Orthodoxy',
-  3: 'Reformed Confession / Catechism',
-  4: 'Historic Reformed Theology',
+  3: 'Confessional Catechisms',
+  4: 'Historic Theology',
   5: 'Approved Modern Teacher',
   6: 'SOLAPATH Editorial / Application',
 };

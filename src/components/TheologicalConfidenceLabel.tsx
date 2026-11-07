@@ -18,7 +18,7 @@ const config: Record<TheologicalConfidence, { label: string; color: string; bg: 
     border: 'border-sage-500/30',
   },
   REFORMED_DEBATE: {
-    label: 'Reformed Debate',
+    label: 'Theological Debate',
     color: 'text-ivory-300',
     bg: 'bg-ink-700/40',
     border: 'border-ink-600/40',

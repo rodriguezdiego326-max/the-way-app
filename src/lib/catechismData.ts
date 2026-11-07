@@ -110,7 +110,7 @@ export const westminsterShorterCatechism: CatechismQuestion[] = [
   {
     number: 6,
     question: 'How many persons are there in the Godhead?',
-    answer: 'There are three persons in the Godhead: the Father, the Son, and the Holy Ghost; and these three are one God, the same in substance, equal in power and glory.',
+    answer: 'There are three persons in the Godhead; the Father, the Son, and the Holy Ghost; and these three are one God, the same in substance, equal in power and glory.',
     scripture_basis: 'Matthew 28:19; 2 Corinthians 13:14',
     explanations: {
       '3-5': 'God is three persons, the Father, the Son, and the Holy Spirit, and yet there is one God.',
