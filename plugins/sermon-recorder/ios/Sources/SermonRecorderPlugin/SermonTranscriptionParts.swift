@@ -2,6 +2,13 @@ import Foundation
 import AVFoundation
 import Capacitor
 
+struct TranscriptionExportedPart {
+    let localURL: URL
+    let startMs: Int
+    let endMs: Int
+    let sizeBytes: Int64
+}
+
 extension SermonRecorderPlugin {
     static let transcriptionPartSeconds: Double = 6 * 60
     static let transcriptionOverlapSeconds: Double = 3
@@ -37,7 +44,7 @@ extension SermonRecorderPlugin {
             do {
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
                 let count = max(1, Int(ceil(durationSeconds / Self.transcriptionPartSeconds)))
-                var parts: [[String: Any]] = []
+                var exported: [TranscriptionExportedPart] = []
                 var index = 0
 
                 for slot in 0..<count {
@@ -48,12 +55,12 @@ extension SermonRecorderPlugin {
                         durationSeconds: durationSeconds,
                         folder: folder,
                         index: &index,
-                        parts: &parts
+                        parts: &exported
                     )
                 }
 
                 DispatchQueue.main.async {
-                    call.resolve(["token": token, "parts": parts])
+                    self.resolvePreparedParts(call, token: token, exported: exported)
                 }
             } catch {
                 try? FileManager.default.removeItem(at: folder)
@@ -68,6 +75,30 @@ extension SermonRecorderPlugin {
                 }
             }
         }
+    }
+
+    private func resolvePreparedParts(_ call: CAPPluginCall, token: String, exported: [TranscriptionExportedPart]) {
+        guard let bridge = bridge else {
+            try? FileManager.default.removeItem(at: Self.transcriptionCacheFolder(token: token))
+            call.reject("This recording could not be prepared. Please try again.", "portable_path_unavailable")
+            return
+        }
+
+        var parts: [[String: Any]] = []
+        for part in exported {
+            guard let webURL = bridge.portablePath(fromLocalURL: part.localURL) else {
+                try? FileManager.default.removeItem(at: Self.transcriptionCacheFolder(token: token))
+                call.reject("This recording could not be prepared. Please try again.", "portable_path_unavailable")
+                return
+            }
+            parts.append([
+                "webPath": webURL.absoluteString,
+                "startMs": part.startMs,
+                "endMs": part.endMs,
+                "sizeBytes": part.sizeBytes,
+            ])
+        }
+        call.resolve(["token": token, "parts": parts])
     }
 
     @objc func cleanupTranscriptionParts(_ call: CAPPluginCall) {
@@ -92,7 +123,7 @@ extension SermonRecorderPlugin {
         durationSeconds: Double,
         folder: URL,
         index: inout Int,
-        parts: inout [[String: Any]]
+        parts: inout [TranscriptionExportedPart]
     ) throws {
         let startSeconds = max(0, nominalStart - (nominalStart > 0 ? transcriptionOverlapSeconds : 0))
         let endSeconds = min(durationSeconds, nominalEnd + transcriptionOverlapSeconds)
@@ -105,12 +136,12 @@ extension SermonRecorderPlugin {
         }
 
         if size <= transcriptionMaxPartBytes {
-            parts.append([
-                "absolutePath": target.path,
-                "startMs": Int(startSeconds * 1000),
-                "endMs": Int(endSeconds * 1000),
-                "sizeBytes": size,
-            ])
+            parts.append(TranscriptionExportedPart(
+                localURL: target,
+                startMs: Int(startSeconds * 1000),
+                endMs: Int(endSeconds * 1000),
+                sizeBytes: size
+            ))
             index += 1
             return
         }

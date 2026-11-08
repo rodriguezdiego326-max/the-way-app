@@ -41,7 +41,7 @@ export interface SermonRecorderPlugin {
 }
 
 export interface TranscriptionAudioPart {
-  absolutePath: string;
+  webPath: string;
   startMs: number;
   endMs: number;
   sizeBytes: number;

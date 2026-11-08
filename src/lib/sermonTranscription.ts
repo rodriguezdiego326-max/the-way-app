@@ -1,4 +1,3 @@
-import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/lib/supabase';
 import { sermonRecorderNative, type TranscriptionAudioPart } from '@/lib/sermonRecorderNative';
 import { saveSermonTranscript, type SermonTranscript } from '@/lib/sermonRecordingStore';
@@ -16,6 +15,28 @@ const NO_SPEECH_MESSAGE = "We couldn't find any speech in this recording.";
 
 export class TranscriptionError extends Error {}
 export class TranscriptionCancelledError extends Error {}
+export class NoSpeechError extends TranscriptionError {}
+
+export type TranscriptionFailureStage =
+  | 'native_prepare_failed'
+  | 'local_chunk_read_failed'
+  | 'upload_failed'
+  | 'edge_function_failed'
+  | 'provider_failed'
+  | 'finalization_failed';
+
+type FailureDetail = Record<string, number>;
+
+export class TranscriptionStageError extends TranscriptionError {
+  stage: TranscriptionFailureStage;
+  detail: FailureDetail;
+
+  constructor(stage: TranscriptionFailureStage, detail: FailureDetail = {}) {
+    super(TRANSCRIPT_FAILURE_MESSAGE);
+    this.stage = stage;
+    this.detail = detail;
+  }
+}
 
 export type TranscriptionProgress =
   | { stage: 'preparing' }
@@ -119,11 +140,35 @@ async function removeLocalParts(job: TranscriptionJob) {
   }
 }
 
-async function uploadPart(job: TranscriptionJob, path: string, blob: Blob, accessToken: string, onBytes: (loaded: number) => void) {
-  if (blob.size >= MAX_PART_UPLOAD_BYTES) throw new TranscriptionError(TRANSCRIPT_FAILURE_MESSAGE);
+function isAcceptedAudioType(type: string): boolean {
+  return type === '' || type.startsWith('audio/') || type === 'video/mp4' || type === 'application/octet-stream';
+}
+
+async function readLocalPart(part: TranscriptionAudioPart, partIndex: number): Promise<Blob> {
+  let response: Response;
+  try {
+    response = await fetch(part.webPath);
+  } catch {
+    throw new TranscriptionStageError('local_chunk_read_failed', { partIndex });
+  }
+  if (!response.ok) throw new TranscriptionStageError('local_chunk_read_failed', { partIndex, httpStatus: response.status });
+
+  let blob: Blob;
+  try {
+    blob = await response.blob();
+  } catch {
+    throw new TranscriptionStageError('local_chunk_read_failed', { partIndex });
+  }
+  if (blob.size <= 0 || blob.size >= MAX_PART_UPLOAD_BYTES || blob.size !== part.sizeBytes || !isAcceptedAudioType(blob.type)) {
+    throw new TranscriptionStageError('local_chunk_read_failed', { partIndex, partBytes: blob.size });
+  }
+  return blob;
+}
+
+async function uploadPart(job: TranscriptionJob, path: string, blob: Blob, accessToken: string, partIndex: number, onBytes: (loaded: number) => void) {
   for (let attempt = 0; ; attempt++) {
     try {
-      await uploadStandardPart(job, path, blob, accessToken, onBytes);
+      await uploadStandardPart(job, path, blob, accessToken, partIndex, onBytes);
       return;
     } catch (cause) {
       if (job.cancelled || cause instanceof TranscriptionCancelledError) throw cause;
@@ -138,7 +183,7 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function uploadStandardPart(job: TranscriptionJob, path: string, blob: Blob, accessToken: string, onBytes: (loaded: number) => void) {
+function uploadStandardPart(job: TranscriptionJob, path: string, blob: Blob, accessToken: string, partIndex: number, onBytes: (loaded: number) => void) {
   return new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     job.abortUpload = () => xhr.abort();
@@ -153,11 +198,11 @@ function uploadStandardPart(job: TranscriptionJob, path: string, blob: Blob, acc
     xhr.onload = () => {
       job.abortUpload = null;
       if (xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new TranscriptionError(TRANSCRIPT_FAILURE_MESSAGE));
+      else reject(new TranscriptionStageError('upload_failed', { partIndex, httpStatus: xhr.status }));
     };
     xhr.onerror = () => {
       job.abortUpload = null;
-      reject(new TranscriptionError(TRANSCRIPT_FAILURE_MESSAGE));
+      reject(new TranscriptionStageError('upload_failed', { partIndex }));
     };
     xhr.onabort = () => {
       job.abortUpload = null;
@@ -188,12 +233,10 @@ async function uploadPendingParts(job: TranscriptionJob, userId: string, accessT
 
   for (const { part, index } of pending) {
     assertActive(job);
-    const response = await fetch(Capacitor.convertFileSrc(part.absolutePath));
-    if (!response.ok) throw new TranscriptionError(TRANSCRIPT_FAILURE_MESSAGE);
-    const blob = await response.blob();
+    const blob = await readLocalPart(part, index);
     const path = `${userId}/${job.jobId}/part-${index}.m4a`;
     const bytesBefore = completedBytes;
-    await uploadPart(job, path, blob, accessToken, (loaded) => {
+    await uploadPart(job, path, blob, accessToken, index, (loaded) => {
       const percent = totalBytes > 0 ? Math.floor(((bytesBefore + loaded) / totalBytes) * 100) : 100;
       onProgress({ stage: 'uploading', percent: Math.min(percent, 99) });
     });
@@ -201,6 +244,15 @@ async function uploadPendingParts(job: TranscriptionJob, userId: string, accessT
     await saveServerState(job, userId, 'processing');
   }
   if (pending.length > 0) onProgress({ stage: 'uploading', percent: 100 });
+}
+
+async function functionStageError(error: unknown, partIndex: number): Promise<TranscriptionStageError> {
+  const response = (error as { context?: unknown } | null)?.context;
+  if (!(response instanceof Response)) return new TranscriptionStageError('edge_function_failed', { partIndex });
+  const body: unknown = await response.clone().json().catch(() => null);
+  const code = typeof body === 'object' && body !== null && 'error' in body ? body.error : null;
+  const stage = typeof code === 'string' && code.startsWith('provider_') ? 'provider_failed' : 'edge_function_failed';
+  return new TranscriptionStageError(stage, { partIndex, httpStatus: response.status });
 }
 
 async function transcribeParts(job: TranscriptionJob, userId: string, onProgress: (p: TranscriptionProgress) => void) {
@@ -220,7 +272,8 @@ async function transcribeParts(job: TranscriptionJob, userId: string, onProgress
         previousTail,
       },
     });
-    if (error || typeof data?.text !== 'string') throw new TranscriptionError(TRANSCRIPT_FAILURE_MESSAGE);
+    if (error) throw await functionStageError(error, index);
+    if (typeof data?.text !== 'string') throw new TranscriptionStageError('edge_function_failed', { partIndex: index });
     job.texts[index] = data.text;
     await saveServerState(job, userId, 'processing');
   }
@@ -229,7 +282,7 @@ async function transcribeParts(job: TranscriptionJob, userId: string, onProgress
 async function finalizeJob(job: TranscriptionJob, userId: string): Promise<SermonTranscript> {
   assertActive(job);
   const text = stitchTranscriptParts(job.texts);
-  if (!text) throw new TranscriptionError(NO_SPEECH_MESSAGE);
+  if (!text) throw new NoSpeechError(NO_SPEECH_MESSAGE);
   const transcript: SermonTranscript = {
     recordingId: job.recordingId,
     text,
@@ -250,35 +303,57 @@ async function finalizeJob(job: TranscriptionJob, userId: string): Promise<Sermo
   return transcript;
 }
 
+function failureCodeFor(cause: unknown, phase: TranscriptionFailureStage): string {
+  if (cause instanceof NoSpeechError) return 'no_speech';
+  if (cause instanceof TranscriptionStageError) return cause.stage;
+  return phase;
+}
+
+function logFailure(job: TranscriptionJob, failureCode: string, cause: unknown) {
+  const detail = cause instanceof TranscriptionStageError ? cause.detail : {};
+  console.warn('Transcription failed', {
+    jobId: job.jobId,
+    stage: failureCode,
+    partCount: job.parts.length,
+    errorName: cause instanceof Error ? cause.name : typeof cause,
+    ...detail,
+  });
+}
+
 export async function runTranscriptionJob(
   job: TranscriptionJob,
   fileName: string,
   onProgress: (p: TranscriptionProgress) => void,
 ): Promise<SermonTranscript> {
   const { userId, accessToken } = await getSignedInUserId();
+  let phase: TranscriptionFailureStage = 'native_prepare_failed';
   try {
     await saveServerState(job, userId, 'processing');
     if (job.parts.length === 0) await prepareParts(job, fileName, userId, onProgress);
+    phase = 'upload_failed';
     await uploadPendingParts(job, userId, accessToken, onProgress);
+    phase = 'edge_function_failed';
     await transcribeParts(job, userId, onProgress);
+    phase = 'finalization_failed';
     onProgress({ stage: 'finalizing' });
     return await finalizeJob(job, userId);
   } catch (cause) {
     if (job.cancelled || cause instanceof TranscriptionCancelledError) throw new TranscriptionCancelledError();
-    await failJob(job, userId).catch(() => undefined);
+    const failureCode = failureCodeFor(cause, phase);
+    logFailure(job, failureCode, cause);
+    await failJob(job, userId, failureCode).catch(() => undefined);
     if (cause instanceof TranscriptionError) throw cause;
-    console.error('Transcription failed', cause);
     throw new TranscriptionError(TRANSCRIPT_FAILURE_MESSAGE);
   }
 }
 
-async function failJob(job: TranscriptionJob, userId: string) {
+async function failJob(job: TranscriptionJob, userId: string, failureCode: string) {
   try {
     await removeCloudAudio(userId, job.jobId);
   } catch (cause) {
     console.warn('Temporary cloud audio could not be removed after failure', cause);
   }
-  await saveServerState(job, userId, 'failed', 'processing_failed');
+  await saveServerState(job, userId, 'failed', failureCode);
 }
 
 export async function cancelTranscriptionJob(job: TranscriptionJob) {
