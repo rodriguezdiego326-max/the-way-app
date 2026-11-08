@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { X, Church, Plus, ChevronRight, Search, MapPin, Globe, BookOpen, Heart, Users, Sun, LogOut, Check, Pencil } from 'lucide-react';
+import { X, Church, Plus, ChevronRight, Search, MapPin, Globe, BookOpen, Heart, Users, Sun, LogOut, Check, Pencil, Mic } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import ChurchSearchResults, { type AppleSearchStatus, type ChurchSearchStatus } from '@/components/ChurchSearchResults';
@@ -23,6 +23,7 @@ interface Props {
   onBack: () => void;
   onOpenSundayMode: () => void;
   onOpenSermonNotes: () => void;
+  onOpenSermonAssistant: () => void;
   onOpenChurchStudies: () => void;
   onOpenManageChurchStudies: () => void;
   onOpenChurchPrayer: () => void;
@@ -39,7 +40,7 @@ interface ChurchWithMeta {
 }
 
 export default function MyChurchScreen({
-  profile, activeChurchId, onActiveChurchChange, onBack, onOpenSundayMode, onOpenSermonNotes, onOpenChurchStudies, onOpenManageChurchStudies, onOpenChurchPrayer, onOpenSmallGroups,
+  profile, activeChurchId, onActiveChurchChange, onBack, onOpenSundayMode, onOpenSermonNotes, onOpenSermonAssistant, onOpenChurchStudies, onOpenManageChurchStudies, onOpenChurchPrayer, onOpenSmallGroups,
 }: Props) {
   const [memberships, setMemberships] = useState<ChurchWithMeta[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -370,6 +371,7 @@ export default function MyChurchScreen({
               <div className="flex flex-col gap-2 mb-4">
                 <ChurchActionCard icon={Sun} label="Sunday Mode" desc="Prepare your heart for worship" onClick={onOpenSundayMode} />
                 <ChurchActionCard icon={BookOpen} label="Sermon Notes" desc={sermonNoteCount === 0 ? 'No studies available' : `${sermonNoteCount} ${sermonNoteCount === 1 ? 'study' : 'studies'} available`} onClick={onOpenSermonNotes} />
+                <ChurchActionCard icon={Mic} label="Sermon Assistant" desc="Record a sermon and build notes as you listen." onClick={onOpenSermonAssistant} />
                 <ChurchActionCard icon={BookOpen} label="From My Church" desc={`${active.studies.length} church studies`} onClick={onOpenChurchStudies} />
                 <ChurchActionCard icon={Heart} label="Church Prayer" desc={`${active.prayerItems.length} prayer items`} onClick={onOpenChurchPrayer} />
                 <ChurchActionCard icon={Users} label="Small Groups" desc={`${active.groups.length} groups`} onClick={onOpenSmallGroups} />

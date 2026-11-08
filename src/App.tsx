@@ -45,6 +45,9 @@ import AccountabilityScreen from '@/screens/AccountabilityScreen';
 import MyChurchScreen from '@/screens/MyChurchScreen';
 import SundayModeScreen from '@/screens/SundayModeScreen';
 import SermonNotesScreen from '@/screens/SermonNotesScreen';
+import SermonAssistantScreen from '@/screens/SermonAssistantScreen';
+import SermonRecordingScreen from '@/screens/SermonRecordingScreen';
+import SermonRecordingDetailScreen from '@/screens/SermonRecordingDetailScreen';
 import SermonFollowUpScreen from '@/screens/SermonFollowUpScreen';
 import ContinueSundayScreen from '@/screens/ContinueSundayScreen';
 import SermonCompanionScreen from '@/screens/SermonCompanionScreen';
@@ -110,6 +113,9 @@ export type Overlay =
   | { type: 'my_church' }
   | { type: 'sunday_mode' }
   | { type: 'sermon_notes' }
+  | { type: 'sermon_assistant' }
+  | { type: 'sermon_recording' }
+  | { type: 'sermon_recording_detail'; recordingId: string; fresh: boolean; interrupted: boolean }
   | { type: 'sermon_follow_up'; sermon: Sermon }
   | { type: 'continue_sunday' }
   | { type: 'sermon_companion'; sermon: Sermon }
@@ -593,6 +599,7 @@ export default function App() {
           onBack={() => setOverlay({ type: 'none' })}
           onOpenSundayMode={() => setOverlay({ type: 'sunday_mode' })}
           onOpenSermonNotes={() => setOverlay({ type: 'sermon_notes' })}
+          onOpenSermonAssistant={() => setOverlay({ type: 'sermon_assistant' })}
           onOpenChurchStudies={() => setOverlay({ type: 'church_studies' })}
           onOpenManageChurchStudies={() => setOverlay({ type: 'manage_church_studies' })}
           onOpenChurchPrayer={() => setOverlay({ type: 'church_prayer' })}
@@ -616,6 +623,44 @@ export default function App() {
           onOpenContinueSunday={() => setOverlay({ type: 'continue_sunday' })}
           onOpenSermonCompanion={(sermon) => setOverlay({ type: 'sermon_companion', sermon })}
           onOpenAskMyPastor={(sermon) => setOverlay({ type: 'ask_my_pastor', sermon })}
+        />
+      </ErrorBoundary>
+    );
+  }
+
+  if (overlay.type === 'sermon_assistant' && profile) {
+    return (
+      <ErrorBoundary>
+        <SermonAssistantScreen
+          profile={profile}
+          onBack={() => setOverlay({ type: 'my_church' })}
+          onRecord={() => setOverlay({ type: 'sermon_recording' })}
+          onOpenRecording={(recordingId) => setOverlay({ type: 'sermon_recording_detail', recordingId, fresh: false, interrupted: false })}
+        />
+      </ErrorBoundary>
+    );
+  }
+
+  if (overlay.type === 'sermon_recording' && profile) {
+    return (
+      <ErrorBoundary>
+        <SermonRecordingScreen
+          profileId={profile.id}
+          onExit={() => setOverlay({ type: 'sermon_assistant' })}
+          onCaptured={(recordingId, interrupted) => setOverlay({ type: 'sermon_recording_detail', recordingId, fresh: true, interrupted })}
+        />
+      </ErrorBoundary>
+    );
+  }
+
+  if (overlay.type === 'sermon_recording_detail') {
+    return (
+      <ErrorBoundary>
+        <SermonRecordingDetailScreen
+          recordingId={overlay.recordingId}
+          fresh={overlay.fresh}
+          interrupted={overlay.interrupted}
+          onDone={() => setOverlay({ type: 'sermon_assistant' })}
         />
       </ErrorBoundary>
     );
