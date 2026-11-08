@@ -1,0 +1,16 @@
+{
+  "name": "sermon-recorder",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local Capacitor plugin that records sermons with AVFoundation and plays them back on the device.",
+  "files": [
+    "ios/Sources",
+    "Package.swift"
+  ],
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  },
+  "license": "UNLICENSED"
+}

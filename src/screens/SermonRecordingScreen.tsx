@@ -1,40 +1,48 @@
-import { useCallback, useRef, useState } from 'react';
-import { Mic, Pause, Play, Square, X, AlertCircle } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Mic, Pause, Play, Square, X, AlertCircle, NotebookPen } from 'lucide-react';
 import { vibrate, formatDuration } from '@/lib/utils';
-import { useSermonRecorder, type CapturedSermonAudio, type CaptureEndReason } from '@/hooks/useSermonRecorder';
+import { useSermonRecording } from '@/hooks/sermonRecordingContext';
+import type { FinishedSermonRecording } from '@/lib/sermonRecorderNative';
 import { saveSermonRecording } from '@/lib/sermonRecordingStore';
 
 interface Props {
   profileId: string;
   onExit: () => void;
+  onTakeNotes: () => void;
   onCaptured: (recordingId: string, interrupted: boolean) => void;
 }
 
-const MIC_LABEL: Record<string, string> = {
-  idle: 'Microphone off',
-  requesting: 'Requesting microphone access',
-  recording: 'Microphone on',
-  paused: 'Microphone paused',
-  finalizing: 'Microphone off',
-  denied: 'Microphone off',
-  unavailable: 'Microphone unavailable',
-  error: 'Microphone off',
+const START_ERROR: Record<string, string> = {
+  denied: 'Microphone access is needed to record a sermon. You can enable it in iPhone Settings.',
+  failed: 'Recording could not start. Please try again.',
 };
 
-export default function SermonRecordingScreen({ profileId, onExit, onCaptured }: Props) {
+export default function SermonRecordingScreen({ profileId, onExit, onTakeNotes, onCaptured }: Props) {
+  const { recorder, setRecorderScreenOpen } = useSermonRecording();
+  const { snapshot, busy, error, start, pause, resume, finish, discard } = recorder;
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
-  const pendingRef = useRef<{ capture: CapturedSermonAudio; interrupted: boolean } | null>(null);
+  const pendingRef = useRef<FinishedSermonRecording | null>(null);
 
-  const persist = useCallback(async (capture: CapturedSermonAudio, interrupted: boolean) => {
+  useEffect(() => {
+    setRecorderScreenOpen(true);
+    return () => setRecorderScreenOpen(false);
+  }, [setRecorderScreenOpen]);
+
+  const persist = useCallback(async (pending: FinishedSermonRecording) => {
     setSaving(true);
     setSaveError(null);
     try {
-      const meta = await saveSermonRecording({ profileId, ...capture });
+      const meta = await saveSermonRecording({
+        profileId,
+        fileName: pending.fileName,
+        durationMs: pending.durationMs,
+        startedAt: pending.startedAt,
+      });
       pendingRef.current = null;
-      onCaptured(meta.id, interrupted);
+      onCaptured(meta.id, pending.interrupted);
     } catch {
       setSaveError('The recording could not be saved on this device. Try saving again.');
     } finally {
@@ -42,15 +50,27 @@ export default function SermonRecordingScreen({ profileId, onExit, onCaptured }:
     }
   }, [profileId, onCaptured]);
 
-  const handleCapture = useCallback((capture: CapturedSermonAudio, reason: CaptureEndReason) => {
-    const interrupted = reason === 'interrupted';
-    pendingRef.current = { capture, interrupted };
-    void persist(capture, interrupted);
-  }, [persist]);
+  const isActive = snapshot.state !== 'idle';
 
-  const recorder = useSermonRecorder(handleCapture);
-  const { status, elapsedMs } = recorder;
-  const isActive = status === 'recording' || status === 'paused' || status === 'finalizing';
+  async function handleFinish() {
+    vibrate(10);
+    setSaving(true);
+    const result = await finish();
+    if (!result) {
+      setSaving(false);
+      return;
+    }
+    pendingRef.current = result;
+    await persist(result);
+  }
+
+  async function handleDiscard() {
+    vibrate(15);
+    setDiscardOpen(false);
+    setLeaveOpen(false);
+    const ok = await discard();
+    if (ok) onExit();
+  }
 
   function handleClose() {
     if (isActive) {
@@ -60,29 +80,8 @@ export default function SermonRecordingScreen({ profileId, onExit, onCaptured }:
     onExit();
   }
 
-  function handleCancelTap() {
-    vibrate(8);
-    if (isActive) {
-      setDiscardOpen(true);
-      return;
-    }
-    onExit();
-  }
-
-  function handleDiscard() {
-    vibrate(15);
-    setDiscardOpen(false);
-    setLeaveOpen(false);
-    recorder.discard();
-    onExit();
-  }
-
-  function handleRetrySave() {
-    const pending = pendingRef.current;
-    if (pending) void persist(pending.capture, pending.interrupted);
-  }
-
-  const showingPreStart = status === 'idle' || status === 'requesting' || status === 'denied' || status === 'unavailable' || status === 'error';
+  const isPaused = snapshot.state === 'paused';
+  const statusLabel = isPaused ? (snapshot.interrupted ? 'Interrupted' : 'Paused') : 'Recording';
 
   return (
     <div className="app-container bg-ink-950 min-h-screen flex flex-col text-ivory-100">
@@ -93,74 +92,71 @@ export default function SermonRecordingScreen({ profileId, onExit, onCaptured }:
       </header>
 
       <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
-        {showingPreStart && !saving && (
+        {!isActive && !saving && !pendingRef.current && (
           <div className="w-full max-w-sm animate-fade-in-up">
             <div className="w-16 h-16 rounded-full bg-ivory-100/5 border border-ivory-100/10 flex items-center justify-center mx-auto mb-6">
               <Mic size={26} className="text-gold-300" />
             </div>
             <h2 className="font-serif text-3xl text-ivory-50 mb-3">Ready to record</h2>
             <p className="text-ivory-400 text-sm leading-relaxed mb-8">
-              Your recording stays on this device. Nothing is uploaded or analyzed.
+              Your recording stays on this device. Nothing is uploaded or analyzed. It keeps recording while you take notes or use other apps.
             </p>
 
-            {status === 'denied' && (
+            {error && (
               <div className="flex items-start gap-2 text-left mb-6 px-1">
                 <AlertCircle size={14} className="text-error shrink-0 mt-0.5" />
-                <p className="text-ivory-300 text-xs leading-relaxed">
-                  Microphone access is needed to record a sermon. You can enable it in iPhone Settings.
-                </p>
+                <p className="text-ivory-300 text-xs leading-relaxed">{START_ERROR[error]}</p>
               </div>
-            )}
-            {status === 'unavailable' && (
-              <p className="text-ivory-300 text-xs leading-relaxed mb-6">Recording is not available on this device.</p>
-            )}
-            {status === 'error' && (
-              <p className="text-ivory-300 text-xs leading-relaxed mb-6">Recording could not start. Please try again.</p>
             )}
 
             <button
-              onClick={() => { vibrate(12); void recorder.start(); }}
-              disabled={status === 'requesting' || status === 'unavailable'}
+              onClick={() => { vibrate(12); void start(); }}
+              disabled={busy}
               className="btn-primary w-full h-14 disabled:opacity-40"
             >
-              {status === 'requesting' ? 'Requesting Microphone...' : 'Start Recording'}
+              {busy ? 'Requesting Microphone...' : 'Start Recording'}
             </button>
-            <p className="text-ivory-600 text-xs mt-4">{MIC_LABEL[status]}</p>
           </div>
         )}
 
-        {!showingPreStart && !saving && (
+        {isActive && !saving && (
           <div className="w-full max-w-sm animate-fade-in-up">
             <div className="flex items-center justify-center gap-2 mb-4">
-              <span
-                className={`w-2.5 h-2.5 rounded-full ${status === 'recording' ? 'bg-error animate-pulse' : 'bg-ivory-600'}`}
-              />
-              <p className="ui-label">{status === 'paused' ? 'Paused' : status === 'finalizing' ? 'Finishing' : 'Recording'}</p>
+              <span className={`w-2.5 h-2.5 rounded-full ${isPaused ? 'bg-ivory-600' : 'bg-error animate-pulse'}`} />
+              <p className="ui-label">{statusLabel}</p>
             </div>
-            <p className="font-mono text-6xl text-ivory-50 tabular-nums tracking-tight mb-3">{formatDuration(elapsedMs)}</p>
-            <p className="text-ivory-500 text-xs mb-12">{MIC_LABEL[status]}</p>
+            <p className="font-mono text-6xl text-ivory-50 tabular-nums tracking-tight mb-3">{formatDuration(snapshot.elapsedMs)}</p>
+            <p className="text-ivory-500 text-xs mb-10">
+              {isPaused && snapshot.interrupted
+                ? 'iPhone interrupted this recording. Tap Resume to continue.'
+                : isPaused
+                  ? 'Paused. Tap Resume to continue.'
+                  : 'Microphone on'}
+            </p>
 
-            {status !== 'finalizing' && (
-              <div className="flex items-center justify-center gap-8 mb-10">
-                {status === 'recording' ? (
-                  <button onClick={() => { vibrate(8); recorder.pause(); }} className="w-20 h-20 rounded-full bg-ivory-100/10 border border-ivory-100/20 flex items-center justify-center hover:bg-ivory-100/15 transition-colors" aria-label="Pause recording">
-                    <Pause size={28} className="text-ivory-50" />
-                  </button>
-                ) : (
-                  <button onClick={() => { vibrate(8); recorder.resume(); }} className="w-20 h-20 rounded-full bg-gold-500 flex items-center justify-center hover:bg-gold-400 transition-colors" aria-label="Resume recording">
-                    <Play size={28} className="text-ink-950 ml-1" />
-                  </button>
-                )}
-                <button onClick={() => { vibrate(10); recorder.finish(); }} className="w-20 h-20 rounded-full bg-ivory-100/10 border border-ivory-100/20 flex items-center justify-center hover:bg-ivory-100/15 transition-colors" aria-label="Finish recording">
-                  <Square size={24} className="text-ivory-50" />
+            <div className="flex items-center justify-center gap-8 mb-8">
+              {isPaused ? (
+                <button onClick={() => { vibrate(8); void resume(); }} disabled={busy} className="w-20 h-20 rounded-full bg-gold-500 flex items-center justify-center hover:bg-gold-400 transition-colors disabled:opacity-40" aria-label="Resume recording">
+                  <Play size={28} className="text-ink-950 ml-1" />
                 </button>
-              </div>
-            )}
-            {status !== 'finalizing' && (
-              <div className="flex justify-center gap-6 text-sm">
-                <button onClick={handleCancelTap} className="text-ivory-400 hover:text-ivory-200 transition-colors">Cancel</button>
-              </div>
-            )}
+              ) : (
+                <button onClick={() => { vibrate(8); void pause(); }} disabled={busy} className="w-20 h-20 rounded-full bg-ivory-100/10 border border-ivory-100/20 flex items-center justify-center hover:bg-ivory-100/15 transition-colors disabled:opacity-40" aria-label="Pause recording">
+                  <Pause size={28} className="text-ivory-50" />
+                </button>
+              )}
+              <button onClick={() => void handleFinish()} disabled={busy} className="w-20 h-20 rounded-full bg-ivory-100/10 border border-ivory-100/20 flex items-center justify-center hover:bg-ivory-100/15 transition-colors disabled:opacity-40" aria-label="Finish recording">
+                <Square size={24} className="text-ivory-50" />
+              </button>
+            </div>
+
+            <button onClick={() => { vibrate(8); onTakeNotes(); }} className="btn-secondary w-full mb-6">
+              <NotebookPen size={16} /> Take Notes
+            </button>
+
+            <div className="flex justify-center text-sm">
+              <button onClick={() => { vibrate(8); setDiscardOpen(true); }} className="text-ivory-400 hover:text-ivory-200 transition-colors">Cancel</button>
+            </div>
+            {error && <p className="text-ivory-300 text-xs leading-relaxed mt-4">The recording could not be updated. Please try again.</p>}
           </div>
         )}
 
@@ -172,9 +168,9 @@ export default function SermonRecordingScreen({ profileId, onExit, onCaptured }:
         )}
 
         {saveError && !saving && (
-          <div className="w-full max-w-sm mt-6 animate-fade-in-up">
+          <div className="w-full max-w-sm animate-fade-in-up">
             <p className="text-ivory-300 text-xs leading-relaxed mb-4">{saveError}</p>
-            <button onClick={() => { vibrate(10); handleRetrySave(); }} className="btn-secondary w-full">Try Saving Again</button>
+            <button onClick={() => { vibrate(10); if (pendingRef.current) void persist(pendingRef.current); }} className="btn-secondary w-full">Try Saving Again</button>
           </div>
         )}
       </div>
@@ -186,7 +182,7 @@ export default function SermonRecordingScreen({ profileId, onExit, onCaptured }:
             <p className="text-ivory-400 text-sm leading-relaxed mb-6">The audio recorded so far will be permanently deleted.</p>
             <div className="flex flex-col gap-2">
               <button onClick={() => setDiscardOpen(false)} className="btn-primary w-full">Keep Recording</button>
-              <button onClick={handleDiscard} className="btn-secondary w-full text-clay-400">Discard</button>
+              <button onClick={() => void handleDiscard()} className="btn-secondary w-full text-clay-400">Discard</button>
             </div>
           </div>
         </div>
@@ -199,8 +195,8 @@ export default function SermonRecordingScreen({ profileId, onExit, onCaptured }:
             <p className="text-ivory-400 text-sm leading-relaxed mb-6">Choose what to do with this recording before you leave.</p>
             <div className="flex flex-col gap-2">
               <button onClick={() => setLeaveOpen(false)} className="btn-primary w-full">Continue Recording</button>
-              <button onClick={() => { setLeaveOpen(false); recorder.finish(); }} className="btn-secondary w-full">Finish Recording</button>
-              <button onClick={handleDiscard} className="btn-secondary w-full text-clay-400">Discard Recording</button>
+              <button onClick={() => { setLeaveOpen(false); void handleFinish(); }} className="btn-secondary w-full">Finish Recording</button>
+              <button onClick={() => void handleDiscard()} className="btn-secondary w-full text-clay-400">Discard Recording</button>
             </div>
           </div>
         </div>

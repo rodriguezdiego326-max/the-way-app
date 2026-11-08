@@ -1,7 +1,7 @@
 const DB_NAME = 'solapath-sermon-assistant';
 const DB_VERSION = 1;
 const META_STORE = 'recordings';
-const AUDIO_STORE = 'audio';
+const LEGACY_AUDIO_STORE = 'audio';
 
 export interface SermonRecordingMeta {
   id: string;
@@ -12,7 +12,7 @@ export interface SermonRecordingMeta {
   startedAt: string;
   createdAt: string;
   durationMs: number;
-  mimeType: string;
+  fileName: string | null;
 }
 
 export interface SermonRecordingDetails {
@@ -23,8 +23,7 @@ export interface SermonRecordingDetails {
 
 export interface NewSermonRecording {
   profileId: string;
-  blob: Blob;
-  mimeType: string;
+  fileName: string;
   durationMs: number;
   startedAt: string;
 }
@@ -41,8 +40,8 @@ function openDb(): Promise<IDBDatabase> {
           const meta = db.createObjectStore(META_STORE, { keyPath: 'id' });
           meta.createIndex('profileId', 'profileId', { unique: false });
         }
-        if (!db.objectStoreNames.contains(AUDIO_STORE)) {
-          db.createObjectStore(AUDIO_STORE);
+        if (!db.objectStoreNames.contains(LEGACY_AUDIO_STORE)) {
+          db.createObjectStore(LEGACY_AUDIO_STORE);
         }
       };
       request.onsuccess = () => resolve(request.result);
@@ -81,11 +80,10 @@ export async function saveSermonRecording(input: NewSermonRecording): Promise<Se
     startedAt: input.startedAt,
     createdAt: new Date().toISOString(),
     durationMs: input.durationMs,
-    mimeType: input.mimeType,
+    fileName: input.fileName,
   };
-  const tx = db.transaction([META_STORE, AUDIO_STORE], 'readwrite');
+  const tx = db.transaction(META_STORE, 'readwrite');
   tx.objectStore(META_STORE).put(meta);
-  tx.objectStore(AUDIO_STORE).put(input.blob, meta.id);
   await transactionDone(tx);
   return meta;
 }
@@ -101,14 +99,15 @@ export async function listSermonRecordings(profileId: string): Promise<SermonRec
 
 export async function getSermonRecording(
   id: string,
-): Promise<{ meta: SermonRecordingMeta; blob: Blob } | null> {
+): Promise<{ meta: SermonRecordingMeta; legacyBlob: Blob | null } | null> {
   const db = await openDb();
-  const tx = db.transaction([META_STORE, AUDIO_STORE], 'readonly');
+  const tx = db.transaction([META_STORE, LEGACY_AUDIO_STORE], 'readonly');
   const meta = await requestToPromise<SermonRecordingMeta | undefined>(tx.objectStore(META_STORE).get(id));
   if (!meta) return null;
-  const blob = await requestToPromise<Blob | undefined>(tx.objectStore(AUDIO_STORE).get(id));
-  if (!blob) return null;
-  return { meta, blob };
+  const legacyBlob = meta.fileName
+    ? null
+    : (await requestToPromise<Blob | undefined>(tx.objectStore(LEGACY_AUDIO_STORE).get(id))) ?? null;
+  return { meta, legacyBlob };
 }
 
 export async function updateSermonRecordingDetails(id: string, details: SermonRecordingDetails): Promise<void> {
@@ -121,10 +120,10 @@ export async function updateSermonRecordingDetails(id: string, details: SermonRe
   await transactionDone(tx);
 }
 
-export async function deleteSermonRecording(id: string): Promise<void> {
+export async function deleteSermonRecordingMeta(id: string): Promise<void> {
   const db = await openDb();
-  const tx = db.transaction([META_STORE, AUDIO_STORE], 'readwrite');
+  const tx = db.transaction([META_STORE, LEGACY_AUDIO_STORE], 'readwrite');
   tx.objectStore(META_STORE).delete(id);
-  tx.objectStore(AUDIO_STORE).delete(id);
+  tx.objectStore(LEGACY_AUDIO_STORE).delete(id);
   await transactionDone(tx);
 }

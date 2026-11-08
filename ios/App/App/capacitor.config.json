@@ -45,6 +45,7 @@
 		"SharePlugin",
 		"SplashScreenPlugin",
 		"StatusBarPlugin",
-		"ChurchSearchPlugin"
+		"ChurchSearchPlugin",
+		"SermonRecorderPlugin"
 	]
 }

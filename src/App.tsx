@@ -22,6 +22,7 @@ import WelcomeScreen from '@/components/WelcomeScreen';
 import BrandMark from '@/components/BrandMark';
 import type { BibleTranslation } from '@/lib/bibleTypes';
 import type { AskHandoffContext, ChildAskedHandoff } from '@/lib/askHandoff';
+import { OPEN_SERMON_RECORDER_EVENT } from '@/hooks/sermonRecordingContext';
 
 const DevOverlayRenderer = import.meta.env.DEV
   ? lazy(() => import('@/components/DevOverlayRenderer'))
@@ -159,6 +160,12 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('today');
   const [profile, setProfile] = useState<Profile | null>(null);
   const [overlay, setOverlay] = useState<Overlay>({ type: 'none' });
+
+  useEffect(() => {
+    const openRecorder = () => setOverlay({ type: 'sermon_recording' });
+    window.addEventListener(OPEN_SERMON_RECORDER_EVENT, openRecorder);
+    return () => window.removeEventListener(OPEN_SERMON_RECORDER_EVENT, openRecorder);
+  }, []);
   const [session, setSession] = useState<{ user: { id: string; email?: string } | null } | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -647,6 +654,7 @@ export default function App() {
         <SermonRecordingScreen
           profileId={profile.id}
           onExit={() => setOverlay({ type: 'sermon_assistant' })}
+          onTakeNotes={() => setOverlay({ type: 'sermon_notes' })}
           onCaptured={(recordingId, interrupted) => setOverlay({ type: 'sermon_recording_detail', recordingId, fresh: true, interrupted })}
         />
       </ErrorBoundary>

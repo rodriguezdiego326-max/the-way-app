@@ -35,6 +35,7 @@
     "@capacitor/status-bar": "^8.0.3",
     "@supabase/supabase-js": "^2.57.4",
     "church-search": "file:plugins/church-search",
+    "sermon-recorder": "file:plugins/sermon-recorder",
     "lucide-react": "^0.446.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

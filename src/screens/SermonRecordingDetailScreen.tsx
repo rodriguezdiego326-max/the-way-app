@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
-import { X, Play, Pause, Trash2, AlertCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, Trash2, AlertCircle } from 'lucide-react';
 import { vibrate, formatDate, formatDuration } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
+import SermonPlaybackPanel from '@/components/sermon/SermonPlaybackPanel';
+import { sermonRecorderNative } from '@/lib/sermonRecorderNative';
 import {
-  getSermonRecording, updateSermonRecordingDetails, deleteSermonRecording,
+  getSermonRecording, updateSermonRecordingDetails, deleteSermonRecordingMeta,
   type SermonRecordingMeta,
 } from '@/lib/sermonRecordingStore';
 
@@ -16,7 +18,7 @@ interface Props {
 
 export default function SermonRecordingDetailScreen({ recordingId, fresh, interrupted, onDone }: Props) {
   const [meta, setMeta] = useState<SermonRecordingMeta | null>(null);
-  const [blob, setBlob] = useState<Blob | null>(null);
+  const [legacyBlob, setLegacyBlob] = useState<Blob | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -25,11 +27,6 @@ export default function SermonRecordingDetailScreen({ recordingId, fresh, interr
   const [serviceName, setServiceName] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [playing, setPlaying] = useState(false);
-  const [playPosition, setPlayPosition] = useState(0);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -47,7 +44,7 @@ export default function SermonRecordingDetailScreen({ recordingId, fresh, interr
           return;
         }
         setMeta(record.meta);
-        setBlob(record.blob);
+        setLegacyBlob(record.legacyBlob);
         setTitle(record.meta.title ?? '');
         setPreacher(record.meta.preacher ?? '');
         setServiceName(record.meta.serviceName ?? '');
@@ -56,24 +53,6 @@ export default function SermonRecordingDetailScreen({ recordingId, fresh, interr
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [recordingId]);
-
-  useEffect(() => {
-    if (!blob) return;
-    const url = URL.createObjectURL(blob);
-    setAudioUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [blob]);
-
-  function togglePlayback() {
-    const audio = audioRef.current;
-    if (!audio) return;
-    vibrate(8);
-    if (audio.paused) {
-      void audio.play();
-    } else {
-      audio.pause();
-    }
-  }
 
   async function handleSave() {
     if (!meta || saving) return;
@@ -100,8 +79,10 @@ export default function SermonRecordingDetailScreen({ recordingId, fresh, interr
     setDeleting(true);
     setDeleteError(null);
     try {
-      audioRef.current?.pause();
-      await deleteSermonRecording(meta.id);
+      if (meta.fileName) {
+        await sermonRecorderNative.deleteRecording({ fileName: meta.fileName });
+      }
+      await deleteSermonRecordingMeta(meta.id);
       onDone();
     } catch {
       setDeleteError('This recording could not be deleted. Please try again.');
@@ -145,29 +126,7 @@ export default function SermonRecordingDetailScreen({ recordingId, fresh, interr
                 </p>
               </div>
 
-              <div className="premium-card p-5 mb-4">
-                <p className="ui-label mb-3">Playback</p>
-                {audioUrl && (
-                  <audio
-                    ref={audioRef}
-                    src={audioUrl}
-                    preload="metadata"
-                    onPlay={() => setPlaying(true)}
-                    onPause={() => setPlaying(false)}
-                    onEnded={() => { setPlaying(false); setPlayPosition(0); }}
-                    onTimeUpdate={(e) => setPlayPosition(e.currentTarget.currentTime * 1000)}
-                    className="hidden"
-                  />
-                )}
-                <div className="flex items-center gap-4">
-                  <button onClick={togglePlayback} className="w-12 h-12 rounded-full bg-gold-500 flex items-center justify-center hover:bg-gold-400 transition-colors" aria-label={playing ? 'Pause playback' : 'Play recording'}>
-                    {playing ? <Pause size={18} className="text-ink-950" /> : <Play size={18} className="text-ink-950 ml-0.5" />}
-                  </button>
-                  <p className="font-mono text-sm text-ivory-300 tabular-nums">
-                    {formatDuration(playPosition)} / {formatDuration(meta.durationMs)}
-                  </p>
-                </div>
-              </div>
+              <SermonPlaybackPanel meta={meta} legacyBlob={legacyBlob} />
 
               <div className="premium-card p-5 mb-4">
                 <p className="ui-label mb-4">Details</p>
