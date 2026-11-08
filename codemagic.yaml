@@ -13,6 +13,7 @@ workflows:
         XCODE_SCHEME: App
         BUNDLE_ID: com.rfgforge.solapath
         EXPECTED_BUILD_NUMBER: "131"
+        EXPECTED_MARKETING_VERSION: "0.2.0"
       node: latest
       xcode: latest
       ios_signing:
@@ -34,9 +35,15 @@ workflows:
       - name: Verify Xcode project
         script: |
           xcodebuild -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME" -list
-      - name: Assert Release build number
+      - name: Assert Release version and build number
         script: |
-          RELEASE_BUILD=$(xcodebuild -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME" -configuration Release -showBuildSettings | awk -F' = ' '$1 ~ /^ *CURRENT_PROJECT_VERSION$/ {print $2; exit}')
+          RELEASE_SETTINGS=$(xcodebuild -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME" -configuration Release -showBuildSettings)
+          RELEASE_BUILD=$(echo "$RELEASE_SETTINGS" | awk -F' = ' '$1 ~ /^ *CURRENT_PROJECT_VERSION$/ {print $2; exit}')
+          RELEASE_MARKETING=$(echo "$RELEASE_SETTINGS" | awk -F' = ' '$1 ~ /^ *MARKETING_VERSION$/ {print $2; exit}')
+          if [ "$RELEASE_MARKETING" != "$EXPECTED_MARKETING_VERSION" ]; then
+            echo "Release MARKETING_VERSION is '$RELEASE_MARKETING', expected '$EXPECTED_MARKETING_VERSION'"
+            exit 1
+          fi
           if [ "$RELEASE_BUILD" != "$EXPECTED_BUILD_NUMBER" ]; then
             echo "Release CURRENT_PROJECT_VERSION is '$RELEASE_BUILD', expected '$EXPECTED_BUILD_NUMBER'"
             exit 1
