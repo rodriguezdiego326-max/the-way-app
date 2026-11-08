@@ -18,7 +18,9 @@ public class SermonRecorderPlugin: CAPPlugin, CAPBridgedPlugin, AVAudioPlayerDel
         CAPPluginMethod(name: "seekPlayback", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopPlayback", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "playbackStatus", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "deleteRecording", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "deleteRecording", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "prepareTranscriptionParts", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "cleanupTranscriptionParts", returnType: CAPPluginReturnPromise)
     ]
 
     private static let folderName = "SermonRecordings"
@@ -330,7 +332,7 @@ public class SermonRecorderPlugin: CAPPlugin, CAPBridgedPlugin, AVAudioPlayerDel
         return directory
     }
 
-    private func fileURL(for fileName: String) -> URL? {
+    func fileURL(for fileName: String) -> URL? {
         guard fileName.hasSuffix(".m4a"), !fileName.contains("/"), !fileName.contains("..") else { return nil }
         return recordingsDirectory().appendingPathComponent(fileName)
     }

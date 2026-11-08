@@ -36,6 +36,20 @@ export interface SermonRecorderPlugin {
   stopPlayback(): Promise<void>;
   playbackStatus(): Promise<SermonPlaybackSnapshot>;
   deleteRecording(options: { fileName: string }): Promise<void>;
+  prepareTranscriptionParts(options: { fileName: string }): Promise<PreparedTranscriptionParts>;
+  cleanupTranscriptionParts(options: { token: string }): Promise<void>;
+}
+
+export interface TranscriptionAudioPart {
+  absolutePath: string;
+  startMs: number;
+  endMs: number;
+  sizeBytes: number;
+}
+
+export interface PreparedTranscriptionParts {
+  token: string;
+  parts: TranscriptionAudioPart[];
 }
 
 export const sermonRecorderNative = registerPlugin<SermonRecorderPlugin>('SermonRecorder');

@@ -3,7 +3,12 @@ import { X, Trash2, AlertCircle } from 'lucide-react';
 import { vibrate, formatDate, formatDuration } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import SermonPlaybackPanel from '@/components/sermon/SermonPlaybackPanel';
+import SermonTranscriptionPanel from '@/components/sermon/SermonTranscriptionPanel';
+import SermonConfirmSheet from '@/components/sermon/SermonConfirmSheet';
+import SermonTranscriptScreen from '@/screens/SermonTranscriptScreen';
 import { sermonRecorderNative } from '@/lib/sermonRecorderNative';
+import { useSermonTranscription } from '@/hooks/useSermonTranscription';
+import { discardServerTranscript } from '@/lib/sermonTranscription';
 import {
   getSermonRecording, updateSermonRecordingDetails, deleteSermonRecordingMeta,
   type SermonRecordingMeta,
@@ -21,6 +26,7 @@ export default function SermonRecordingDetailScreen({ recordingId, fresh, interr
   const [legacyBlob, setLegacyBlob] = useState<Blob | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [view, setView] = useState<'details' | 'transcript'>('details');
 
   const [title, setTitle] = useState('');
   const [preacher, setPreacher] = useState('');
@@ -31,6 +37,8 @@ export default function SermonRecordingDetailScreen({ recordingId, fresh, interr
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const transcription = useSermonTranscription(recordingId, meta?.fileName ?? null);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,15 +87,27 @@ export default function SermonRecordingDetailScreen({ recordingId, fresh, interr
     setDeleting(true);
     setDeleteError(null);
     try {
+      if (transcription.status !== 'idle') await transcription.cancel();
       if (meta.fileName) {
         await sermonRecorderNative.deleteRecording({ fileName: meta.fileName });
       }
       await deleteSermonRecordingMeta(meta.id);
+      await discardServerTranscript(meta.id);
       onDone();
     } catch {
       setDeleteError('This recording could not be deleted. Please try again.');
       setDeleting(false);
     }
+  }
+
+  if (meta && view === 'transcript') {
+    return (
+      <SermonTranscriptScreen
+        meta={meta}
+        transcription={transcription}
+        onBack={() => setView('details')}
+      />
+    );
   }
 
   const headerLabel = fresh ? 'Recording Complete' : 'Sermon Recording';
@@ -122,11 +142,17 @@ export default function SermonRecordingDetailScreen({ recordingId, fresh, interr
                   {formatDate(meta.startedAt)} · {formatDuration(meta.durationMs)}
                 </p>
                 <p className="text-ivory-600 text-xs leading-relaxed mt-4">
-                  Transcription and sermon insights will be available in a future update.
+                  Sermon insights will be available in a future update.
                 </p>
               </div>
 
               <SermonPlaybackPanel meta={meta} legacyBlob={legacyBlob} />
+
+              <SermonTranscriptionPanel
+                meta={meta}
+                transcription={transcription}
+                onOpenTranscript={() => setView('transcript')}
+              />
 
               <div className="premium-card p-5 mb-4">
                 <p className="ui-label mb-4">Details</p>
@@ -170,22 +196,18 @@ export default function SermonRecordingDetailScreen({ recordingId, fresh, interr
         </div>
       </div>
 
-      {confirmDeleteOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={() => !deleting && setConfirmDeleteOpen(false)}>
-          <div className="w-full max-w-md bg-ink-900 rounded-t-3xl p-6 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-serif text-xl text-ivory-50 mb-2">Delete this recording?</h3>
-            <p className="text-ivory-400 text-sm leading-relaxed mb-6">This permanently deletes the audio from this device.</p>
-            <div className="flex flex-col gap-2">
-              <button onClick={handleDelete} disabled={deleting} className="btn-primary w-full disabled:opacity-40">
-                {deleting ? 'Deleting...' : 'Delete'}
-              </button>
-              <button onClick={() => setConfirmDeleteOpen(false)} disabled={deleting} className="btn-secondary w-full disabled:opacity-40">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SermonConfirmSheet
+        open={confirmDeleteOpen}
+        title={transcription.transcript ? 'Delete this recording and its transcript?' : 'Delete this recording?'}
+        body={transcription.transcript
+          ? 'This permanently deletes the audio and the transcript from this device.'
+          : 'This permanently deletes the audio from this device.'}
+        confirmLabel="Delete"
+        busy={deleting}
+        destructive
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDeleteOpen(false)}
+      />
     </div>
   );
 }

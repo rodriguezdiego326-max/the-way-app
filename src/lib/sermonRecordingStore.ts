@@ -1,7 +1,8 @@
 const DB_NAME = 'solapath-sermon-assistant';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const META_STORE = 'recordings';
 const LEGACY_AUDIO_STORE = 'audio';
+const TRANSCRIPT_STORE = 'transcripts';
 
 export interface SermonRecordingMeta {
   id: string;
@@ -19,6 +20,12 @@ export interface SermonRecordingDetails {
   title: string | null;
   preacher: string | null;
   serviceName: string | null;
+}
+
+export interface SermonTranscript {
+  recordingId: string;
+  text: string;
+  createdAt: string;
 }
 
 export interface NewSermonRecording {
@@ -42,6 +49,9 @@ function openDb(): Promise<IDBDatabase> {
         }
         if (!db.objectStoreNames.contains(LEGACY_AUDIO_STORE)) {
           db.createObjectStore(LEGACY_AUDIO_STORE);
+        }
+        if (!db.objectStoreNames.contains(TRANSCRIPT_STORE)) {
+          db.createObjectStore(TRANSCRIPT_STORE, { keyPath: 'recordingId' });
         }
       };
       request.onsuccess = () => resolve(request.result);
@@ -122,8 +132,30 @@ export async function updateSermonRecordingDetails(id: string, details: SermonRe
 
 export async function deleteSermonRecordingMeta(id: string): Promise<void> {
   const db = await openDb();
-  const tx = db.transaction([META_STORE, LEGACY_AUDIO_STORE], 'readwrite');
+  const tx = db.transaction([META_STORE, LEGACY_AUDIO_STORE, TRANSCRIPT_STORE], 'readwrite');
   tx.objectStore(META_STORE).delete(id);
   tx.objectStore(LEGACY_AUDIO_STORE).delete(id);
+  tx.objectStore(TRANSCRIPT_STORE).delete(id);
+  await transactionDone(tx);
+}
+
+export async function getSermonTranscript(recordingId: string): Promise<SermonTranscript | null> {
+  const db = await openDb();
+  const tx = db.transaction(TRANSCRIPT_STORE, 'readonly');
+  const row = await requestToPromise<SermonTranscript | undefined>(tx.objectStore(TRANSCRIPT_STORE).get(recordingId));
+  return row ?? null;
+}
+
+export async function saveSermonTranscript(transcript: SermonTranscript): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(TRANSCRIPT_STORE, 'readwrite');
+  tx.objectStore(TRANSCRIPT_STORE).put(transcript);
+  await transactionDone(tx);
+}
+
+export async function deleteSermonTranscript(recordingId: string): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(TRANSCRIPT_STORE, 'readwrite');
+  tx.objectStore(TRANSCRIPT_STORE).delete(recordingId);
   await transactionDone(tx);
 }

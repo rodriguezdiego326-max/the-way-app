@@ -12,6 +12,10 @@
     "the-way-intelligence": {
       "hasChanged": false,
       "hash": "d802d4175ba202edf12fb643d7254d6440364f9200816571d3cbdea4cffc5a3a"
+    },
+    "transcribe-sermon-part": {
+      "hasChanged": false,
+      "hash": "a646a431ae41cef352f99da2a4f1b24adee963a70b84510ffa41b17a9d0acb98"
     }
   }
 }

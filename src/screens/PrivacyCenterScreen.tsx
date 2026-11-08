@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { X, Shield, Download, Trash2, Brain, Heart, BookOpen, Users, Church, BookHeart, Lock, AlertCircle, FileText } from 'lucide-react';
+import { X, Shield, Download, Trash2, Brain, Heart, BookOpen, Users, Church, BookHeart, Lock, AlertCircle, FileText, Mic } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import { grantAiConsent, withdrawAiConsent, hasCurrentAiConsent } from '@/lib/aiConsent';
 import { openPrivacyPolicy } from '@/lib/privacyConfig';
@@ -17,7 +17,7 @@ interface Props {
   onProfileUpdate?: () => void;
 }
 
-type Section = 'main' | 'stores' | 'ai_data' | 'download' | 'delete';
+type Section = 'main' | 'stores' | 'ai_data' | 'recording' | 'download' | 'delete';
 type DownloadPhase = 'idle' | 'file' | 'share';
 
 export default function PrivacyCenterScreen({ profile, onBack, onProfileUpdate }: Props) {
@@ -104,9 +104,64 @@ export default function PrivacyCenterScreen({ profile, onBack, onProfileUpdate }
     { icon: Shield, label: 'What SOLAPATH Stores', desc: 'Understand your data', onClick: () => setSection('stores') },
     { icon: FileText, label: 'Privacy Policy', desc: 'Read how SOLAPATH collects, uses, protects, and deletes data.', onClick: () => void openPrivacyPolicy() },
     { icon: Brain, label: 'AI & My Data', desc: 'How AI uses your context', onClick: () => setSection('ai_data') },
+    { icon: Mic, label: 'Recording & Transcription', desc: 'How sermon audio and transcripts are handled', onClick: () => setSection('recording') },
     { icon: Download, label: 'Download My Data', desc: 'Export your data as JSON', onClick: () => setSection('download') },
     { icon: Trash2, label: 'Delete My Account', desc: 'Permanently remove your data', onClick: () => setSection('delete') },
   ];
+
+  if (section === 'recording') {
+    return (
+      <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28 flex flex-col">
+        <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
+          <button onClick={() => setSection('main')} className="btn-ghost"><X size={20} /></button>
+          <p className="ui-label">Recording & Transcription</p><span className="w-10" />
+        </header>
+        <div className="flex-1 overflow-y-auto px-6 mt-4">
+          <div className="animate-fade-in-up space-y-6">
+            <section className="space-y-3">
+              <p className="ui-label">Recording</p>
+              <div className="premium-card p-4">
+                <p className="text-ivory-100 font-medium text-sm mb-2">Why Recordings Exist</p>
+                <p className="text-ivory-500 text-xs leading-relaxed">You can record a sermon with SOLAPATH to listen back later. Recording happens on your device.</p>
+              </div>
+              <div className="premium-card p-4">
+                <p className="text-ivory-100 font-medium text-sm mb-2">Where Recordings Live</p>
+                <p className="text-ivory-500 text-xs leading-relaxed">Your original recordings stay on this device, excluded from device backups. They are never sent anywhere unless you choose to transcribe them.</p>
+              </div>
+              <div className="premium-card p-4">
+                <p className="text-ivory-100 font-medium text-sm mb-2">How to Delete</p>
+                <p className="text-ivory-500 text-xs leading-relaxed">Open a recording and choose Delete. This removes its audio and any transcript from this device.</p>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <p className="ui-label">Transcription</p>
+              <div className="premium-card p-4">
+                <p className="text-ivory-100 font-medium text-sm mb-2">Why Audio Is Sent</p>
+                <p className="text-ivory-500 text-xs leading-relaxed">Only when you tap Transcribe Sermon on a saved recording, SOLAPATH temporarily sends that one recording to create a written transcript. Live audio is never sent.</p>
+              </div>
+              <div className="premium-card p-4">
+                <p className="text-ivory-100 font-medium text-sm mb-2">Who Processes It</p>
+                <p className="text-ivory-500 text-xs leading-relaxed">A third-party AI transcription service converts the sermon audio into text.</p>
+              </div>
+              <div className="premium-card p-4">
+                <p className="text-ivory-100 font-medium text-sm mb-2">What It Is Used For</p>
+                <p className="text-ivory-500 text-xs leading-relaxed">The audio is used only to create the transcript. It is not added to your SOLAPATH Memory and is not used for other features.</p>
+              </div>
+              <div className="premium-card p-4">
+                <p className="text-ivory-100 font-medium text-sm mb-2">Temporary Audio</p>
+                <p className="text-ivory-500 text-xs leading-relaxed">The audio copy uploaded for transcription is removed once processing finishes, is cancelled, or fails. Your original recording on this device is never changed.</p>
+              </div>
+              <div className="premium-card p-4">
+                <p className="text-ivory-100 font-medium text-sm mb-2">Where the Transcript Lives</p>
+                <p className="text-ivory-500 text-xs leading-relaxed">Transcripts are saved on this device with the sermon. Deleting a transcript keeps the recording; deleting a recording removes both.</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (section === 'stores') {
     return (
