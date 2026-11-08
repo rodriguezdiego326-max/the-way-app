@@ -1,6 +1,10 @@
 {
   "projectId": "70050774",
   "functions": {
+    "cleanup-sermon-transcription-temp": {
+      "hasChanged": false,
+      "hash": "d817572bcf3cae64cda127f57843bc3eebc75c979d09a1b57e7c2e3cecb6ade4"
+    },
     "delete-account": {
       "hasChanged": false,
       "hash": "264dc3c411b8ded5851d1627d76dc980973e4cd301ebeff02c07e8756ed9c1fb"
@@ -15,11 +19,7 @@
     },
     "transcribe-sermon-part": {
       "hasChanged": false,
-      "hash": "a646a431ae41cef352f99da2a4f1b24adee963a70b84510ffa41b17a9d0acb98"
-    },
-    "cleanup-sermon-transcription-temp": {
-      "hasChanged": false,
-      "hash": "d817572bcf3cae64cda127f57843bc3eebc75c979d09a1b57e7c2e3cecb6ade4"
+      "hash": "767ef4d303fd0aafc04ebee01c4c504709b9f32c1abc7abfabb6286ca8576712"
     }
   }
 }

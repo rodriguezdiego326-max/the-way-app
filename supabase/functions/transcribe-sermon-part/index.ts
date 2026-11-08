@@ -9,8 +9,8 @@ const corsHeaders = {
 
 const BUCKET = "sermon-transcription-temp";
 const MODEL = "gpt-transcribe";
-const MAX_PART_BYTES = 24_000_000;
-const MAX_PARTS = 12;
+const MAX_PART_BYTES = 6_000_000;
+const MAX_PARTS = 32;
 const MAX_TAIL_CHARS = 300;
 const OPENAI_TIMEOUT_MS = 170_000;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

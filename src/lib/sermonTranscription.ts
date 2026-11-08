@@ -1,14 +1,12 @@
 import { Capacitor } from '@capacitor/core';
-import { Upload } from 'tus-js-client';
 import { supabase } from '@/lib/supabase';
 import { sermonRecorderNative, type TranscriptionAudioPart } from '@/lib/sermonRecorderNative';
 import { saveSermonTranscript, type SermonTranscript } from '@/lib/sermonRecordingStore';
 
 const BUCKET = 'sermon-transcription-temp';
 const PREVIOUS_TAIL_CHARS = 300;
-const SMALL_UPLOAD_MAX_BYTES = 6 * 1024 * 1024;
-const RESUMABLE_CHUNK_BYTES = 6 * 1024 * 1024;
-const RESUMABLE_RETRY_DELAYS = [0, 1000, 3000, 5000, 10000];
+const MAX_PART_UPLOAD_BYTES = 6_000_000;
+const UPLOAD_RETRY_DELAYS_MS = [0, 2000, 5000];
 const SUPABASE_URL: string = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY: string = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -121,60 +119,23 @@ async function removeLocalParts(job: TranscriptionJob) {
   }
 }
 
-function resumableUploadEndpoint(): string {
-  const projectHost = new URL(SUPABASE_URL).hostname.replace(/\.supabase\.co$/, '');
-  return `https://${projectHost}.storage.supabase.co/storage/v1/upload/resumable`;
-}
-
 async function uploadPart(job: TranscriptionJob, path: string, blob: Blob, accessToken: string, onBytes: (loaded: number) => void) {
-  if (blob.size > SMALL_UPLOAD_MAX_BYTES) {
-    await uploadResumablePart(job, path, blob, accessToken, onBytes);
-    return;
+  if (blob.size >= MAX_PART_UPLOAD_BYTES) throw new TranscriptionError(TRANSCRIPT_FAILURE_MESSAGE);
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await uploadStandardPart(job, path, blob, accessToken, onBytes);
+      return;
+    } catch (cause) {
+      if (job.cancelled || cause instanceof TranscriptionCancelledError) throw cause;
+      if (attempt >= UPLOAD_RETRY_DELAYS_MS.length) throw cause;
+      await delay(UPLOAD_RETRY_DELAYS_MS[attempt]);
+      assertActive(job);
+    }
   }
-  await uploadStandardPart(job, path, blob, accessToken, onBytes);
 }
 
-function uploadResumablePart(job: TranscriptionJob, path: string, blob: Blob, accessToken: string, onBytes: (loaded: number) => void) {
-  return new Promise<void>((resolve, reject) => {
-    const upload = new Upload(blob, {
-      endpoint: resumableUploadEndpoint(),
-      chunkSize: RESUMABLE_CHUNK_BYTES,
-      retryDelays: RESUMABLE_RETRY_DELAYS,
-      removeFingerprintOnSuccess: true,
-      fingerprint: async () => `sermon-transcription:${path}:${blob.size}`,
-      headers: {
-        authorization: `Bearer ${accessToken}`,
-        apikey: SUPABASE_ANON_KEY,
-      },
-      metadata: {
-        bucketName: BUCKET,
-        objectName: path,
-        contentType: 'audio/mp4',
-        cacheControl: '3600',
-      },
-      onProgress: (bytesSent) => onBytes(bytesSent),
-      onSuccess: () => {
-        job.abortUpload = null;
-        resolve();
-      },
-      onError: () => {
-        job.abortUpload = null;
-        reject(new TranscriptionError(TRANSCRIPT_FAILURE_MESSAGE));
-      },
-    });
-    job.abortUpload = () => {
-      job.abortUpload = null;
-      upload.abort(true).catch(() => undefined);
-      reject(new TranscriptionCancelledError());
-    };
-    upload
-      .findPreviousUploads()
-      .catch(() => [])
-      .then((previous) => {
-        if (previous.length > 0) upload.resumeFromPreviousUpload(previous[0]);
-        upload.start();
-      });
-  });
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function uploadStandardPart(job: TranscriptionJob, path: string, blob: Blob, accessToken: string, onBytes: (loaded: number) => void) {

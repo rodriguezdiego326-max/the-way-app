@@ -3,10 +3,10 @@ import AVFoundation
 import Capacitor
 
 extension SermonRecorderPlugin {
-    static let transcriptionPartSeconds: Double = 25 * 60
+    static let transcriptionPartSeconds: Double = 6 * 60
     static let transcriptionOverlapSeconds: Double = 3
     static let transcriptionMaxSeconds: Double = 3 * 60 * 60
-    static let transcriptionMaxPartBytes: Int64 = 24_000_000
+    static let transcriptionMaxPartBytes: Int64 = 5_900_000
 
     @objc func prepareTranscriptionParts(_ call: CAPPluginCall) {
         guard let fileName = call.getString("fileName"), let source = fileURL(for: fileName),
@@ -90,7 +90,7 @@ extension SermonRecorderPlugin {
     }
 
     static func exportTranscriptionPart(asset: AVAsset, startSeconds: Double, endSeconds: Double, to target: URL) throws {
-        guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetPassthrough) else {
+        guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A) else {
             throw TranscriptionPartError.exportFailed
         }
         try? FileManager.default.removeItem(at: target)

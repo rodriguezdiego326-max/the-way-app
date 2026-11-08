@@ -20,14 +20,13 @@
   },
   "dependencies": {
     "@aparajita/capacitor-secure-storage": "^8.0.0",
-    "@capacitor/android": "^8.5.0",
+    "@capacitor/android": "~8.5.3",
     "@capacitor/app": "^8.1.1",
     "@capacitor/browser": "^8.0.5",
-    "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
     "@capacitor/filesystem": "^8.1.5",
     "@capacitor/haptics": "^8.0.2",
-    "@capacitor/ios": "^8.5.0",
+    "@capacitor/ios": "~8.5.3",
     "@capacitor/keyboard": "^8.0.5",
     "@capacitor/push-notifications": "^8.1.2",
     "@capacitor/share": "^8.0.3",
@@ -38,10 +37,10 @@
     "lucide-react": "^0.446.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "sermon-recorder": "file:plugins/sermon-recorder",
-    "tus-js-client": "4.3.1"
+    "sermon-recorder": "file:plugins/sermon-recorder"
   },
   "devDependencies": {
+    "@capacitor/cli": "~8.5.3",
     "@eslint/js": "^9.9.1",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
