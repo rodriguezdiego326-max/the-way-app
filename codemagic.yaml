@@ -12,6 +12,7 @@ workflows:
         XCODE_PROJECT: ios/App/App.xcodeproj
         XCODE_SCHEME: App
         BUNDLE_ID: com.rfgforge.solapath
+        EXPECTED_BUILD_NUMBER: "131"
       node: latest
       xcode: latest
       ios_signing:
@@ -33,6 +34,13 @@ workflows:
       - name: Verify Xcode project
         script: |
           xcodebuild -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME" -list
+      - name: Assert Release build number
+        script: |
+          RELEASE_BUILD=$(xcodebuild -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME" -configuration Release -showBuildSettings | awk -F' = ' '$1 ~ /^ *CURRENT_PROJECT_VERSION$/ {print $2; exit}')
+          if [ "$RELEASE_BUILD" != "$EXPECTED_BUILD_NUMBER" ]; then
+            echo "Release CURRENT_PROJECT_VERSION is '$RELEASE_BUILD', expected '$EXPECTED_BUILD_NUMBER'"
+            exit 1
+          fi
       - name: Apply provisioning profiles
         script: |
           xcode-project use-profiles
