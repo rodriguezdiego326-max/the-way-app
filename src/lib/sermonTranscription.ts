@@ -1,10 +1,14 @@
 import { Capacitor } from '@capacitor/core';
+import { Upload } from 'tus-js-client';
 import { supabase } from '@/lib/supabase';
 import { sermonRecorderNative, type TranscriptionAudioPart } from '@/lib/sermonRecorderNative';
 import { saveSermonTranscript, type SermonTranscript } from '@/lib/sermonRecordingStore';
 
 const BUCKET = 'sermon-transcription-temp';
 const PREVIOUS_TAIL_CHARS = 300;
+const SMALL_UPLOAD_MAX_BYTES = 6 * 1024 * 1024;
+const RESUMABLE_CHUNK_BYTES = 6 * 1024 * 1024;
+const RESUMABLE_RETRY_DELAYS = [0, 1000, 3000, 5000, 10000];
 const SUPABASE_URL: string = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY: string = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -28,7 +32,7 @@ export interface TranscriptionJob {
   parts: TranscriptionAudioPart[];
   texts: string[];
   cancelled: boolean;
-  xhr: XMLHttpRequest | null;
+  abortUpload: (() => void) | null;
 }
 
 export function createTranscriptionJob(recordingId: string): TranscriptionJob {
@@ -39,7 +43,7 @@ export function createTranscriptionJob(recordingId: string): TranscriptionJob {
     parts: [],
     texts: [],
     cancelled: false,
-    xhr: null,
+    abortUpload: null,
   };
 }
 
@@ -117,10 +121,66 @@ async function removeLocalParts(job: TranscriptionJob) {
   }
 }
 
+function resumableUploadEndpoint(): string {
+  const projectHost = new URL(SUPABASE_URL).hostname.replace(/\.supabase\.co$/, '');
+  return `https://${projectHost}.storage.supabase.co/storage/v1/upload/resumable`;
+}
+
 async function uploadPart(job: TranscriptionJob, path: string, blob: Blob, accessToken: string, onBytes: (loaded: number) => void) {
-  await new Promise<void>((resolve, reject) => {
+  if (blob.size > SMALL_UPLOAD_MAX_BYTES) {
+    await uploadResumablePart(job, path, blob, accessToken, onBytes);
+    return;
+  }
+  await uploadStandardPart(job, path, blob, accessToken, onBytes);
+}
+
+function uploadResumablePart(job: TranscriptionJob, path: string, blob: Blob, accessToken: string, onBytes: (loaded: number) => void) {
+  return new Promise<void>((resolve, reject) => {
+    const upload = new Upload(blob, {
+      endpoint: resumableUploadEndpoint(),
+      chunkSize: RESUMABLE_CHUNK_BYTES,
+      retryDelays: RESUMABLE_RETRY_DELAYS,
+      removeFingerprintOnSuccess: true,
+      fingerprint: async () => `sermon-transcription:${path}:${blob.size}`,
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        apikey: SUPABASE_ANON_KEY,
+      },
+      metadata: {
+        bucketName: BUCKET,
+        objectName: path,
+        contentType: 'audio/mp4',
+        cacheControl: '3600',
+      },
+      onProgress: (bytesSent) => onBytes(bytesSent),
+      onSuccess: () => {
+        job.abortUpload = null;
+        resolve();
+      },
+      onError: () => {
+        job.abortUpload = null;
+        reject(new TranscriptionError(TRANSCRIPT_FAILURE_MESSAGE));
+      },
+    });
+    job.abortUpload = () => {
+      job.abortUpload = null;
+      upload.abort(true).catch(() => undefined);
+      reject(new TranscriptionCancelledError());
+    };
+    upload
+      .findPreviousUploads()
+      .catch(() => [])
+      .then((previous) => {
+        if (previous.length > 0) upload.resumeFromPreviousUpload(previous[0]);
+        upload.start();
+      });
+  });
+}
+
+function uploadStandardPart(job: TranscriptionJob, path: string, blob: Blob, accessToken: string, onBytes: (loaded: number) => void) {
+  return new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    job.xhr = xhr;
+    job.abortUpload = () => xhr.abort();
     xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`);
     xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
     xhr.setRequestHeader('apikey', SUPABASE_ANON_KEY);
@@ -130,16 +190,16 @@ async function uploadPart(job: TranscriptionJob, path: string, blob: Blob, acces
       if (event.lengthComputable) onBytes(event.loaded);
     };
     xhr.onload = () => {
-      job.xhr = null;
+      job.abortUpload = null;
       if (xhr.status >= 200 && xhr.status < 300) resolve();
       else reject(new TranscriptionError(TRANSCRIPT_FAILURE_MESSAGE));
     };
     xhr.onerror = () => {
-      job.xhr = null;
+      job.abortUpload = null;
       reject(new TranscriptionError(TRANSCRIPT_FAILURE_MESSAGE));
     };
     xhr.onabort = () => {
-      job.xhr = null;
+      job.abortUpload = null;
       reject(new TranscriptionCancelledError());
     };
     xhr.send(blob);
@@ -177,6 +237,7 @@ async function uploadPendingParts(job: TranscriptionJob, userId: string, accessT
       onProgress({ stage: 'uploading', percent: Math.min(percent, 99) });
     });
     completedBytes += part.sizeBytes;
+    await saveServerState(job, userId, 'processing');
   }
   if (pending.length > 0) onProgress({ stage: 'uploading', percent: 100 });
 }
@@ -200,6 +261,7 @@ async function transcribeParts(job: TranscriptionJob, userId: string, onProgress
     });
     if (error || typeof data?.text !== 'string') throw new TranscriptionError(TRANSCRIPT_FAILURE_MESSAGE);
     job.texts[index] = data.text;
+    await saveServerState(job, userId, 'processing');
   }
 }
 
@@ -260,7 +322,7 @@ async function failJob(job: TranscriptionJob, userId: string) {
 
 export async function cancelTranscriptionJob(job: TranscriptionJob) {
   job.cancelled = true;
-  job.xhr?.abort();
+  job.abortUpload?.();
   const { data } = await supabase.auth.getSession();
   const userId = data.session?.user.id;
   if (userId) {
