@@ -6,7 +6,8 @@ extension SermonRecorderPlugin {
     static let transcriptionPartSeconds: Double = 6 * 60
     static let transcriptionOverlapSeconds: Double = 3
     static let transcriptionMaxSeconds: Double = 3 * 60 * 60
-    static let transcriptionMaxPartBytes: Int64 = 5_900_000
+    static let transcriptionMaxPartBytes: Int64 = 5_500_000
+    static let transcriptionMinSplitSeconds: Double = 30
 
     @objc func prepareTranscriptionParts(_ call: CAPPluginCall) {
         guard let fileName = call.getString("fileName"), let source = fileURL(for: fileName),
@@ -37,23 +38,18 @@ extension SermonRecorderPlugin {
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
                 let count = max(1, Int(ceil(durationSeconds / Self.transcriptionPartSeconds)))
                 var parts: [[String: Any]] = []
+                var index = 0
 
-                for index in 0..<count {
-                    let startSeconds = max(0, Double(index) * Self.transcriptionPartSeconds - (index > 0 ? Self.transcriptionOverlapSeconds : 0))
-                    let endSeconds = min(durationSeconds, Double(index + 1) * Self.transcriptionPartSeconds + Self.transcriptionOverlapSeconds)
-                    let target = folder.appendingPathComponent("part-\(index).m4a")
-                    try Self.exportTranscriptionPart(asset: asset, startSeconds: startSeconds, endSeconds: endSeconds, to: target)
-
-                    let size = (try FileManager.default.attributesOfItem(atPath: target.path)[.size] as? NSNumber)?.int64Value ?? 0
-                    guard size > 0, size <= Self.transcriptionMaxPartBytes else {
-                        throw TranscriptionPartError.tooLarge
-                    }
-                    parts.append([
-                        "absolutePath": target.path,
-                        "startMs": Int(startSeconds * 1000),
-                        "endMs": Int(endSeconds * 1000),
-                        "sizeBytes": size,
-                    ])
+                for slot in 0..<count {
+                    try Self.exportBoundedParts(
+                        asset: asset,
+                        nominalStart: Double(slot) * Self.transcriptionPartSeconds,
+                        nominalEnd: min(durationSeconds, Double(slot + 1) * Self.transcriptionPartSeconds),
+                        durationSeconds: durationSeconds,
+                        folder: folder,
+                        index: &index,
+                        parts: &parts
+                    )
                 }
 
                 DispatchQueue.main.async {
@@ -87,6 +83,46 @@ extension SermonRecorderPlugin {
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         return caches.appendingPathComponent("SermonTranscription", isDirectory: true)
             .appendingPathComponent(token, isDirectory: true)
+    }
+
+    static func exportBoundedParts(
+        asset: AVAsset,
+        nominalStart: Double,
+        nominalEnd: Double,
+        durationSeconds: Double,
+        folder: URL,
+        index: inout Int,
+        parts: inout [[String: Any]]
+    ) throws {
+        let startSeconds = max(0, nominalStart - (nominalStart > 0 ? transcriptionOverlapSeconds : 0))
+        let endSeconds = min(durationSeconds, nominalEnd + transcriptionOverlapSeconds)
+        let target = folder.appendingPathComponent("part-\(index).m4a")
+        try exportTranscriptionPart(asset: asset, startSeconds: startSeconds, endSeconds: endSeconds, to: target)
+
+        let size = (try FileManager.default.attributesOfItem(atPath: target.path)[.size] as? NSNumber)?.int64Value ?? 0
+        guard size > 0 else {
+            throw TranscriptionPartError.exportFailed
+        }
+
+        if size <= transcriptionMaxPartBytes {
+            parts.append([
+                "absolutePath": target.path,
+                "startMs": Int(startSeconds * 1000),
+                "endMs": Int(endSeconds * 1000),
+                "sizeBytes": size,
+            ])
+            index += 1
+            return
+        }
+
+        try? FileManager.default.removeItem(at: target)
+        let length = nominalEnd - nominalStart
+        guard length / 2 >= transcriptionMinSplitSeconds else {
+            throw TranscriptionPartError.tooLarge
+        }
+        let middle = nominalStart + length / 2
+        try exportBoundedParts(asset: asset, nominalStart: nominalStart, nominalEnd: middle, durationSeconds: durationSeconds, folder: folder, index: &index, parts: &parts)
+        try exportBoundedParts(asset: asset, nominalStart: middle, nominalEnd: nominalEnd, durationSeconds: durationSeconds, folder: folder, index: &index, parts: &parts)
     }
 
     static func exportTranscriptionPart(asset: AVAsset, startSeconds: Double, endSeconds: Double, to target: URL) throws {
