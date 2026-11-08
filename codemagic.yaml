@@ -12,7 +12,7 @@ workflows:
         XCODE_PROJECT: ios/App/App.xcodeproj
         XCODE_SCHEME: App
         BUNDLE_ID: com.rfgforge.solapath
-        EXPECTED_BUILD_NUMBER: "134"
+        EXPECTED_BUILD_NUMBER: "135"
         EXPECTED_MARKETING_VERSION: "0.2.0"
       node: latest
       xcode: latest
