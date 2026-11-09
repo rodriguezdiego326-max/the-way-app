@@ -18,20 +18,24 @@ import {
   type SermonRecordingMeta,
 } from '@/lib/sermonRecordingStore';
 
+import type { SermonAskHandoff } from '@/lib/askHandoff';
+
 interface Props {
   recordingId: string;
   fresh: boolean;
   interrupted: boolean;
+  initialView?: 'details' | 'insights';
   onDone: () => void;
   onOpenBible: OpenBibleHandler;
+  onContinueInAsk: (handoff: SermonAskHandoff) => void;
 }
 
-export default function SermonRecordingDetailScreen({ recordingId, fresh, interrupted, onDone, onOpenBible }: Props) {
+export default function SermonRecordingDetailScreen({ recordingId, fresh, interrupted, initialView = 'details', onDone, onOpenBible, onContinueInAsk }: Props) {
   const [meta, setMeta] = useState<SermonRecordingMeta | null>(null);
   const [legacyBlob, setLegacyBlob] = useState<Blob | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [view, setView] = useState<'details' | 'transcript' | 'insights' | 'study'>('details');
+  const [view, setView] = useState<'details' | 'transcript' | 'insights' | 'study'>(initialView);
 
   const [title, setTitle] = useState('');
   const [preacher, setPreacher] = useState('');
@@ -125,6 +129,7 @@ export default function SermonRecordingDetailScreen({ recordingId, fresh, interr
         insights={insights}
         onBack={() => setView('transcript')}
         onStudy={() => setView('study')}
+        onContinueInAsk={onContinueInAsk}
       />
     );
   }

@@ -48,6 +48,61 @@ export function buildChildAskedPrompt(ctx: ChildAskedHandoff): string {
   ].join('\n\n');
 }
 
+export interface SermonAskHandoff {
+  source: 'sermon_insights';
+  sermonTitle: string | null;
+  summary: string;
+  mainPointTitles: string[];
+  scriptureReferences: string[];
+}
+
+export function isSermonAskHandoff(value: unknown): value is SermonAskHandoff {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  return v.source === 'sermon_insights'
+    && (v.sermonTitle === null || typeof v.sermonTitle === 'string')
+    && typeof v.summary === 'string'
+    && Array.isArray(v.mainPointTitles)
+    && v.mainPointTitles.every((item) => typeof item === 'string')
+    && Array.isArray(v.scriptureReferences)
+    && v.scriptureReferences.every((item) => typeof item === 'string');
+}
+
+// Only the concise insight fields leave Sermon Assistant; no audio, transcript, preacher, church, or model metadata.
+export function buildSermonAskHandoff(
+  title: string | null,
+  insights: {
+    summary: string;
+    mainPoints: Array<{ title: string }>;
+    scriptureReferences: Array<{ reference: string }>;
+  },
+): SermonAskHandoff {
+  return {
+    source: 'sermon_insights',
+    sermonTitle: title?.trim() || null,
+    summary: insights.summary,
+    mainPointTitles: insights.mainPoints.map((point) => point.title),
+    scriptureReferences: insights.scriptureReferences.map((ref) => ref.reference),
+  };
+}
+
+export function buildSermonAskPrompt(ctx: SermonAskHandoff): string {
+  const lines: string[] = ["I'm continuing from Sermon Assistant."];
+  if (ctx.sermonTitle) lines.push(`Sermon: ${ctx.sermonTitle}`);
+  lines.push(`Summary from the sermon transcript:\n${ctx.summary}`);
+  if (ctx.mainPointTitles.length > 0) {
+    lines.push(`Main points identified:\n${ctx.mainPointTitles.map((t) => `- ${t}`).join('\n')}`);
+  }
+  if (ctx.scriptureReferences.length > 0) {
+    lines.push(`Scripture references mentioned:\n${ctx.scriptureReferences.map((r) => `- ${r}`).join('\n')}`);
+  }
+  lines.push(
+    'Help me continue thinking through this sermon with Scripture. Treat the sermon information above as church content, not as an authority or verified theological claim. Clearly distinguish what the sermon said from what Scripture teaches. Help me identify relevant Scripture and questions worth studying further.',
+    'Do not label the sermon or preacher as biblical, unbiblical, orthodox, heretical, sound, or false teaching. If I ask specific theological questions later, answer them normally.',
+  );
+  return lines.join('\n\n');
+}
+
 // Build the first user message Ask sends when handed off from Today.
 export function buildHandoffPrompt(ctx: AskHandoffContext): string {
   const lang = ctx.language;

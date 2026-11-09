@@ -21,7 +21,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import WelcomeScreen from '@/components/WelcomeScreen';
 import BrandMark from '@/components/BrandMark';
 import type { BibleTranslation } from '@/lib/bibleTypes';
-import type { AskHandoffContext, ChildAskedHandoff } from '@/lib/askHandoff';
+import type { AskHandoffContext, ChildAskedHandoff, SermonAskHandoff } from '@/lib/askHandoff';
 import { OPEN_SERMON_RECORDER_EVENT } from '@/hooks/sermonRecordingContext';
 
 const DevOverlayRenderer = import.meta.env.DEV
@@ -116,7 +116,7 @@ export type Overlay =
   | { type: 'sermon_notes' }
   | { type: 'sermon_assistant' }
   | { type: 'sermon_recording' }
-  | { type: 'sermon_recording_detail'; recordingId: string; fresh: boolean; interrupted: boolean }
+  | { type: 'sermon_recording_detail'; recordingId: string; fresh: boolean; interrupted: boolean; initialView?: 'details' | 'insights' }
   | { type: 'sermon_follow_up'; sermon: Sermon }
   | { type: 'continue_sunday' }
   | { type: 'sermon_companion'; sermon: Sermon }
@@ -169,7 +169,8 @@ export default function App() {
   const [session, setSession] = useState<{ user: { id: string; email?: string } | null } | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
-  const [askContext, setAskContext] = useState<string | AskHandoffContext | ChildAskedHandoff | null>(null);
+  const [askContext, setAskContext] = useState<string | AskHandoffContext | ChildAskedHandoff | SermonAskHandoff | null>(null);
+  const [sermonAskRecordingId, setSermonAskRecordingId] = useState<string | null>(null);
   const [activeAskConversationId, setActiveAskConversationId] = useState<string | null>(null);
   const [askKeyboardOpen, setAskKeyboardOpen] = useState(false);
   const [activeChurchId, setActiveChurchId] = useState<string | null>(null);
@@ -448,8 +449,18 @@ export default function App() {
               recordingId={studyDetail.recordingId}
               fresh={studyDetail.fresh}
               interrupted={studyDetail.interrupted}
+              initialView={studyDetail.initialView}
               onDone={() => setOverlay({ type: 'sermon_assistant' })}
               onOpenBible={handleOpenBibleReference}
+              onContinueInAsk={(handoff) => {
+                setSermonAskRecordingId(studyDetail.recordingId);
+                setActiveAskConversationId(null);
+                localStorage.removeItem('solapath_active_ask_conv');
+                localStorage.removeItem('solapath_ask_return_conv');
+                setOverlay({ type: 'none' });
+                setActiveTab('ask');
+                setAskContext(handoff);
+              }}
             />
           </div>
           {bibleLayer}
@@ -809,7 +820,7 @@ export default function App() {
         setActiveTab('ask');
         setAskContext(ref);
       }} />}
-      {activeTab === 'ask' && <AskScreen theologicalDepth={profile?.theological_depth || 'simple'} profile={profile} onProfileUpdate={handleProfileUpdate} onOpenBibleReference={handleOpenBibleReference} initialContext={askContext} onContextConsumed={() => setAskContext(null)} onKeyboardVisibilityChange={setAskKeyboardOpen} activeConversationId={activeAskConversationId} onConversationChange={setActiveAskConversationId} translation={globalTranslation} onTranslationChange={handleTranslationChange} onBackToFamily={() => setOverlay({ type: 'family' })} />}
+      {activeTab === 'ask' && <AskScreen theologicalDepth={profile?.theological_depth || 'simple'} profile={profile} onProfileUpdate={handleProfileUpdate} onOpenBibleReference={handleOpenBibleReference} initialContext={askContext} onContextConsumed={() => setAskContext(null)} onKeyboardVisibilityChange={setAskKeyboardOpen} activeConversationId={activeAskConversationId} onConversationChange={setActiveAskConversationId} translation={globalTranslation} onTranslationChange={handleTranslationChange} onBackToFamily={() => setOverlay({ type: 'family' })} onBackToSermon={sermonAskRecordingId ? () => setOverlay({ type: 'sermon_recording_detail', recordingId: sermonAskRecordingId, fresh: false, interrupted: false, initialView: 'insights' }) : undefined} />}
 
       {activeTab === 'prayer' && <PrayerScreen profile={profile} />}
       {activeTab === 'explore' && <YouScreen profile={profile} onProfileUpdate={handleProfileUpdate} session={session} onSignOut={handleSignOut} onOpenFamily={() => setOverlay({ type: 'family' })} onOpenReach={() => setOverlay({ type: 'reach' })} onOpenLibrarySearch={() => setOverlay({ type: 'library_search' })} onOpenTogether={() => setOverlay({ type: 'together' })} onOpenMyChurch={() => setOverlay({ type: 'my_church' })} onOpenLegacy={() => setOverlay({ type: 'legacy_home' })} onOpenPrivacyCenter={() => setOverlay({ type: 'privacy_center' })} onOpenBetaFeedback={() => setOverlay({ type: 'beta_feedback' })} {...(import.meta.env.DEV ? { onOpenAdminSources: () => setOverlay({ type: 'admin_sources' }), onOpenRetrievalDebug: () => setOverlay({ type: 'retrieval_debug' }), onOpenRAGTests: () => setOverlay({ type: 'rag_tests' }), onOpenPhase6Tests: () => setOverlay({ type: 'phase6_tests' }), onOpenQADashboard: () => setOverlay({ type: 'qa_dashboard' }), onOpenSourceBatches: () => setOverlay({ type: 'source_batches' }), onOpenReleaseGate: () => setOverlay({ type: 'release_gate' }), onOpenProductionStatus: () => setOverlay({ type: 'production_status' }), onOpenPhase8Tests: () => setOverlay({ type: 'phase8_tests' }), onOpenPhase9Tests: () => setOverlay({ type: 'phase9_tests' }), onOpenProductionReadiness: () => setOverlay({ type: 'production_readiness' }), onOpenPhase10Tests: () => setOverlay({ type: 'phase10_tests' }) } : {})} />}

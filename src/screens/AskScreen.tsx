@@ -9,7 +9,7 @@ import BiblicalBasis from '@/components/BiblicalBasis';
 import MemoryProposalCard from '@/components/MemoryProposalCard';
 import { fetchIntelligenceResponse, isMemoryEnabled, retrieveStudyMemoryEvidence } from '@/lib/intelligenceService';
 import { useAiConsentGate } from '@/hooks/useAiConsentGate';
-import { isAskHandoffContext, buildHandoffPrompt, isChildAskedHandoff, buildChildAskedPrompt, type AskHandoffContext, type ChildAskedHandoff } from '@/lib/askHandoff';
+import { isAskHandoffContext, buildHandoffPrompt, isChildAskedHandoff, buildChildAskedPrompt, isSermonAskHandoff, buildSermonAskPrompt, type AskHandoffContext, type ChildAskedHandoff, type SermonAskHandoff } from '@/lib/askHandoff';
 import type { AskIntent, Profile } from '@/lib/types';
 import type { StructuredTheologicalResponse, VerificationState, StudyMemoryEvidence, PersonalContextItem, PersonalClaim } from '@/lib/intelligenceTypes';
 import ScriptureBlock from '@/components/ScriptureBlock';
@@ -132,7 +132,7 @@ interface AskScreenProps {
   theologicalDepth: string;
   profile: Profile | null;
   onOpenBibleReference: (book: string, chapter: number, verseStart: number | null, verseEnd: number | null) => void;
-  initialContext?: string | AskHandoffContext | ChildAskedHandoff | null;
+  initialContext?: string | AskHandoffContext | ChildAskedHandoff | SermonAskHandoff | null;
   onContextConsumed?: () => void;
   onKeyboardVisibilityChange?: (visible: boolean) => void;
   activeConversationId?: string | null;
@@ -141,9 +141,10 @@ interface AskScreenProps {
   onTranslationChange: (tr: BibleTranslation) => void;
   onProfileUpdate?: () => void;
   onBackToFamily?: () => void;
+  onBackToSermon?: () => void;
 }
 
-export default function AskScreen({ theologicalDepth, profile, onOpenBibleReference, initialContext, onContextConsumed, onKeyboardVisibilityChange, activeConversationId, onConversationChange, translation, onTranslationChange, onProfileUpdate, onBackToFamily }: AskScreenProps) {
+export default function AskScreen({ theologicalDepth, profile, onOpenBibleReference, initialContext, onContextConsumed, onKeyboardVisibilityChange, activeConversationId, onConversationChange, translation, onTranslationChange, onProfileUpdate, onBackToFamily, onBackToSermon }: AskScreenProps) {
   const { ensureAiConsent, consentDialog } = useAiConsentGate(profile, onProfileUpdate);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [emptyComposerFocused, setEmptyComposerFocused] = useState(false);
@@ -158,6 +159,7 @@ export default function AskScreen({ theologicalDepth, profile, onOpenBibleRefere
   const [showSourceViewer, setShowSourceViewer] = useState(false);
   const [showBiblicalBasis, setShowBiblicalBasis] = useState(false);
   const [familyHandoffActive, setFamilyHandoffActive] = useState(false);
+  const [sermonHandoffActive, setSermonHandoffActive] = useState(false);
   const [activeResponseForModal, setActiveResponseForModal] = useState<StructuredTheologicalResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showConcernReport, setShowConcernReport] = useState(false);
@@ -275,6 +277,7 @@ export default function AskScreen({ theologicalDepth, profile, onOpenBibleRefere
   }, [conversationId]);
 
   async function loadConversation(convId: string) {
+    setSermonHandoffActive(false);
     setLoadingHistory(true);
     try {
       const { data: messages, error } = await supabase
@@ -490,6 +493,9 @@ export default function AskScreen({ theologicalDepth, profile, onOpenBibleRefere
       } else if (isChildAskedHandoff(initialContext)) {
         setFamilyHandoffActive(true);
         latest.startConversation('passage', buildChildAskedPrompt(initialContext));
+      } else if (isSermonAskHandoff(initialContext)) {
+        setSermonHandoffActive(true);
+        latest.startConversation('passage', buildSermonAskPrompt(initialContext));
       } else {
         latest.startConversation('passage', `Help me understand ${initialContext}`);
       }
@@ -858,6 +864,15 @@ export default function AskScreen({ theologicalDepth, profile, onOpenBibleRefere
             </button>
 
             <div className="flex items-center gap-1.5">
+              {sermonHandoffActive && onBackToSermon && (
+                <button
+                  onClick={() => { vibrate(6); setSermonHandoffActive(false); onBackToSermon(); }}
+                  className="h-9 px-3 rounded-full bg-ink-800/40 backdrop-blur-sm border border-ink-600/20 flex items-center gap-1.5 text-ivory-300 hover:text-ivory-100 transition-colors no-tap-highlight text-xs font-medium"
+                >
+                  <ChevronLeft size={15} />
+                  Back to Sermon
+                </button>
+              )}
               {familyHandoffActive && onBackToFamily && (
                 <button
                   onClick={() => { vibrate(6); setFamilyHandoffActive(false); onBackToFamily(); }}

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { X, Copy, Check, RefreshCw, AlertCircle, BookOpen } from 'lucide-react';
+import { X, Copy, Check, RefreshCw, AlertCircle, BookOpen, MessageSquare } from 'lucide-react';
 import { vibrate, formatDate } from '@/lib/utils';
 import type { SermonRecordingMeta } from '@/lib/sermonRecordingStore';
 import type { SermonInsightsState } from '@/hooks/useSermonInsights';
 import { formatSermonInsightsText } from '@/lib/sermonInsights';
+import { buildSermonAskHandoff, type SermonAskHandoff } from '@/lib/askHandoff';
 import SermonConfirmSheet from '@/components/sermon/SermonConfirmSheet';
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
   insights: SermonInsightsState;
   onBack: () => void;
   onStudy: () => void;
+  onContinueInAsk: (handoff: SermonAskHandoff) => void;
 }
 
 const STAGE_LABELS = {
@@ -24,9 +26,12 @@ const CONFIDENCE_LABELS = {
   likely: 'Likely reference',
 } as const;
 
-export default function SermonInsightsScreen({ meta, insights, onBack, onStudy }: Props) {
+export default function SermonInsightsScreen({ meta, insights, onBack, onStudy, onContinueInAsk }: Props) {
   const { record, stage, error, isGenerating, generate, clearError } = insights;
   const [confirmRegenerate, setConfirmRegenerate] = useState(false);
+  const [confirmAsk, setConfirmAsk] = useState(false);
+  const [askStarting, setAskStarting] = useState(false);
+  const [askError, setAskError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState<string | null>(null);
   const content = record?.insights ?? null;
@@ -47,6 +52,19 @@ export default function SermonInsightsScreen({ meta, insights, onBack, onStudy }
   async function handleRegenerate() {
     setConfirmRegenerate(false);
     await generate();
+  }
+
+  function handleConfirmAsk() {
+    if (!content || askStarting) return;
+    setAskStarting(true);
+    setAskError(null);
+    try {
+      onContinueInAsk(buildSermonAskHandoff(meta.title, content));
+    } catch {
+      setAskError("We couldn't open this sermon in Ask. Your sermon insights are safe. Please try again.");
+      setAskStarting(false);
+      setConfirmAsk(false);
+    }
   }
 
   return (
@@ -173,6 +191,13 @@ export default function SermonInsightsScreen({ meta, insights, onBack, onStudy }
                 Generated from your transcript. Compare important points with the sermon and Scripture.
               </p>
 
+              {askError && (
+                <div className="flex items-start gap-2 mb-3 px-1">
+                  <AlertCircle size={14} className="text-error shrink-0 mt-0.5" />
+                  <p className="text-ivory-300 text-xs leading-relaxed">{askError}</p>
+                </div>
+              )}
+
               {copyError && (
                 <div className="flex items-start gap-2 mb-3 px-1">
                   <AlertCircle size={14} className="text-error shrink-0 mt-0.5" />
@@ -183,6 +208,9 @@ export default function SermonInsightsScreen({ meta, insights, onBack, onStudy }
               <div className="flex flex-col gap-2 mb-8">
                 <button onClick={() => { vibrate(8); onStudy(); }} disabled={isGenerating} className="btn-primary w-full disabled:opacity-40">
                   <BookOpen size={16} /> Study This Sermon With Scripture
+                </button>
+                <button onClick={() => { vibrate(8); setConfirmAsk(true); }} disabled={isGenerating || askStarting} className="btn-secondary w-full disabled:opacity-40">
+                  <MessageSquare size={16} /> Continue in Ask
                 </button>
                 <button onClick={handleCopy} disabled={isGenerating} className="btn-primary w-full disabled:opacity-40">
                   {copied ? <><Check size={16} /> Copied</> : <><Copy size={16} /> Copy Insights</>}
@@ -195,6 +223,19 @@ export default function SermonInsightsScreen({ meta, insights, onBack, onStudy }
           )}
         </div>
       </div>
+
+      <SermonConfirmSheet
+        open={confirmAsk}
+        title="Continue this sermon in Ask?"
+        body={<>
+          <p>SOLAPATH will start a new Ask conversation using a short summary of these sermon insights, the main-point titles, and the Scripture references identified from the sermon. Your audio and full transcript stay in Sermon Assistant.</p>
+          <p>The sermon is treated as church content, not as Scripture or a verified theological source.</p>
+        </>}
+        confirmLabel="Continue in Ask"
+        busy={askStarting}
+        onConfirm={handleConfirmAsk}
+        onCancel={() => setConfirmAsk(false)}
+      />
 
       <SermonConfirmSheet
         open={confirmRegenerate}
