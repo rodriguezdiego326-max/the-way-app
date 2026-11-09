@@ -1,8 +1,9 @@
 const DB_NAME = 'solapath-sermon-assistant';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const META_STORE = 'recordings';
 const LEGACY_AUDIO_STORE = 'audio';
 const TRANSCRIPT_STORE = 'transcripts';
+const INSIGHTS_STORE = 'insights';
 
 export interface SermonRecordingMeta {
   id: string;
@@ -25,6 +26,24 @@ export interface SermonRecordingDetails {
 export interface SermonTranscript {
   recordingId: string;
   text: string;
+  createdAt: string;
+}
+
+export interface SermonInsights {
+  summary: string;
+  mainPoints: { title: string; summary: string }[];
+  scriptureReferences: { reference: string; context: string; confidence: 'explicit' | 'likely' }[];
+  applicationTakeaways: string[];
+  reflectionQuestions: string[];
+  limitations: string[];
+  generatedAt: string;
+  modelVersion: string;
+}
+
+export interface SermonInsightsRecord {
+  recordingId: string;
+  transcriptFingerprint: string;
+  insights: SermonInsights;
   createdAt: string;
 }
 
@@ -52,6 +71,9 @@ function openDb(): Promise<IDBDatabase> {
         }
         if (!db.objectStoreNames.contains(TRANSCRIPT_STORE)) {
           db.createObjectStore(TRANSCRIPT_STORE, { keyPath: 'recordingId' });
+        }
+        if (!db.objectStoreNames.contains(INSIGHTS_STORE)) {
+          db.createObjectStore(INSIGHTS_STORE, { keyPath: 'recordingId' });
         }
       };
       request.onsuccess = () => resolve(request.result);
@@ -132,10 +154,11 @@ export async function updateSermonRecordingDetails(id: string, details: SermonRe
 
 export async function deleteSermonRecordingMeta(id: string): Promise<void> {
   const db = await openDb();
-  const tx = db.transaction([META_STORE, LEGACY_AUDIO_STORE, TRANSCRIPT_STORE], 'readwrite');
+  const tx = db.transaction([META_STORE, LEGACY_AUDIO_STORE, TRANSCRIPT_STORE, INSIGHTS_STORE], 'readwrite');
   tx.objectStore(META_STORE).delete(id);
   tx.objectStore(LEGACY_AUDIO_STORE).delete(id);
   tx.objectStore(TRANSCRIPT_STORE).delete(id);
+  tx.objectStore(INSIGHTS_STORE).delete(id);
   await transactionDone(tx);
 }
 
@@ -148,14 +171,37 @@ export async function getSermonTranscript(recordingId: string): Promise<SermonTr
 
 export async function saveSermonTranscript(transcript: SermonTranscript): Promise<void> {
   const db = await openDb();
-  const tx = db.transaction(TRANSCRIPT_STORE, 'readwrite');
+  const tx = db.transaction([TRANSCRIPT_STORE, INSIGHTS_STORE], 'readwrite');
   tx.objectStore(TRANSCRIPT_STORE).put(transcript);
+  tx.objectStore(INSIGHTS_STORE).delete(transcript.recordingId);
   await transactionDone(tx);
 }
 
 export async function deleteSermonTranscript(recordingId: string): Promise<void> {
   const db = await openDb();
-  const tx = db.transaction(TRANSCRIPT_STORE, 'readwrite');
+  const tx = db.transaction([TRANSCRIPT_STORE, INSIGHTS_STORE], 'readwrite');
   tx.objectStore(TRANSCRIPT_STORE).delete(recordingId);
+  tx.objectStore(INSIGHTS_STORE).delete(recordingId);
+  await transactionDone(tx);
+}
+
+export async function getSermonInsights(recordingId: string): Promise<SermonInsightsRecord | null> {
+  const db = await openDb();
+  const tx = db.transaction(INSIGHTS_STORE, 'readonly');
+  const row = await requestToPromise<SermonInsightsRecord | undefined>(tx.objectStore(INSIGHTS_STORE).get(recordingId));
+  return row ?? null;
+}
+
+export async function saveSermonInsights(record: SermonInsightsRecord): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(INSIGHTS_STORE, 'readwrite');
+  tx.objectStore(INSIGHTS_STORE).put(record);
+  await transactionDone(tx);
+}
+
+export async function deleteSermonInsights(recordingId: string): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(INSIGHTS_STORE, 'readwrite');
+  tx.objectStore(INSIGHTS_STORE).delete(recordingId);
   await transactionDone(tx);
 }

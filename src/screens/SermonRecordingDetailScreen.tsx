@@ -6,8 +6,10 @@ import SermonPlaybackPanel from '@/components/sermon/SermonPlaybackPanel';
 import SermonTranscriptionPanel from '@/components/sermon/SermonTranscriptionPanel';
 import SermonConfirmSheet from '@/components/sermon/SermonConfirmSheet';
 import SermonTranscriptScreen from '@/screens/SermonTranscriptScreen';
+import SermonInsightsScreen from '@/screens/SermonInsightsScreen';
 import { sermonRecorderNative } from '@/lib/sermonRecorderNative';
 import { useSermonTranscription } from '@/hooks/useSermonTranscription';
+import { useSermonInsights } from '@/hooks/useSermonInsights';
 import { discardServerTranscript } from '@/lib/sermonTranscription';
 import {
   getSermonRecording, updateSermonRecordingDetails, deleteSermonRecordingMeta,
@@ -26,7 +28,7 @@ export default function SermonRecordingDetailScreen({ recordingId, fresh, interr
   const [legacyBlob, setLegacyBlob] = useState<Blob | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [view, setView] = useState<'details' | 'transcript'>('details');
+  const [view, setView] = useState<'details' | 'transcript' | 'insights'>('details');
 
   const [title, setTitle] = useState('');
   const [preacher, setPreacher] = useState('');
@@ -39,6 +41,7 @@ export default function SermonRecordingDetailScreen({ recordingId, fresh, interr
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const transcription = useSermonTranscription(recordingId, meta?.fileName ?? null);
+  const insights = useSermonInsights(meta, transcription.transcript);
 
   useEffect(() => {
     let cancelled = false;
@@ -105,7 +108,19 @@ export default function SermonRecordingDetailScreen({ recordingId, fresh, interr
       <SermonTranscriptScreen
         meta={meta}
         transcription={transcription}
+        insights={insights}
         onBack={() => setView('details')}
+        onOpenInsights={() => setView('insights')}
+      />
+    );
+  }
+
+  if (meta && view === 'insights') {
+    return (
+      <SermonInsightsScreen
+        meta={meta}
+        insights={insights}
+        onBack={() => setView('transcript')}
       />
     );
   }
@@ -140,9 +155,6 @@ export default function SermonRecordingDetailScreen({ recordingId, fresh, interr
                 <p className="font-serif text-2xl text-ivory-50 leading-tight">{meta.title || 'Untitled Sermon'}</p>
                 <p className="text-ivory-500 text-xs mt-2">
                   {formatDate(meta.startedAt)} · {formatDuration(meta.durationMs)}
-                </p>
-                <p className="text-ivory-600 text-xs leading-relaxed mt-4">
-                  Sermon insights will be available in a future update.
                 </p>
               </div>
 
@@ -200,7 +212,7 @@ export default function SermonRecordingDetailScreen({ recordingId, fresh, interr
         open={confirmDeleteOpen}
         title={transcription.transcript ? 'Delete this recording and its transcript?' : 'Delete this recording?'}
         body={transcription.transcript
-          ? 'This permanently deletes the audio and the transcript from this device.'
+          ? 'This permanently deletes the audio, the transcript, and any sermon insights from this device.'
           : 'This permanently deletes the audio from this device.'}
         confirmLabel="Delete"
         busy={deleting}

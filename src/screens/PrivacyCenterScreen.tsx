@@ -104,7 +104,7 @@ export default function PrivacyCenterScreen({ profile, onBack, onProfileUpdate }
     { icon: Shield, label: 'What SOLAPATH Stores', desc: 'Understand your data', onClick: () => setSection('stores') },
     { icon: FileText, label: 'Privacy Policy', desc: 'Read how SOLAPATH collects, uses, protects, and deletes data.', onClick: () => void openPrivacyPolicy() },
     { icon: Brain, label: 'AI & My Data', desc: 'How AI uses your context', onClick: () => setSection('ai_data') },
-    { icon: Mic, label: 'Recording & Transcription', desc: 'How sermon audio and transcripts are handled', onClick: () => setSection('recording') },
+    { icon: Mic, label: 'Recording & Transcription', desc: 'How sermon audio, transcripts, and insights are handled', onClick: () => setSection('recording') },
     { icon: Download, label: 'Download My Data', desc: 'Export your data as JSON', onClick: () => setSection('download') },
     { icon: Trash2, label: 'Delete My Account', desc: 'Permanently remove your data', onClick: () => setSection('delete') },
   ];
@@ -130,7 +130,7 @@ export default function PrivacyCenterScreen({ profile, onBack, onProfileUpdate }
               </div>
               <div className="premium-card p-4">
                 <p className="text-ivory-100 font-medium text-sm mb-2">How to Delete</p>
-                <p className="text-ivory-500 text-xs leading-relaxed">Open a recording and choose Delete. This removes its audio and any transcript from this device.</p>
+                <p className="text-ivory-500 text-xs leading-relaxed">Open a recording and choose Delete. This removes its audio, its transcript, and any Sermon Insights from this device.</p>
               </div>
             </section>
 
@@ -154,7 +154,27 @@ export default function PrivacyCenterScreen({ profile, onBack, onProfileUpdate }
               </div>
               <div className="premium-card p-4">
                 <p className="text-ivory-100 font-medium text-sm mb-2">Where the Transcript Lives</p>
-                <p className="text-ivory-500 text-xs leading-relaxed">Transcripts are saved on this device with the sermon. Deleting a transcript keeps the recording; deleting a recording removes both.</p>
+                <p className="text-ivory-500 text-xs leading-relaxed">Transcripts are saved on this device with the sermon. Deleting a transcript keeps the recording and removes its Sermon Insights; deleting a recording removes all three.</p>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <p className="ui-label">Sermon Insights</p>
+              <div className="premium-card p-4">
+                <p className="text-ivory-100 font-medium text-sm mb-2">Created Only When You Ask</p>
+                <p className="text-ivory-500 text-xs leading-relaxed">Insights such as a summary, main points, scriptures mentioned, and reflection questions are created only when you tap Generate Sermon Insights. Nothing is created automatically.</p>
+              </div>
+              <div className="premium-card p-4">
+                <p className="text-ivory-100 font-medium text-sm mb-2">What Is Sent</p>
+                <p className="text-ivory-500 text-xs leading-relaxed">Only the text of that sermon's transcript is sent to a third-party AI service to create the insights. Audio is not sent again.</p>
+              </div>
+              <div className="premium-card p-4">
+                <p className="text-ivory-100 font-medium text-sm mb-2">Where Insights Live</p>
+                <p className="text-ivory-500 text-xs leading-relaxed">Insights are saved on this device. They are not shared with other people and are not used for Memory, Ask, or Family features.</p>
+              </div>
+              <div className="premium-card p-4">
+                <p className="text-ivory-100 font-medium text-sm mb-2">Not a Doctrinal Check</p>
+                <p className="text-ivory-500 text-xs leading-relaxed">Insights are a study aid based on the transcript. They do not grade the teaching or check it for accuracy. Transcripts can contain errors, so compare them with the sermon when it matters.</p>
               </div>
             </section>
           </div>

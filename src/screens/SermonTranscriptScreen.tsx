@@ -1,22 +1,32 @@
 import { useState } from 'react';
-import { X, Copy, Check, RefreshCw, Trash2, AlertCircle } from 'lucide-react';
+import { X, Copy, Check, RefreshCw, Trash2, AlertCircle, Sparkles } from 'lucide-react';
 import { vibrate, formatDate } from '@/lib/utils';
 import type { SermonRecordingMeta } from '@/lib/sermonRecordingStore';
 import type { SermonTranscriptionState } from '@/hooks/useSermonTranscription';
+import type { SermonInsightsState } from '@/hooks/useSermonInsights';
 import SermonConfirmSheet from '@/components/sermon/SermonConfirmSheet';
 import TranscriptionProgressCard from '@/components/sermon/TranscriptionProgressCard';
 
 interface Props {
   meta: SermonRecordingMeta;
   transcription: SermonTranscriptionState;
+  insights: SermonInsightsState;
   onBack: () => void;
+  onOpenInsights: () => void;
 }
 
 type ConfirmAction = 'retranscribe' | 'delete' | null;
 
-export default function SermonTranscriptScreen({ meta, transcription, onBack }: Props) {
+const INSIGHTS_STAGE_LABELS = {
+  reading: 'Reading transcript...',
+  creating: 'Creating sermon insights...',
+  finalizing: 'Finalizing...',
+} as const;
+
+export default function SermonTranscriptScreen({ meta, transcription, insights, onBack, onOpenInsights }: Props) {
   const { transcript, status, progress, error, canRetry, start, retry, cancel, removeTranscript } = transcription;
   const [confirm, setConfirm] = useState<ConfirmAction>(null);
+  const [disclosureOpen, setDisclosureOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -31,6 +41,26 @@ export default function SermonTranscriptScreen({ meta, transcription, onBack }: 
     } catch {
       setActionError('The transcript could not be copied. Please select the text and copy it instead.');
     }
+  }
+
+  async function runInsightsGeneration() {
+    const ok = await insights.generate();
+    if (ok) onOpenInsights();
+  }
+
+  function handleGenerateTap() {
+    vibrate(8);
+    if (insights.consented) {
+      void runInsightsGeneration();
+    } else {
+      setDisclosureOpen(true);
+    }
+  }
+
+  async function handleDisclosureConfirm() {
+    setDisclosureOpen(false);
+    insights.grantConsent();
+    await runInsightsGeneration();
   }
 
   async function handleConfirm() {
@@ -102,7 +132,35 @@ export default function SermonTranscriptScreen({ meta, transcription, onBack }: 
 
           {transcript && status === 'idle' && (
             <div className="flex flex-col gap-2 mb-8">
-              <button onClick={handleCopy} className="btn-primary w-full">
+              {insights.isGenerating && insights.stage && (
+                <div className="premium-card p-5" role="status" aria-live="polite">
+                  <p className="text-ivory-200 text-sm">{INSIGHTS_STAGE_LABELS[insights.stage]}</p>
+                </div>
+              )}
+              {insights.error && !insights.isGenerating && (
+                <div className="premium-card p-5">
+                  <div className="flex items-start gap-2 mb-4">
+                    <AlertCircle size={14} className="text-error shrink-0 mt-0.5" />
+                    <p className="text-ivory-300 text-sm leading-relaxed">{insights.error}</p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <button onClick={() => { insights.clearError(); void runInsightsGeneration(); }} className="btn-primary w-full">Try Again</button>
+                    <button onClick={insights.clearError} className="btn-secondary w-full">Cancel</button>
+                  </div>
+                </div>
+              )}
+              {insights.loaded && !insights.isGenerating && (
+                insights.record ? (
+                  <button onClick={() => { vibrate(8); onOpenInsights(); }} className="btn-primary w-full">
+                    <Sparkles size={16} /> View Sermon Insights
+                  </button>
+                ) : (
+                  <button onClick={handleGenerateTap} className="btn-primary w-full">
+                    <Sparkles size={16} /> Generate Sermon Insights
+                  </button>
+                )
+              )}
+              <button onClick={handleCopy} className="btn-secondary w-full">
                 {copied ? <><Check size={16} /> Copied</> : <><Copy size={16} /> Copy Transcript</>}
               </button>
               <button onClick={() => { vibrate(8); setConfirm('retranscribe'); }} className="btn-secondary w-full">
@@ -117,9 +175,22 @@ export default function SermonTranscriptScreen({ meta, transcription, onBack }: 
       </div>
 
       <SermonConfirmSheet
+        open={disclosureOpen}
+        title="Generate sermon insights?"
+        body={(
+          <>
+            <p>To create sermon insights, SOLAPATH will send this transcript to our third-party AI service for analysis. Your sermon audio is not sent again. The generated insights stay on this device and are not added to SOLAPATH Memory unless a future feature explicitly asks you to do so.</p>
+            <p>The transcript remains the source for these insights. SOLAPATH may summarize incorrectly, so compare important points with the sermon and Scripture.</p>
+          </>
+        )}
+        confirmLabel="Continue & Generate"
+        onConfirm={handleDisclosureConfirm}
+        onCancel={() => setDisclosureOpen(false)}
+      />
+      <SermonConfirmSheet
         open={confirm === 'retranscribe'}
         title="Retranscribe this sermon?"
-        body="Replace the current transcript with a new transcription?"
+        body="Replace the current transcript with a new transcription? Any sermon insights made from the current transcript will be removed."
         confirmLabel="Retranscribe"
         busy={busy}
         onConfirm={handleConfirm}
@@ -128,7 +199,7 @@ export default function SermonTranscriptScreen({ meta, transcription, onBack }: 
       <SermonConfirmSheet
         open={confirm === 'delete'}
         title="Delete this transcript?"
-        body="The sermon recording will remain on this device."
+        body="Deleting the transcript will also remove its generated sermon insights. The original recording will remain on this device."
         confirmLabel="Delete Transcript"
         busy={busy}
         destructive

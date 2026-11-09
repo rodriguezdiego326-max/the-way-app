@@ -20,6 +20,10 @@
     "transcribe-sermon-part": {
       "hasChanged": false,
       "hash": "91b243c8282b59739caf9d54d597f82d911ab460f72c4a0db88bcfd2529237a0"
+    },
+    "generate-sermon-insights": {
+      "hasChanged": false,
+      "hash": "86cb6d4dc01118acd6e15ce017374ada08b45db460002b04c34790fa7cc446fa"
     }
   }
 }
