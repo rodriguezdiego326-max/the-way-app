@@ -43,16 +43,21 @@ export async function createCircle(
   return circle as Circle;
 }
 
-export async function getMyCircles(profile: Profile): Promise<Circle[]> {
-  const { data } = await supabase
+export async function loadMyCircles(profile: Profile): Promise<Circle[]> {
+  const { data, error } = await supabase
     .from('circle_members')
     .select('circle_id, circles(*)')
     .eq('profile_id', profile.id)
     .order('joined_at', { ascending: false });
+  if (error) throw error;
 
   return ((data || []) as unknown as Array<{ circles: Circle }>)
     .map((d) => d.circles)
     .filter(Boolean);
+}
+
+export async function getMyCircles(profile: Profile): Promise<Circle[]> {
+  return loadMyCircles(profile).catch(() => []);
 }
 
 export async function getCircle(circleId: string): Promise<Circle | null> {

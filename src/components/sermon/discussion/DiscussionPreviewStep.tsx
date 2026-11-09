@@ -15,7 +15,8 @@ interface Props {
   onView: () => void;
 }
 
-const CONSENT_TEXT = 'Circle members will be able to read this discussion. Only you can delete it. Nothing else from this sermon is shared: not the summary, transcript, audio, recording, or preacher and church details.';
+const CONSENT_TEXT = 'This will be visible to members of this Circle. Your recording, audio, transcript, and full Sermon Insights stay private on your device.';
+const CONSENT_DETAIL = 'Only what you see on this page is shared. Only you can delete it from the Circle.';
 
 export default function DiscussionPreviewStep({
   circle, sermonTitle, body, scriptures, sharing, shareError, created, onBack, onShare, onDone, onView,
@@ -41,12 +42,10 @@ export default function DiscussionPreviewStep({
       <p className="text-ivory-400 text-sm leading-relaxed mb-5">This is exactly what {circle.name} will see.</p>
 
       <article className="premium-card p-5 mb-4">
-        {sermonTitle && (
-          <div className="mb-4">
-            <p className="ui-label mb-1.5">From a sermon</p>
-            <p className="font-serif text-lg text-ivory-50 leading-snug">{sermonTitle}</p>
-          </div>
-        )}
+        <div className="mb-4">
+          <p className="ui-label mb-1.5">From a sermon</p>
+          {sermonTitle && <p className="font-serif text-lg text-ivory-50 leading-snug">{sermonTitle}</p>}
+        </div>
         <p className="ui-label mb-1.5">Discussion</p>
         <p className="text-ivory-200 text-sm leading-[1.5] whitespace-pre-line">{body}</p>
         {scriptures.length > 0 && (
@@ -63,7 +62,10 @@ export default function DiscussionPreviewStep({
 
       <div className="premium-card p-4 mb-6 flex items-start gap-3">
         <Lock size={14} className="text-gold-400/70 shrink-0 mt-0.5" />
-        <p className="text-ivory-400 text-xs leading-relaxed">{CONSENT_TEXT}</p>
+        <div>
+          <p className="text-ivory-100 text-sm leading-relaxed mb-1">{CONSENT_TEXT}</p>
+          <p className="text-ivory-400 text-xs leading-relaxed">{CONSENT_DETAIL}</p>
+        </div>
       </div>
 
       {shareError && (

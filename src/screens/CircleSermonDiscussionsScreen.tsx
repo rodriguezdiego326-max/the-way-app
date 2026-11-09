@@ -61,8 +61,12 @@ export default function CircleSermonDiscussionsScreen({ profile, circle, onBack,
                     <MessageSquare size={16} className="text-ivory-400 group-hover:text-gold-300 transition-colors" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-ivory-100 font-medium text-sm truncate">{discussion.sermon_title || 'Sermon discussion'}</p>
+                    <p className="ui-label mb-1.5">From a sermon</p>
+                    {discussion.sermon_title && <p className="text-ivory-100 font-medium text-sm truncate">{discussion.sermon_title}</p>}
                     <p className="text-ivory-400 text-xs leading-relaxed mt-1 line-clamp-2">{discussion.discussion_body}</p>
+                    {discussion.scripture_references.length > 0 && (
+                      <p className="text-gold-200/80 text-xs mt-2">{discussion.scripture_references.join(', ')}</p>
+                    )}
                     <p className="text-ivory-600 text-xs mt-2">
                       {discussion.created_by_profile_id === profile.id ? 'Shared by you' : 'Shared by a member'} · {formatRelative(discussion.created_at)}
                     </p>

@@ -88,14 +88,20 @@ export default function DiscussionSourceStep({
 
       {questionOptions.length > 0 && (
         <section className="mb-6">
-          <p className="ui-label mb-3 px-1">One question</p>
+          <p className="ui-label mb-3 px-1">One reflection question</p>
           <div className="flex flex-col gap-2">
+            <OptionRow
+              kind="radio"
+              selected={selection.question === null}
+              onClick={() => onChange({ ...selection, question: null })}
+              label="No question"
+            />
             {questionOptions.map((question, index) => (
               <OptionRow
                 key={index}
                 kind="radio"
                 selected={selection.question === question}
-                onClick={() => onChange({ ...selection, question: selection.question === question ? null : question })}
+                onClick={() => onChange({ ...selection, question })}
                 label={question}
               />
             ))}

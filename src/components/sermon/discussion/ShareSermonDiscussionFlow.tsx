@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
-import { LoadingState, ErrorState } from '@/components/States';
-import { getMyCircles, createCircleSermonDiscussion } from '@/lib/togetherEngine';
+import { LoadingState } from '@/components/States';
+import { loadMyCircles, createCircleSermonDiscussion } from '@/lib/togetherEngine';
 import {
   buildDiscussionDraft, buildDiscussionStarter, validateDiscussionBody,
   type DiscussionSelection,
@@ -55,7 +55,7 @@ export default function ShareSermonDiscussionFlow({ profile, sermonTitle, insigh
   const loadCircles = useCallback(async () => {
     setCirclesError(false);
     try {
-      const mine = await getMyCircles(profile);
+      const mine = await loadMyCircles(profile);
       setCircles(mine);
       if (mine.length === 1) setCircle(mine[0]);
     } catch {
@@ -144,7 +144,15 @@ export default function ShareSermonDiscussionFlow({ profile, sermonTitle, insigh
           {step === 'circle' && (
             <>
               {!circles && !circlesError && <LoadingState message="Loading your Circles..." />}
-              {circlesError && <ErrorState message="We couldn't load your Circles. Please try again." onRetry={loadCircles} />}
+              {circlesError && (
+                <div className="premium-card p-5 animate-fade-in-up" role="alert">
+                  <p className="text-ivory-200 text-sm leading-relaxed mb-5">We couldn&apos;t load your Circles. Please try again.</p>
+                  <div className="flex flex-col gap-2">
+                    <button onClick={loadCircles} className="btn-primary w-full">Try Again</button>
+                    <button onClick={onClose} className="btn-secondary w-full">Cancel</button>
+                  </div>
+                </div>
+              )}
               {circles && (
                 <CircleChoiceStep
                   circles={circles}

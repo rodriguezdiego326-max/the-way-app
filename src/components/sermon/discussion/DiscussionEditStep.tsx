@@ -13,7 +13,8 @@ export default function DiscussionEditStep({ body, error, onChange, onContinue }
 
   return (
     <div className="animate-fade-in-up">
-      <p className="text-ivory-400 text-sm leading-relaxed mb-5">This starter is a suggestion built from what you selected. Edit it in your own words before you share.</p>
+      <p className="text-ivory-50 font-medium text-sm mb-1">You control what your Circle receives.</p>
+      <p className="text-ivory-400 text-sm leading-relaxed mb-5">This starter is built from what you selected. Edit it in your own words before you share.</p>
 
       <div className="premium-card p-5 mb-3">
         <label htmlFor="discussion-starter" className="ui-label block mb-3">Your starter</label>

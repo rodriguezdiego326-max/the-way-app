@@ -107,8 +107,8 @@ export default function CircleSermonDiscussionDetailScreen({ profile, circle, di
 
       <SermonConfirmSheet
         open={confirmDelete}
-        title="Delete this discussion?"
-        body="The discussion will be removed from this Circle for every member. This cannot be undone."
+        title="Delete this sermon discussion?"
+        body="This removes it from the Circle for everyone. Your private sermon recording, transcript, and Sermon Insights will not be changed."
         confirmLabel="Delete"
         busy={deleting}
         onConfirm={handleDelete}

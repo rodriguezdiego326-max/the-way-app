@@ -13,7 +13,8 @@ export default function CircleChoiceStep({ circles, selectedId, onSelect, onCont
   if (circles.length === 0) {
     return (
       <div className="premium-card p-5 animate-fade-in-up">
-        <p className="text-ivory-200 text-sm leading-relaxed">You are not in a Circle yet. Join or create one in Together, then come back here to share a discussion.</p>
+        <p className="font-serif text-lg text-ivory-50 mb-2">You don&apos;t have a Circle to share with yet.</p>
+        <p className="text-ivory-400 text-sm leading-relaxed">Join or create a Circle in Together, then come back here to share a discussion.</p>
       </div>
     );
   }
