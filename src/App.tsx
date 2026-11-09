@@ -87,7 +87,7 @@ export type Overlay =
   | { type: 'none' }
   | { type: 'bible-mode'; walk: Walk; mode: 'physical' | 'in-app' }
   | { type: 'bible-reader'; walk: Walk }
-  | { type: 'bible-reference'; book: string; chapter: number; verseStart: number | null; verseEnd: number | null; returnTo?: 'church_studies' }
+  | { type: 'bible-reference'; book: string; chapter: number; verseStart: number | null; verseEnd: number | null; returnTo?: 'church_studies'; returnOverlay?: Overlay }
   | { type: 'profile_hub' }
   | { type: 'family' }
   | { type: 'reach' }
@@ -328,7 +328,10 @@ export default function App() {
   }
 
   function handleOpenBibleReference(book: string, chapter: number, verseStart: number | null, verseEnd: number | null) {
-    setOverlay({ type: 'bible-reference', book, chapter, verseStart, verseEnd });
+    setOverlay({
+      type: 'bible-reference', book, chapter, verseStart, verseEnd,
+      returnOverlay: overlay.type === 'sermon_recording_detail' ? overlay : undefined,
+    });
   }
 
   function handleExitBibleMode() {
@@ -412,22 +415,45 @@ export default function App() {
     );
   }
 
-  if (overlay.type === 'bible-reference') {
+  const studyDetail = overlay.type === 'sermon_recording_detail'
+    ? overlay
+    : overlay.type === 'bible-reference' && overlay.returnOverlay?.type === 'sermon_recording_detail'
+      ? overlay.returnOverlay
+      : null;
+
+  if (overlay.type === 'bible-reference' || studyDetail) {
+    const bibleLayer = overlay.type === 'bible-reference' ? (
+      <BibleScreen
+        onStartWalk={handleStartWalk}
+        translation={globalTranslation}
+        onTranslationChange={handleTranslationChange}
+        onAskScripture={(b, c, vs, ve) => {
+          const ref = vs === ve ? `${b} ${c}:${vs}` : `${b} ${c}:${vs}\u2013${ve}`;
+          setOverlay({ type: 'none' });
+          setActiveTab('ask');
+          setAskContext(ref);
+        }}
+        initialReference={{ book: overlay.book, chapter: overlay.chapter, verseStart: overlay.verseStart, verseEnd: overlay.verseEnd }}
+        onBack={() => setOverlay(overlay.returnOverlay ?? (overlay.returnTo === 'church_studies' ? { type: 'church_studies' } : { type: 'none' }))}
+      />
+    ) : null;
+
+    if (!studyDetail) return <ErrorBoundary>{bibleLayer}</ErrorBoundary>;
+
     return (
       <ErrorBoundary>
-        <BibleScreen
-          onStartWalk={handleStartWalk}
-          translation={globalTranslation}
-          onTranslationChange={handleTranslationChange}
-          onAskScripture={(b, c, vs, ve) => {
-            const ref = vs === ve ? `${b} ${c}:${vs}` : `${b} ${c}:${vs}\u2013${ve}`;
-            setOverlay({ type: 'none' });
-            setActiveTab('ask');
-            setAskContext(ref);
-          }}
-          initialReference={{ book: overlay.book, chapter: overlay.chapter, verseStart: overlay.verseStart, verseEnd: overlay.verseEnd }}
-          onBack={() => setOverlay(overlay.returnTo === 'church_studies' ? { type: 'church_studies' } : { type: 'none' })}
-        />
+        <div>
+          <div hidden={overlay.type !== 'sermon_recording_detail'}>
+            <SermonRecordingDetailScreen
+              recordingId={studyDetail.recordingId}
+              fresh={studyDetail.fresh}
+              interrupted={studyDetail.interrupted}
+              onDone={() => setOverlay({ type: 'sermon_assistant' })}
+              onOpenBible={handleOpenBibleReference}
+            />
+          </div>
+          {bibleLayer}
+        </div>
       </ErrorBoundary>
     );
   }
@@ -656,20 +682,6 @@ export default function App() {
           onExit={() => setOverlay({ type: 'sermon_assistant' })}
           onTakeNotes={() => setOverlay({ type: 'sermon_notes' })}
           onCaptured={(recordingId, interrupted) => setOverlay({ type: 'sermon_recording_detail', recordingId, fresh: true, interrupted })}
-        />
-      </ErrorBoundary>
-    );
-  }
-
-  if (overlay.type === 'sermon_recording_detail') {
-    return (
-      <ErrorBoundary>
-        <SermonRecordingDetailScreen
-          recordingId={overlay.recordingId}
-          fresh={overlay.fresh}
-          interrupted={overlay.interrupted}
-          onDone={() => setOverlay({ type: 'sermon_assistant' })}
-          onOpenBible={handleOpenBibleReference}
         />
       </ErrorBoundary>
     );
