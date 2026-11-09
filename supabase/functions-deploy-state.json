@@ -9,6 +9,10 @@
       "hasChanged": false,
       "hash": "264dc3c411b8ded5851d1627d76dc980973e4cd301ebeff02c07e8756ed9c1fb"
     },
+    "generate-sermon-insights": {
+      "hasChanged": false,
+      "hash": "86cb6d4dc01118acd6e15ce017374ada08b45db460002b04c34790fa7cc446fa"
+    },
     "memory-retrieval": {
       "hasChanged": false,
       "hash": "9b6b425a800962c6b184c2fd1cdcc7a3beca7c904ef4fe782ace3a6a8dfd4a87"
@@ -21,9 +25,9 @@
       "hasChanged": false,
       "hash": "91b243c8282b59739caf9d54d597f82d911ab460f72c4a0db88bcfd2529237a0"
     },
-    "generate-sermon-insights": {
+    "generate-sermon-insights-provider-failure-test": {
       "hasChanged": false,
-      "hash": "86cb6d4dc01118acd6e15ce017374ada08b45db460002b04c34790fa7cc446fa"
+      "hash": "32f617b1ab14d6298e5b71ee9ae7774af5a74167c2303611fb8de0a76b7c15ce"
     }
   }
 }
