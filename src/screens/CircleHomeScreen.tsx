@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Users, Heart, BookOpen, CheckCircle, HandHeart, Shield, ChevronRight, UserPlus, LogOut, Mail, Lock } from 'lucide-react';
+import { X, Users, Heart, BookOpen, CheckCircle, HandHeart, Shield, ChevronRight, UserPlus, LogOut, Mail, Lock, MessageSquare } from 'lucide-react';
 
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
@@ -16,10 +16,11 @@ interface Props {
   onOpenCheckIn: (circle: Circle) => void;
   onOpenEncouragement: (circle: Circle) => void;
   onOpenAccountability: (circle: Circle) => void;
+  onOpenSermonDiscussions: (circle: Circle) => void;
 }
 
 export default function CircleHomeScreen({
-  profile, circle, onBack, onOpenPrayer, onOpenScripture, onOpenCheckIn, onOpenEncouragement, onOpenAccountability,
+  profile, circle, onBack, onOpenPrayer, onOpenScripture, onOpenCheckIn, onOpenEncouragement, onOpenAccountability, onOpenSermonDiscussions,
 }: Props) {
   const [members, setMembers] = useState<CircleMember[]>([]);
   const [myRole, setMyRole] = useState<string | null>(null);
@@ -106,6 +107,7 @@ export default function CircleHomeScreen({
               <p className="ui-label mb-3">This Week</p>
               <div className="flex flex-col gap-2 mb-6">
                 <CircleActionCard icon={BookOpen} label="Scripture" desc={studies.length > 0 ? `${studies[0].passage_reference}` : 'No study assigned'} onClick={() => onOpenScripture(circle)} />
+                <CircleActionCard icon={MessageSquare} label="Sermon Discussions" desc="Shared from Sermon Insights" onClick={() => onOpenSermonDiscussions(circle)} />
                 <CircleActionCard icon={Heart} label="Prayer" desc={recentPrayers.length > 0 ? `${recentPrayers.length} prayer request${recentPrayers.length !== 1 ? 's' : ''}` : 'No prayers shared yet'} onClick={() => onOpenPrayer(circle)} />
                 <CircleActionCard icon={CheckCircle} label="Check-In" desc={recentCheckIns.length > 0 ? `${recentCheckIns.length} recent check-in${recentCheckIns.length !== 1 ? 's' : ''}` : 'How is everyone arriving?'} onClick={() => onOpenCheckIn(circle)} />
                 <CircleActionCard icon={HandHeart} label="Encouragement" desc="Encourage someone intentionally" onClick={() => onOpenEncouragement(circle)} />

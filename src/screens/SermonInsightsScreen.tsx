@@ -1,18 +1,23 @@
 import { useState } from 'react';
-import { X, Copy, Check, RefreshCw, AlertCircle, BookOpen, MessageSquare } from 'lucide-react';
+import { X, Copy, Check, RefreshCw, AlertCircle, BookOpen, MessageSquare, Users } from 'lucide-react';
 import { vibrate, formatDate } from '@/lib/utils';
 import type { SermonRecordingMeta } from '@/lib/sermonRecordingStore';
 import type { SermonInsightsState } from '@/hooks/useSermonInsights';
 import { formatSermonInsightsText } from '@/lib/sermonInsights';
 import { buildSermonAskHandoff, type SermonAskHandoff } from '@/lib/askHandoff';
+import type { Profile } from '@/lib/types';
+import type { Circle, CircleSermonDiscussion } from '@/lib/togetherTypes';
 import SermonConfirmSheet from '@/components/sermon/SermonConfirmSheet';
+import ShareSermonDiscussionFlow from '@/components/sermon/discussion/ShareSermonDiscussionFlow';
 
 interface Props {
   meta: SermonRecordingMeta;
   insights: SermonInsightsState;
+  profile: Profile | null;
   onBack: () => void;
   onStudy: () => void;
   onContinueInAsk: (handoff: SermonAskHandoff) => void;
+  onViewSharedDiscussion: (circle: Circle, discussion: CircleSermonDiscussion) => void;
 }
 
 const STAGE_LABELS = {
@@ -26,9 +31,10 @@ const CONFIDENCE_LABELS = {
   likely: 'Likely reference',
 } as const;
 
-export default function SermonInsightsScreen({ meta, insights, onBack, onStudy, onContinueInAsk }: Props) {
+export default function SermonInsightsScreen({ meta, insights, profile, onBack, onStudy, onContinueInAsk, onViewSharedDiscussion }: Props) {
   const { record, stage, error, isGenerating, generate, clearError } = insights;
   const [confirmRegenerate, setConfirmRegenerate] = useState(false);
+  const [discussOpen, setDiscussOpen] = useState(false);
   const [confirmAsk, setConfirmAsk] = useState(false);
   const [askStarting, setAskStarting] = useState(false);
   const [askError, setAskError] = useState<string | null>(null);
@@ -212,6 +218,11 @@ export default function SermonInsightsScreen({ meta, insights, onBack, onStudy, 
                 <button onClick={() => { vibrate(8); setConfirmAsk(true); }} disabled={isGenerating || askStarting} className="btn-secondary w-full disabled:opacity-40">
                   <MessageSquare size={16} /> Continue in Ask
                 </button>
+                {profile && (
+                  <button onClick={() => { vibrate(8); setDiscussOpen(true); }} disabled={isGenerating} className="btn-secondary w-full disabled:opacity-40">
+                    <Users size={16} /> Discuss in Together
+                  </button>
+                )}
                 <button onClick={handleCopy} disabled={isGenerating} className="btn-primary w-full disabled:opacity-40">
                   {copied ? <><Check size={16} /> Copied</> : <><Copy size={16} /> Copy Insights</>}
                 </button>
@@ -236,6 +247,19 @@ export default function SermonInsightsScreen({ meta, insights, onBack, onStudy, 
         onConfirm={handleConfirmAsk}
         onCancel={() => setConfirmAsk(false)}
       />
+
+      {discussOpen && profile && content && (
+        <ShareSermonDiscussionFlow
+          profile={profile}
+          sermonTitle={meta.title || null}
+          insights={content}
+          onClose={() => setDiscussOpen(false)}
+          onViewDiscussion={(circle, discussion) => {
+            setDiscussOpen(false);
+            onViewSharedDiscussion(circle, discussion);
+          }}
+        />
+      )}
 
       <SermonConfirmSheet
         open={confirmRegenerate}

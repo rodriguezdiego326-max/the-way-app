@@ -130,7 +130,7 @@ export default function PrivacyCenterScreen({ profile, onBack, onProfileUpdate }
               </div>
               <div className="premium-card p-4">
                 <p className="text-ivory-100 font-medium text-sm mb-2">How to Delete</p>
-                <p className="text-ivory-500 text-xs leading-relaxed">Open a recording and choose Delete. This removes its audio, its transcript, and any Sermon Insights from this device.</p>
+                <p className="text-ivory-500 text-xs leading-relaxed">Open a recording and choose Delete. This removes its audio, its transcript, and any Sermon Insights from this device. A discussion you already shared with a Circle stays there until you delete it in that Circle.</p>
               </div>
             </section>
 
@@ -170,7 +170,7 @@ export default function PrivacyCenterScreen({ profile, onBack, onProfileUpdate }
               </div>
               <div className="premium-card p-4">
                 <p className="text-ivory-100 font-medium text-sm mb-2">Where Insights Live</p>
-                <p className="text-ivory-500 text-xs leading-relaxed">Insights are saved on this device. They are not shared with other people and are not used for Memory, Ask, or Family features.</p>
+                <p className="text-ivory-500 text-xs leading-relaxed">Insights are saved on this device and are not used for Memory, Ask, or Family features. They leave your device only if you choose to share a discussion from them with a Circle, and then only the parts you select.</p>
               </div>
               <div className="premium-card p-4">
                 <p className="text-ivory-100 font-medium text-sm mb-2">Not a Doctrinal Check</p>
@@ -198,7 +198,7 @@ export default function PrivacyCenterScreen({ profile, onBack, onProfileUpdate }
             <DataCategory icon={BookOpen} title="Ask SOLAPATH Conversations" desc="Your questions and AI responses. These are private and never shared with Circles, Church, or accountability partners." visibility="PRIVATE" />
             <DataCategory icon={Users} title="Family Records" desc="Family Walks, family prayers, children's questions, and parent reflections. Parent-controlled with heightened child privacy." visibility="PRIVATE" />
             <DataCategory icon={Heart} title="REACH Records" desc="People you're praying for and gospel conversation notes. Minimized third-party data — no addresses or phone numbers required." visibility="PRIVATE" />
-            <DataCategory icon={Users} title="Circle Shared Records" desc="Prayers and reflections you choose to share within a Circle. Only visible to Circle members." visibility="CIRCLE" />
+            <DataCategory icon={Users} title="Circle Shared Records" desc="Prayers, reflections, and sermon discussions you choose to share within a Circle. Only visible to Circle members." visibility="CIRCLE" />
             <DataCategory icon={Church} title="Church Records" desc="Sermon notes and church-related reflections you create. Church admins cannot access your private data." visibility="PRIVATE" />
             <DataCategory icon={BookHeart} title="Legacy Records" desc="Your intentional permanent record — events, seasons, letters, milestones, testimony. Fully private unless you explicitly share." visibility="PRIVATE" />
           </div>

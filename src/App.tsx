@@ -37,6 +37,8 @@ function getInitialTranslation(): BibleTranslation {
 // Phase 8 imports
 import TogetherScreen from '@/screens/TogetherScreen';
 import CircleHomeScreen from '@/screens/CircleHomeScreen';
+import CircleSermonDiscussionsScreen from '@/screens/CircleSermonDiscussionsScreen';
+import CircleSermonDiscussionDetailScreen from '@/screens/CircleSermonDiscussionDetailScreen';
 import CreateCircleScreen from '@/screens/CreateCircleScreen';
 import PrayerTogetherScreen from '@/screens/PrayerTogetherScreen';
 import ScriptureTogetherScreen from '@/screens/ScriptureTogetherScreen';
@@ -57,7 +59,7 @@ import ChurchStudiesScreen from '@/screens/ChurchStudiesScreen';
 import ManageChurchStudiesScreen from '@/screens/ManageChurchStudiesScreen';
 import SmallGroupModeScreen from '@/screens/SmallGroupModeScreen';
 import ChurchPrayerScreen from '@/screens/ChurchPrayerScreen';
-import type { Circle, Sermon } from '@/lib/togetherTypes';
+import type { Circle, CircleSermonDiscussion, Sermon } from '@/lib/togetherTypes';
 
 // Phase 9 imports
 import LegacyHomeScreen from '@/screens/LegacyHomeScreen';
@@ -105,6 +107,8 @@ export type Overlay =
   | { type: 'together_invitations' }
   | { type: 'together_join_code' }
   | { type: 'circle_home'; circle: Circle }
+  | { type: 'circle_sermon_discussions'; circle: Circle }
+  | { type: 'circle_sermon_discussion'; circle: Circle; discussion: CircleSermonDiscussion }
   | { type: 'create_circle' }
   | { type: 'prayer_together'; circle?: Circle }
   | { type: 'scripture_together'; circle?: Circle }
@@ -335,6 +339,13 @@ export default function App() {
     });
   }
 
+  function handleOpenDiscussionScripture(reference: string, detail: Overlay): boolean {
+    const parsed = parsePassageReference(reference);
+    if (!parsed) return false;
+    setOverlay({ type: 'bible-reference', book: parsed.book, chapter: parsed.chapter, verseStart: parsed.verseStart, verseEnd: parsed.verseEnd, returnOverlay: detail });
+    return true;
+  }
+
   function handleExitBibleMode() {
     setOverlay({ type: 'none' });
   }
@@ -452,6 +463,8 @@ export default function App() {
               initialView={studyDetail.initialView}
               onDone={() => setOverlay({ type: 'sermon_assistant' })}
               onOpenBible={handleOpenBibleReference}
+              profile={profile}
+              onViewSharedDiscussion={(circle, discussion) => setOverlay({ type: 'circle_sermon_discussion', circle, discussion })}
               onContinueInAsk={(handoff) => {
                 setSermonAskRecordingId(studyDetail.recordingId);
                 setActiveAskConversationId(null);
@@ -584,6 +597,34 @@ export default function App() {
     );
   }
 
+  if (overlay.type === 'circle_sermon_discussions' && profile) {
+    return (
+      <ErrorBoundary>
+        <CircleSermonDiscussionsScreen
+          profile={profile}
+          circle={overlay.circle}
+          onBack={() => setOverlay({ type: 'circle_home', circle: overlay.circle })}
+          onOpenDiscussion={(discussion) => setOverlay({ type: 'circle_sermon_discussion', circle: overlay.circle, discussion })}
+        />
+      </ErrorBoundary>
+    );
+  }
+
+  if (overlay.type === 'circle_sermon_discussion' && profile) {
+    return (
+      <ErrorBoundary>
+        <CircleSermonDiscussionDetailScreen
+          profile={profile}
+          circle={overlay.circle}
+          discussion={overlay.discussion}
+          onBack={() => setOverlay({ type: 'circle_sermon_discussions', circle: overlay.circle })}
+          onDeleted={() => setOverlay({ type: 'circle_sermon_discussions', circle: overlay.circle })}
+          onOpenScripture={(reference) => handleOpenDiscussionScripture(reference, overlay)}
+        />
+      </ErrorBoundary>
+    );
+  }
+
   if (overlay.type === 'circle_home' && profile) {
     return (
       <ErrorBoundary>
@@ -596,6 +637,7 @@ export default function App() {
           onOpenCheckIn={(circle) => setOverlay({ type: 'check_in', circle })}
           onOpenEncouragement={(circle) => setOverlay({ type: 'encouragement', circle })}
           onOpenAccountability={(circle) => setOverlay({ type: 'accountability', circle })}
+          onOpenSermonDiscussions={(circle) => setOverlay({ type: 'circle_sermon_discussions', circle })}
         />
       </ErrorBoundary>
     );

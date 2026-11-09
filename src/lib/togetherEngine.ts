@@ -7,7 +7,7 @@ import type { Profile } from '@/lib/types';
 import type {
   Circle, CircleMember, CircleInvitation, SharedPrayer, PrayerAcknowledgement,
   SharedScriptureStudy, SharedReflection, CircleCheckIn, Encouragement,
-  AccountabilityRelationship,
+  AccountabilityRelationship, CircleSermonDiscussion,
 } from '@/lib/togetherTypes';
 
 // ============================================================
@@ -465,4 +465,51 @@ export async function setAccountability(
     .select('*')
     .single();
   return (data as AccountabilityRelationship) || null;
+}
+
+// ============================================================
+// CIRCLE SERMON DISCUSSIONS
+// Writes and reads throw on failure so the UI can show an error instead of an empty list.
+// ============================================================
+
+export interface CircleSermonDiscussionDraft {
+  sermonTitle: string | null;
+  discussionBody: string;
+  scriptureReferences: string[];
+}
+
+export async function createCircleSermonDiscussion(
+  circleId: string,
+  draft: CircleSermonDiscussionDraft,
+): Promise<CircleSermonDiscussion> {
+  const { data, error } = await supabase
+    .from('circle_sermon_discussions')
+    .insert({
+      circle_id: circleId,
+      sermon_title: draft.sermonTitle,
+      discussion_body: draft.discussionBody,
+      scripture_references: draft.scriptureReferences,
+    })
+    .select('*')
+    .single();
+  if (error || !data) throw error ?? new Error('Discussion was not created');
+  return data as CircleSermonDiscussion;
+}
+
+export async function getCircleSermonDiscussions(circleId: string): Promise<CircleSermonDiscussion[]> {
+  const { data, error } = await supabase
+    .from('circle_sermon_discussions')
+    .select('*')
+    .eq('circle_id', circleId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data as CircleSermonDiscussion[]) ?? [];
+}
+
+export async function deleteCircleSermonDiscussion(discussionId: string): Promise<void> {
+  const { error } = await supabase
+    .from('circle_sermon_discussions')
+    .delete()
+    .eq('id', discussionId);
+  if (error) throw error;
 }

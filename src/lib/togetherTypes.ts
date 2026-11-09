@@ -55,6 +55,17 @@ export interface Circle {
   updated_at: string;
 }
 
+export interface CircleSermonDiscussion {
+  id: string;
+  circle_id: string;
+  created_by_profile_id: string;
+  sermon_title: string | null;
+  discussion_body: string;
+  scripture_references: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface CircleMember {
   id: string;
   circle_id: string;
