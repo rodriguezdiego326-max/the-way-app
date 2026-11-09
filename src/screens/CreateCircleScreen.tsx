@@ -3,16 +3,14 @@ import { X, Plus, Check } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import { createCircle } from '@/lib/togetherEngine';
 import { CIRCLE_TYPES } from '@/lib/togetherTypes';
-import type { Profile } from '@/lib/types';
 import type { Circle } from '@/lib/togetherTypes';
 
 interface Props {
-  profile: Profile;
   onBack: () => void;
   onCreated: (circle: Circle) => void;
 }
 
-export default function CreateCircleScreen({ profile, onBack, onCreated }: Props) {
+export default function CreateCircleScreen({ onBack, onCreated }: Props) {
   const [name, setName] = useState('');
   const [circleType, setCircleType] = useState<string>('Bible Study');
   const [description, setDescription] = useState('');
@@ -25,7 +23,7 @@ export default function CreateCircleScreen({ profile, onBack, onCreated }: Props
     setCreating(true);
     setError(null);
     try {
-      const circle = await createCircle(profile, name.trim(), circleType, description.trim() || undefined);
+      const circle = await createCircle(name.trim(), circleType, description.trim() || undefined);
       if (circle) {
         onCreated(circle);
       } else {

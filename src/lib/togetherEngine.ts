@@ -5,7 +5,8 @@
 import { supabase } from '@/lib/supabase';
 import type { Profile } from '@/lib/types';
 import type {
-  Circle, CircleMember, CircleInvitation, SharedPrayer, PrayerAcknowledgement,
+  Circle, CircleMember, CircleMemberSummary, CircleInvitation, CircleInvitePreview,
+  CircleInviteAcceptResult, SharedPrayer, PrayerAcknowledgement,
   SharedScriptureStudy, SharedReflection, CircleCheckIn, Encouragement,
   AccountabilityRelationship, CircleSermonDiscussion,
 } from '@/lib/togetherTypes';
@@ -15,32 +16,17 @@ import type {
 // ============================================================
 
 export async function createCircle(
-  profile: Profile,
   name: string,
   circleType: string,
   description?: string,
 ): Promise<Circle | null> {
-  const { data: circle } = await supabase
-    .from('circles')
-    .insert({
-      name,
-      circle_type: circleType,
-      description: description || null,
-      owner_profile_id: profile.id,
-      privacy: 'PRIVATE',
-    })
-    .select('*')
-    .single();
-
-  if (!circle) return null;
-
-  await supabase.from('circle_members').insert({
-    circle_id: (circle as Circle).id,
-    profile_id: profile.id,
-    role: 'OWNER',
+  const { data, error } = await supabase.rpc('create_circle', {
+    p_name: name,
+    p_circle_type: circleType,
+    p_description: description || null,
   });
-
-  return circle as Circle;
+  if (error || !data) return null;
+  return data as Circle;
 }
 
 export async function loadMyCircles(profile: Profile): Promise<Circle[]> {
@@ -88,100 +74,79 @@ export async function getMyRole(circleId: string, profileId: string): Promise<st
   return (data as { role: string } | null)?.role || null;
 }
 
+export async function getCircleMemberSummaries(circleId: string): Promise<CircleMemberSummary[]> {
+  const { data, error } = await supabase.rpc('get_circle_member_summaries', { p_circle_id: circleId });
+  if (error) throw error;
+  return (data as CircleMemberSummary[]) ?? [];
+}
+
 // ============================================================
 // INVITATIONS
 // ============================================================
 
-export async function createInvitation(
+export async function createCircleInvitation(
   circleId: string,
-  invitedByProfileId: string,
-  expiresAt?: string,
-): Promise<CircleInvitation | null> {
-  const { data } = await supabase
-    .from('circle_invitations')
-    .insert({
-      circle_id: circleId,
-      invited_by_profile_id: invitedByProfileId,
-      expires_at: expiresAt || null,
-    })
-    .select('*')
-    .single();
-  return (data as CircleInvitation) || null;
+  expiresInHours: number | null,
+): Promise<CircleInvitation> {
+  const { data, error } = await supabase.rpc('create_circle_invitation', {
+    p_circle_id: circleId,
+    p_expires_in_hours: expiresInHours,
+  });
+  if (error || !data) throw error ?? new Error('Invitation was not created');
+  return data as CircleInvitation;
 }
 
-export async function getInvitationsForProfile(profileId: string): Promise<Array<CircleInvitation & { circles: Circle }>> {
-  const { data } = await supabase
+export async function getPendingCircleInvitations(circleId: string): Promise<CircleInvitation[]> {
+  const { data, error } = await supabase
     .from('circle_invitations')
-    .select('*, circles(*)')
+    .select('*')
+    .eq('circle_id', circleId)
     .is('accepted_at', null)
     .is('revoked_at', null)
+    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
     .order('created_at', { ascending: false });
-
-  return ((data || []) as Array<CircleInvitation & { circles: Circle }>).filter((inv) => {
-    return inv.circles && inv.circles.owner_profile_id === profileId;
-  });
+  if (error) throw error;
+  return (data as CircleInvitation[]) ?? [];
 }
 
-export async function getInvitationByCode(code: string): Promise<(CircleInvitation & { circles: Circle }) | null> {
-  const { data } = await supabase
-    .from('circle_invitations')
-    .select('*, circles(*)')
-    .eq('invite_code', code)
-    .maybeSingle();
-  return (data as CircleInvitation & { circles: Circle }) || null;
+export async function revokeCircleInvitation(invitationId: string): Promise<void> {
+  const { error } = await supabase.rpc('revoke_circle_invitation', { p_invitation_id: invitationId });
+  if (error) throw error;
 }
 
-export async function acceptInvitation(
-  code: string,
-  profile: Profile,
-): Promise<{ success: boolean; error?: string; circle?: Circle }> {
-  const invitation = await getInvitationByCode(code);
-  if (!invitation) return { success: false, error: 'Invitation not found' };
-  if (invitation.revoked_at) return { success: false, error: 'This invitation has been revoked' };
-  if (invitation.accepted_at) return { success: false, error: 'This invitation has already been used' };
-  if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
-    return { success: false, error: 'This invitation has expired' };
-  }
-
-  const { data: existing } = await supabase
-    .from('circle_members')
-    .select('id')
-    .eq('circle_id', invitation.circle_id)
-    .eq('profile_id', profile.id)
-    .maybeSingle();
-
-  if (existing) return { success: false, error: 'You are already a member of this Circle' };
-
-  await supabase.from('circle_members').insert({
-    circle_id: invitation.circle_id,
-    profile_id: profile.id,
-    role: 'MEMBER',
-  });
-
-  await supabase
-    .from('circle_invitations')
-    .update({
-      accepted_at: new Date().toISOString(),
-      accepted_by_profile_id: profile.id,
-    })
-    .eq('id', invitation.id);
-
-  return { success: true, circle: invitation.circles };
+export async function previewCircleInvitation(code: string): Promise<CircleInvitePreview> {
+  const { data, error } = await supabase.rpc('preview_circle_invitation', { p_code: code });
+  if (error || !data) throw error ?? new Error('Invitation could not be checked');
+  return data as CircleInvitePreview;
 }
 
-export async function revokeInvitation(invitationId: string): Promise<void> {
-  await supabase
-    .from('circle_invitations')
-    .update({ revoked_at: new Date().toISOString() })
-    .eq('id', invitationId);
+export async function acceptCircleInvitation(code: string): Promise<CircleInviteAcceptResult> {
+  const { data, error } = await supabase.rpc('accept_circle_invitation', { p_code: code });
+  if (error || !data) throw error ?? new Error('Invitation could not be accepted');
+  return data as CircleInviteAcceptResult;
 }
 
-export async function leaveCircle(circleId: string, profileId: string): Promise<void> {
-  await supabase
+// ============================================================
+// MEMBERSHIP
+// ============================================================
+
+async function deleteCircleMembership(circleId: string, profileId: string): Promise<void> {
+  const { data, error } = await supabase
     .from('circle_members')
     .delete()
     .eq('circle_id', circleId)
-    .eq('profile_id', profileId);
+    .eq('profile_id', profileId)
+    .select('id');
+  if (error) throw error;
+  if (!data?.length) throw new Error('Membership was not removed');
+}
+
+export async function removeCircleMember(circleId: string, profileId: string): Promise<void> {
+  return deleteCircleMembership(circleId, profileId);
+}
+
+export async function leaveCircle(circleId: string, profileId: string): Promise<void> {
+  return deleteCircleMembership(circleId, profileId);
 }
 
 // ============================================================

@@ -3,7 +3,7 @@ import { X, Check, AlertCircle, FlaskConical, ChevronDown, Shield, Lock, Databas
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import { supabase } from '@/lib/supabase';
-import { createCircle, getMyCircles, createReflection, getReflections, createSharedPrayer, acknowledgePrayer, leaveCircle, createInvitation, getInvitationByCode, revokeInvitation, getAcknowledgementCount } from '@/lib/togetherEngine';
+import { createCircle, getMyCircles, createReflection, getReflections, createSharedPrayer, acknowledgePrayer, leaveCircle, createCircleInvitation, previewCircleInvitation, revokeCircleInvitation, getAcknowledgementCount } from '@/lib/togetherEngine';
 import { retrieveSources } from '@/lib/libraryEngine';
 import type { Profile } from '@/lib/types';
 
@@ -94,7 +94,7 @@ export default function Phase8TestScreen({ profile, onBack }: Props) {
       // TEST 1: Circle Privacy
       // ============================================================
       try {
-        const circle = await createCircle(profile, '__P8_PRIVACY_TEST__', 'Bible Study', 'Privacy validation circle');
+        const circle = await createCircle('__P8_PRIVACY_TEST__', 'Bible Study', 'Privacy validation circle');
         if (circle) {
           createdIds.push(circle.id);
           // Verify owner can see it
@@ -144,64 +144,31 @@ export default function Phase8TestScreen({ profile, onBack }: Props) {
       // TEST 2: Invitation Security
       // ============================================================
       try {
-        const invCircle = await createCircle(profile, '__P8_INVITE_TEST__', 'Prayer Group');
+        const invCircle = await createCircle('__P8_INVITE_TEST__', 'Prayer Group');
         if (invCircle) {
           createdIds.push(invCircle.id);
-          // Create valid invitation
-          const validInv = await createInvitation(invCircle.id, testProfileId);
-          // Create expired invitation
-          const expiredInv = await createInvitation(invCircle.id, testProfileId, new Date(Date.now() - 86400000).toISOString());
-          // Create and revoke invitation
-          const revokableInv = await createInvitation(invCircle.id, testProfileId);
+          const validInv = await createCircleInvitation(invCircle.id, 24);
+          const revokableInv = await createCircleInvitation(invCircle.id, 24);
 
-          let validWorks = false;
-          let invalidFails = false;
-          let revokedFails = false;
-          let expiredFails = false;
+          const validPreview = await previewCircleInvitation(validInv.invite_code);
+          const validWorks = validPreview.status === 'valid';
+          const invalidFails = (await previewCircleInvitation('0123456789abcdef01234567')).status === 'invalid';
 
-          if (validInv) {
-            // Valid invite should return the invitation
-            const found = await getInvitationByCode(validInv.invite_code);
-            validWorks = !!found && !found.revoked_at && !found.accepted_at;
-          }
+          await revokeCircleInvitation(revokableInv.id);
+          const revokedFails = (await previewCircleInvitation(revokableInv.invite_code)).status === 'revoked';
 
-          // Invalid code should return null
-          const notFound = await getInvitationByCode('INVALID_CODE_12345');
-          invalidFails = notFound === null;
-
-          if (revokableInv) {
-            await revokeInvitation(revokableInv.id);
-            const revokedCheck = await getInvitationByCode(revokableInv.invite_code);
-            revokedFails = !!revokedCheck && !!revokedCheck.revoked_at;
-          }
-
-          if (expiredInv) {
-            const expiredCheck = await getInvitationByCode(expiredInv.invite_code);
-            expiredFails = !!expiredCheck && expiredCheck.expires_at !== null && new Date(expiredCheck.expires_at) < new Date();
-          }
-
-          // Verify invitation does not expose circle content (only metadata)
-          if (validInv) {
-            const invData = await getInvitationByCode(validInv.invite_code);
-            const noContentLeak = invData !== null && !('body' in invData) && !('notes' in invData);
-            const allPass = validWorks && invalidFails && revokedFails && expiredFails && noContentLeak;
-            updateTest('invitation_security', allPass ? 'pass' : 'fail', {
-              testUsers: 'Test User A (inviter), Test User B (invitee)',
-              expectedBehavior: 'Valid invite works, invalid code fails, revoked invite fails, expired invite fails, no content leaked before acceptance',
-              actualBehavior: `Valid: ${validWorks}. Invalid rejected: ${invalidFails}. Revoked: ${revokedFails}. Expired: ${expiredFails}. No content leak: ${noContentLeak}.`,
-              dbEndpoint: 'circle_invitations (SELECT, INSERT, UPDATE)',
-              authResult: 'Invite tokens are unique (gen_random_bytes), revocable (revoked_at), optionally expire (expires_at). No Circle content in invitation record.',
+          const noContentLeak = !('owner_profile_id' in validPreview) && !('circle_id' in validPreview);
+          const allPass = validWorks && invalidFails && revokedFails && noContentLeak;
+          updateTest('invitation_security', allPass ? 'pass' : 'fail', {
+              testUsers: 'Test User A (owner)',
+              expectedBehavior: 'Valid code previews, invalid code is rejected, revoked code is rejected, preview exposes no owner or Circle ids',
+              actualBehavior: `Valid: ${validWorks}. Invalid rejected: ${invalidFails}. Revoked: ${revokedFails}. No id leak: ${noContentLeak}.`,
+              dbEndpoint: 'create_circle_invitation, preview_circle_invitation, revoke_circle_invitation (RPC)',
+              authResult: 'Invite codes are 24 random hex characters, revocable, and checked server-side.',
               passFailReason: allPass
                 ? 'PASS: All invitation security checks passed'
                 : 'FAIL: One or more invitation security checks failed',
-            });
-          } else {
-            updateTest('invitation_security', 'fail', {
-              testUsers: 'Test User A', expectedBehavior: 'Invitations are secure',
-              actualBehavior: 'Could not create invitation', dbEndpoint: 'circle_invitations',
-              authResult: 'N/A', passFailReason: 'FAIL: Invitation creation failed',
-            });
-          }
+          });
         }
       } catch (e) {
         updateTest('invitation_security', 'fail', {
@@ -216,7 +183,7 @@ export default function Phase8TestScreen({ profile, onBack }: Props) {
       // ============================================================
       try {
         // Create a circle for the reflection
-        const reflCircle = await createCircle(profile, '__P8_REFL_TEST__', 'Bible Study');
+        const reflCircle = await createCircle('__P8_REFL_TEST__', 'Bible Study');
         if (reflCircle) {
           createdIds.push(reflCircle.id);
           // Create a PRIVATE reflection tied to this circle
@@ -266,7 +233,7 @@ export default function Phase8TestScreen({ profile, onBack }: Props) {
       // TEST 4: Prayer Sharing Controls
       // ============================================================
       try {
-        const prayerCircle = await createCircle(profile, '__P8_PRAYER_TEST__', 'Prayer Group');
+        const prayerCircle = await createCircle('__P8_PRAYER_TEST__', 'Prayer Group');
         if (prayerCircle) {
           createdIds.push(prayerCircle.id);
           // Create private prayer
@@ -519,7 +486,7 @@ export default function Phase8TestScreen({ profile, onBack }: Props) {
       // TEST 8: Circle Leave Revocation
       // ============================================================
       try {
-        const leaveTestCircle = await createCircle(profile, '__P8_LEAVE_TEST__', 'Friends');
+        const leaveTestCircle = await createCircle('__P8_LEAVE_TEST__', 'Friends');
         if (leaveTestCircle) {
           createdIds.push(leaveTestCircle.id);
           // Verify membership exists

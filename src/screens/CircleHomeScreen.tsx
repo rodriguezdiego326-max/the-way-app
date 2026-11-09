@@ -3,7 +3,7 @@ import { X, Users, Heart, BookOpen, CheckCircle, HandHeart, Shield, ChevronRight
 
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
-import { getCircleMembers, getMyRole, leaveCircle, createInvitation, getScriptureStudies, getSharedPrayers, getCheckIns, getCircleSermonDiscussions } from '@/lib/togetherEngine';
+import { getCircleMembers, getMyRole, leaveCircle, createCircleInvitation, getScriptureStudies, getSharedPrayers, getCheckIns, getCircleSermonDiscussions } from '@/lib/togetherEngine';
 import type { Profile } from '@/lib/types';
 import type { Circle, CircleMember, SharedScriptureStudy, SharedPrayer, CircleCheckIn, CircleSermonDiscussion } from '@/lib/togetherTypes';
 
@@ -69,15 +69,20 @@ export default function CircleHomeScreen({
 
   async function handleInvite() {
     vibrate(10);
-    const inv = await createInvitation(circle.id, profile.id);
-    if (inv) setInviteCode(inv.invite_code);
+    const inv = await createCircleInvitation(circle.id, 168);
+    setInviteCode(inv.invite_code);
   }
 
   async function handleLeave() {
     vibrate(20);
     setLeaving(true);
-    await leaveCircle(circle.id, profile.id);
-    onBack();
+    try {
+      await leaveCircle(circle.id, profile.id);
+      onBack();
+    } catch {
+      setLeaving(false);
+      setError('The Circle owner cannot leave. Transfer ownership or delete the Circle first.');
+    }
   }
 
   const isLeader = myRole === 'OWNER' || myRole === 'LEADER' || myRole === 'PASTOR' || myRole === 'CHURCH_LEADER';

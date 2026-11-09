@@ -86,6 +86,35 @@ export interface CircleInvitation {
   created_at: string;
 }
 
+export interface CircleMemberSummary {
+  member_profile_id: string;
+  member_display_name: string | null;
+  member_role: CircleRole | string;
+  member_joined_at: string;
+  is_current_user: boolean;
+}
+
+export type CircleInviteStatus =
+  | 'valid' | 'invalid' | 'revoked' | 'expired' | 'used' | 'full' | 'already_member' | 'joined';
+
+export interface CircleInvitePreview {
+  status: CircleInviteStatus;
+  circle_id?: string;
+  circle_name?: string;
+  circle_type?: string;
+  description?: string | null;
+  member_count?: number;
+  max_members?: number;
+  expires_at?: string | null;
+}
+
+export interface CircleInviteAcceptResult {
+  status: CircleInviteStatus;
+  circle_id?: string;
+  circle_name?: string;
+  circle_type?: string;
+}
+
 export interface SharedPrayer {
   id: string;
   title: string;

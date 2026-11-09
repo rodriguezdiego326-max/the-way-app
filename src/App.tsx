@@ -36,6 +36,7 @@ function getInitialTranslation(): BibleTranslation {
 
 // Phase 8 imports
 import TogetherScreen from '@/screens/TogetherScreen';
+import JoinCircleScreen from '@/screens/JoinCircleScreen';
 import CircleHomeScreen from '@/screens/CircleHomeScreen';
 import CircleSermonDiscussionsScreen from '@/screens/CircleSermonDiscussionsScreen';
 import CircleSermonDiscussionDetailScreen from '@/screens/CircleSermonDiscussionDetailScreen';
@@ -107,7 +108,6 @@ export type Overlay =
   | { type: 'production_status' }
   // Phase 8 overlays
   | { type: 'together' }
-  | { type: 'together_invitations' }
   | { type: 'together_join_code' }
   | { type: 'circle_home'; circle: Circle }
   | { type: 'circle_sermon_discussions'; circle: Circle }
@@ -556,30 +556,12 @@ export default function App() {
           onBack={() => setOverlay({ type: 'none' })}
           onOpenCircle={(circle) => setOverlay({ type: 'circle_home', circle })}
           onOpenCreateCircle={() => setOverlay({ type: 'create_circle' })}
+          onOpenJoinCircle={() => setOverlay({ type: 'together_join_code' })}
           onOpenPrayer={(circle) => setOverlay({ type: 'prayer_together', circle })}
           onOpenScripture={(circle) => setOverlay({ type: 'scripture_together', circle })}
           onOpenCheckIn={(circle) => setOverlay({ type: 'check_in', circle })}
           onOpenEncouragement={() => setOverlay({ type: 'encouragement' })}
           onOpenAccountability={() => setOverlay({ type: 'accountability' })}
-        />
-      </ErrorBoundary>
-    );
-  }
-
-  if (overlay.type === 'together_invitations' && profile) {
-    return (
-      <ErrorBoundary>
-        <TogetherScreen
-          profile={profile}
-          onBack={() => setOverlay({ type: 'together' })}
-          onOpenCircle={(circle) => setOverlay({ type: 'circle_home', circle })}
-          onOpenCreateCircle={() => setOverlay({ type: 'create_circle' })}
-          onOpenPrayer={(circle) => setOverlay({ type: 'prayer_together', circle })}
-          onOpenScripture={(circle) => setOverlay({ type: 'scripture_together', circle })}
-          onOpenCheckIn={(circle) => setOverlay({ type: 'check_in', circle })}
-          onOpenEncouragement={() => setOverlay({ type: 'encouragement' })}
-          onOpenAccountability={() => setOverlay({ type: 'accountability' })}
-          initialTab="invitations"
         />
       </ErrorBoundary>
     );
@@ -588,17 +570,9 @@ export default function App() {
   if (overlay.type === 'together_join_code' && profile) {
     return (
       <ErrorBoundary>
-        <TogetherScreen
-          profile={profile}
+        <JoinCircleScreen
           onBack={() => setOverlay({ type: 'together' })}
-          onOpenCircle={(circle) => setOverlay({ type: 'circle_home', circle })}
-          onOpenCreateCircle={() => setOverlay({ type: 'create_circle' })}
-          onOpenPrayer={(circle) => setOverlay({ type: 'prayer_together', circle })}
-          onOpenScripture={(circle) => setOverlay({ type: 'scripture_together', circle })}
-          onOpenCheckIn={(circle) => setOverlay({ type: 'check_in', circle })}
-          onOpenEncouragement={() => setOverlay({ type: 'encouragement' })}
-          onOpenAccountability={() => setOverlay({ type: 'accountability' })}
-          initialTab="join_code"
+          onJoined={() => setOverlay({ type: 'together' })}
         />
       </ErrorBoundary>
     );
@@ -678,7 +652,6 @@ export default function App() {
     return (
       <ErrorBoundary>
         <CreateCircleScreen
-          profile={profile}
           onBack={() => setOverlay({ type: 'together' })}
           onCreated={() => setOverlay({ type: 'together' })}
         />
