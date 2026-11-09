@@ -130,7 +130,7 @@ export default function PrivacyCenterScreen({ profile, onBack, onProfileUpdate }
               </div>
               <div className="premium-card p-4">
                 <p className="text-ivory-100 font-medium text-sm mb-2">How to Delete</p>
-                <p className="text-ivory-500 text-xs leading-relaxed">Open a recording and choose Delete. This removes its audio, its transcript, and any Sermon Insights from this device. A discussion you already shared with a Circle stays there until you delete it in that Circle.</p>
+                <p className="text-ivory-500 text-xs leading-relaxed">Open a recording and choose Delete. This removes its audio, its transcript, and any Sermon Insights from this device. A discussion you already shared with a Circle stays there until you delete it in that Circle, and a Family discussion stays in your Family until you delete it there.</p>
               </div>
             </section>
 
@@ -170,7 +170,7 @@ export default function PrivacyCenterScreen({ profile, onBack, onProfileUpdate }
               </div>
               <div className="premium-card p-4">
                 <p className="text-ivory-100 font-medium text-sm mb-2">Where Insights Live</p>
-                <p className="text-ivory-500 text-xs leading-relaxed">Insights are saved on this device and are not used for Memory, Ask, or Family features. They leave your device only if you choose to share a discussion from them with a Circle, and then only the parts you select.</p>
+                <p className="text-ivory-500 text-xs leading-relaxed">Insights are saved on this device and are not used for Memory or Ask. They leave your device only if you choose to share a discussion with a Circle, and then only the parts you select. A Family discussion you save is kept in your private Family Profile and does not include your recording, transcript, or full Sermon Insights.</p>
               </div>
               <div className="premium-card p-4">
                 <p className="text-ivory-100 font-medium text-sm mb-2">Not a Doctrinal Check</p>

@@ -21,6 +21,7 @@ import {
 import type { SermonAskHandoff } from '@/lib/askHandoff';
 import type { Profile } from '@/lib/types';
 import type { Circle, CircleSermonDiscussion } from '@/lib/togetherTypes';
+import type { FamilySermonDiscussion } from '@/lib/familyTypes';
 
 interface Props {
   recordingId: string;
@@ -32,9 +33,10 @@ interface Props {
   onContinueInAsk: (handoff: SermonAskHandoff) => void;
   profile: Profile | null;
   onViewSharedDiscussion: (circle: Circle, discussion: CircleSermonDiscussion) => void;
+  onOpenFamilyDiscussion: (discussion: FamilySermonDiscussion) => void;
 }
 
-export default function SermonRecordingDetailScreen({ recordingId, fresh, interrupted, initialView = 'details', onDone, onOpenBible, onContinueInAsk, profile, onViewSharedDiscussion }: Props) {
+export default function SermonRecordingDetailScreen({ recordingId, fresh, interrupted, initialView = 'details', onDone, onOpenBible, onContinueInAsk, profile, onViewSharedDiscussion, onOpenFamilyDiscussion }: Props) {
   const [meta, setMeta] = useState<SermonRecordingMeta | null>(null);
   const [legacyBlob, setLegacyBlob] = useState<Blob | null>(null);
   const [loading, setLoading] = useState(true);
@@ -136,6 +138,7 @@ export default function SermonRecordingDetailScreen({ recordingId, fresh, interr
         onStudy={() => setView('study')}
         onContinueInAsk={onContinueInAsk}
         onViewSharedDiscussion={onViewSharedDiscussion}
+        onOpenFamilyDiscussion={onOpenFamilyDiscussion}
       />
     );
   }
