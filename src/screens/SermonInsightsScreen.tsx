@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Copy, Check, RefreshCw, AlertCircle } from 'lucide-react';
+import { X, Copy, Check, RefreshCw, AlertCircle, BookOpen } from 'lucide-react';
 import { vibrate, formatDate } from '@/lib/utils';
 import type { SermonRecordingMeta } from '@/lib/sermonRecordingStore';
 import type { SermonInsightsState } from '@/hooks/useSermonInsights';
@@ -10,6 +10,7 @@ interface Props {
   meta: SermonRecordingMeta;
   insights: SermonInsightsState;
   onBack: () => void;
+  onStudy: () => void;
 }
 
 const STAGE_LABELS = {
@@ -23,7 +24,7 @@ const CONFIDENCE_LABELS = {
   likely: 'Likely reference',
 } as const;
 
-export default function SermonInsightsScreen({ meta, insights, onBack }: Props) {
+export default function SermonInsightsScreen({ meta, insights, onBack, onStudy }: Props) {
   const { record, stage, error, isGenerating, generate, clearError } = insights;
   const [confirmRegenerate, setConfirmRegenerate] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -180,6 +181,9 @@ export default function SermonInsightsScreen({ meta, insights, onBack }: Props) 
               )}
 
               <div className="flex flex-col gap-2 mb-8">
+                <button onClick={() => { vibrate(8); onStudy(); }} disabled={isGenerating} className="btn-primary w-full disabled:opacity-40">
+                  <BookOpen size={16} /> Study This Sermon With Scripture
+                </button>
                 <button onClick={handleCopy} disabled={isGenerating} className="btn-primary w-full disabled:opacity-40">
                   {copied ? <><Check size={16} /> Copied</> : <><Copy size={16} /> Copy Insights</>}
                 </button>

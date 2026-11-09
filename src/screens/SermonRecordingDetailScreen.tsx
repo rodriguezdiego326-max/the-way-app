@@ -7,6 +7,8 @@ import SermonTranscriptionPanel from '@/components/sermon/SermonTranscriptionPan
 import SermonConfirmSheet from '@/components/sermon/SermonConfirmSheet';
 import SermonTranscriptScreen from '@/screens/SermonTranscriptScreen';
 import SermonInsightsScreen from '@/screens/SermonInsightsScreen';
+import SermonStudyScreen from '@/screens/SermonStudyScreen';
+import type { OpenBibleHandler } from '@/lib/sermonStudy';
 import { sermonRecorderNative } from '@/lib/sermonRecorderNative';
 import { useSermonTranscription } from '@/hooks/useSermonTranscription';
 import { useSermonInsights } from '@/hooks/useSermonInsights';
@@ -21,14 +23,15 @@ interface Props {
   fresh: boolean;
   interrupted: boolean;
   onDone: () => void;
+  onOpenBible: OpenBibleHandler;
 }
 
-export default function SermonRecordingDetailScreen({ recordingId, fresh, interrupted, onDone }: Props) {
+export default function SermonRecordingDetailScreen({ recordingId, fresh, interrupted, onDone, onOpenBible }: Props) {
   const [meta, setMeta] = useState<SermonRecordingMeta | null>(null);
   const [legacyBlob, setLegacyBlob] = useState<Blob | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [view, setView] = useState<'details' | 'transcript' | 'insights'>('details');
+  const [view, setView] = useState<'details' | 'transcript' | 'insights' | 'study'>('details');
 
   const [title, setTitle] = useState('');
   const [preacher, setPreacher] = useState('');
@@ -121,6 +124,19 @@ export default function SermonRecordingDetailScreen({ recordingId, fresh, interr
         meta={meta}
         insights={insights}
         onBack={() => setView('transcript')}
+        onStudy={() => setView('study')}
+      />
+    );
+  }
+
+  if (meta && view === 'study' && insights.record) {
+    return (
+      <SermonStudyScreen
+        key={insights.record.createdAt}
+        meta={meta}
+        insights={insights.record.insights}
+        onBack={() => setView('insights')}
+        onOpenBible={onOpenBible}
       />
     );
   }

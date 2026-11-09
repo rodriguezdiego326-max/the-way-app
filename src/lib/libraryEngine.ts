@@ -320,7 +320,13 @@ export function detectAuthorInQuery(query: string): string | null {
 }
 
 // Retrieve sources from the library database — error-safe
-export async function retrieveSources(query: string): Promise<RetrievalResult> {
+export interface RetrieveSourcesOptions {
+  logRetrieval?: boolean;
+  throwOnError?: boolean;
+}
+
+export async function retrieveSources(query: string, options: RetrieveSourcesOptions = {}): Promise<RetrievalResult> {
+  const logRetrieval = options.logRetrieval ?? true;
   const { intent, doctrines } = classifyIntent(query);
   const doctrineIds = doctrines.map((d) => d.doctrine_id);
   const detectedAuthor = detectAuthorInQuery(query);
@@ -382,6 +388,7 @@ export async function retrieveSources(query: string): Promise<RetrievalResult> {
     }
   } catch (err) {
     console.error('[RAG] Retrieval failed:', err);
+    if (options.throwOnError) throw err;
     return {
       citations: [],
       confidence: 'source_unavailable',
@@ -518,7 +525,7 @@ export async function retrieveSources(query: string): Promise<RetrievalResult> {
     : 'No verified sources found for this query.';
 
   // Log retrieval (fire and forget — don't block on this)
-  try {
+  if (logRetrieval) try {
     await supabase.from('retrieval_log').insert({
       query,
       detected_intent: intent,

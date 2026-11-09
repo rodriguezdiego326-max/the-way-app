@@ -669,6 +669,7 @@ export default function App() {
           fresh={overlay.fresh}
           interrupted={overlay.interrupted}
           onDone={() => setOverlay({ type: 'sermon_assistant' })}
+          onOpenBible={handleOpenBibleReference}
         />
       </ErrorBoundary>
     );
