@@ -1,11 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Users, Heart, BookOpen, CheckCircle, HandHeart, Shield, ChevronRight, UserPlus, LogOut, Mail, Lock, MessageSquare } from 'lucide-react';
+import { X, Users, Heart, BookOpen, CheckCircle, HandHeart, Shield, ChevronRight, UserPlus, LogOut, MessageSquare } from 'lucide-react';
 
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
-import { getCircleMembers, getMyRole, leaveCircle, createCircleInvitation, getScriptureStudies, getSharedPrayers, getCheckIns, getCircleSermonDiscussions } from '@/lib/togetherEngine';
+import {
+  getMyRole, leaveCircle, removeCircleMember, getCircleMemberSummaries,
+  getScriptureStudies, getSharedPrayers, getCheckIns, getCircleSermonDiscussions,
+} from '@/lib/togetherEngine';
 import type { Profile } from '@/lib/types';
-import type { Circle, CircleMember, SharedScriptureStudy, SharedPrayer, CircleCheckIn, CircleSermonDiscussion } from '@/lib/togetherTypes';
+import type { Circle, CircleMemberSummary, SharedScriptureStudy, SharedPrayer, CircleCheckIn, CircleSermonDiscussion } from '@/lib/togetherTypes';
+import InvitePeopleSheet from '@/components/circle/InvitePeopleSheet';
+import PendingInvitationsList from '@/components/circle/PendingInvitationsList';
+import CircleMemberList from '@/components/circle/CircleMemberList';
+import CircleConfirmDialog from '@/components/circle/CircleConfirmDialog';
 
 interface Props {
   profile: Profile;
@@ -28,7 +35,8 @@ function discussionSummary(discussions: CircleSermonDiscussion[] | null): string
 export default function CircleHomeScreen({
   profile, circle, onBack, onOpenPrayer, onOpenScripture, onOpenCheckIn, onOpenEncouragement, onOpenAccountability, onOpenSermonDiscussions,
 }: Props) {
-  const [members, setMembers] = useState<CircleMember[]>([]);
+  const [members, setMembers] = useState<CircleMemberSummary[] | null>(null);
+  const [membersFailed, setMembersFailed] = useState(false);
   const [myRole, setMyRole] = useState<string | null>(null);
   const [studies, setStudies] = useState<SharedScriptureStudy[]>([]);
   const [prayers, setPrayers] = useState<SharedPrayer[]>([]);
@@ -37,22 +45,35 @@ export default function CircleHomeScreen({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showInvite, setShowInvite] = useState(false);
-  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [pendingRefreshKey, setPendingRefreshKey] = useState(0);
+  const [memberToRemove, setMemberToRemove] = useState<CircleMemberSummary | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const [showOwnerLeaveNotice, setShowOwnerLeaveNotice] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
+
+  const loadMembers = useCallback(async () => {
+    setMembersFailed(false);
+    try {
+      setMembers(await getCircleMemberSummaries(circle.id));
+    } catch {
+      setMembersFailed(true);
+    }
+  }, [circle.id]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [m, role, studs, prays, checkins, discussionRows] = await Promise.all([
-        getCircleMembers(circle.id),
+      const [role, studs, prays, checkins, discussionRows] = await Promise.all([
         getMyRole(circle.id, profile.id),
         getScriptureStudies(circle.id),
         getSharedPrayers(circle.id),
         getCheckIns(circle.id),
         getCircleSermonDiscussions(circle.id).catch(() => null),
       ]);
-      setMembers(m);
       setMyRole(role);
       setStudies(studs);
       setPrayers(prays);
@@ -65,36 +86,59 @@ export default function CircleHomeScreen({
     }
   }, [circle.id, profile.id]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); loadMembers(); }, [load, loadMembers]);
 
-  async function handleInvite() {
-    vibrate(10);
-    const inv = await createCircleInvitation(circle.id, 168);
-    setInviteCode(inv.invite_code);
+  async function handleRemoveMember() {
+    if (!memberToRemove || removing) return;
+    setRemoving(true);
+    setRemoveError(null);
+    try {
+      await removeCircleMember(circle.id, memberToRemove.member_profile_id);
+      setMemberToRemove(null);
+      await loadMembers();
+    } catch {
+      setRemoveError("We couldn't remove this member. Please try again.");
+    } finally {
+      setRemoving(false);
+    }
   }
 
   async function handleLeave() {
+    if (leaving) return;
     vibrate(20);
     setLeaving(true);
+    setLeaveError(null);
     try {
       await leaveCircle(circle.id, profile.id);
       onBack();
     } catch {
+      setLeaveError("We couldn't leave this Circle. Please try again.");
       setLeaving(false);
-      setError('The Circle owner cannot leave. Transfer ownership or delete the Circle first.');
     }
   }
 
-  const isLeader = myRole === 'OWNER' || myRole === 'LEADER' || myRole === 'PASTOR' || myRole === 'CHURCH_LEADER';
+  function handleLeaveTap() {
+    vibrate(8);
+    if (myRole === 'OWNER') {
+      setShowOwnerLeaveNotice(true);
+      return;
+    }
+    setLeaveError(null);
+    setConfirmLeave(true);
+  }
+
+  const isOwner = myRole === 'OWNER';
+  const isLeader = isOwner || myRole === 'LEADER' || myRole === 'PASTOR' || myRole === 'CHURCH_LEADER';
   const recentPrayers = prayers.slice(0, 3);
   const recentCheckIns = checkIns.filter((c) => c.visibility !== 'private').slice(0, 3);
+  const memberCount = members?.length;
 
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28 flex flex-col">
       <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
-        <button onClick={onBack} className="btn-ghost"><X size={20} /></button>
+        <button onClick={onBack} className="btn-ghost" aria-label="Close"><X size={20} /></button>
         <p className="ui-label">{circle.circle_type}</p>
-        <button onClick={handleLeave} disabled={leaving} className="btn-ghost">
+        <button onClick={handleLeaveTap} disabled={leaving} className="btn-ghost" aria-label="Leave Circle">
           <LogOut size={16} />
         </button>
       </header>
@@ -107,7 +151,9 @@ export default function CircleHomeScreen({
             </div>
             <div className="flex-1">
               <h2 className="font-serif text-2xl text-ivory-50">{circle.name}</h2>
-              <p className="text-ivory-500 text-sm mt-1">{circle.circle_type} · {members.length} member{members.length !== 1 ? 's' : ''} · {circle.privacy}</p>
+              <p className="text-ivory-500 text-sm mt-1">
+                {circle.circle_type} · {memberCount === undefined ? 'Members loading' : `${memberCount} member${memberCount !== 1 ? 's' : ''}`} · {circle.privacy}
+              </p>
               {circle.description && <p className="text-ivory-400 text-xs mt-2 leading-relaxed">{circle.description}</p>}
             </div>
           </div>
@@ -117,7 +163,6 @@ export default function CircleHomeScreen({
 
           {!loading && !error && (
             <>
-              {/* This Week section */}
               <p className="ui-label mb-3">This Week</p>
               <div className="flex flex-col gap-2 mb-6">
                 <CircleActionCard icon={BookOpen} label="Scripture" desc={studies.length > 0 ? `${studies[0].passage_reference}` : 'No study assigned'} onClick={() => onOpenScripture(circle)} />
@@ -128,68 +173,78 @@ export default function CircleHomeScreen({
                 <CircleActionCard icon={Shield} label="Accountability" desc="Private · Opt-in" onClick={() => onOpenAccountability(circle)} />
               </div>
 
-              {/* Members */}
               <div className="flex items-center justify-between mb-3">
                 <p className="ui-label">Members</p>
                 {isLeader && (
                   <button onClick={() => { vibrate(8); setShowInvite(true); }} className="btn-ghost text-xs">
-                    <UserPlus size={12} /> Invite
+                    <UserPlus size={12} /> Invite People
                   </button>
                 )}
               </div>
-              <div className="flex flex-col gap-2 mb-6">
-                {members.map((m) => (
-                  <div key={m.id} className="premium-card p-3 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-ink-700/50 flex items-center justify-center shrink-0">
-                      <Users size={14} className="text-ivory-400" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-ivory-200 text-sm">
-                        {m.profile_id === circle.owner_profile_id ? 'Owner' : m.profile_id === profile.id ? 'You' : 'Member'}
-                      </p>
-                      <p className="text-ivory-600 text-xs">{m.role} · Joined {formatRelative(m.joined_at)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
 
-              {/* Invite modal */}
-              {showInvite && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={() => { setShowInvite(false); setInviteCode(null); }}>
-                  <div className="w-full max-w-md bg-ink-900 rounded-t-3xl p-6 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-serif text-xl text-ivory-50">Invite to Circle</h3>
-                      <button onClick={() => { setShowInvite(false); setInviteCode(null); }} className="btn-ghost"><X size={18} /></button>
-                    </div>
-                    {!inviteCode ? (
-                      <>
-                        <p className="text-ivory-400 text-sm leading-relaxed mb-4">Generate an invite code to share with someone you trust. The code is revocable and can optionally expire.</p>
-                        <div className="premium-card p-3 mb-4">
-                          <div className="flex items-start gap-2">
-                            <Lock size={12} className="text-gold-400/60 shrink-0 mt-0.5" />
-                            <p className="text-ivory-500 text-xs leading-relaxed">Circle content is not visible until the invitation is accepted.</p>
-                          </div>
-                        </div>
-                        <button onClick={handleInvite} className="btn-primary w-full">
-                          <Mail size={16} /> Generate Invite Code
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-ivory-400 text-sm leading-relaxed mb-3">Share this code with someone you trust:</p>
-                        <div className="premium-card p-4 mb-4 text-center">
-                          <p className="font-mono text-lg text-gold-300 tracking-wider">{inviteCode}</p>
-                        </div>
-                        <button onClick={() => { setShowInvite(false); setInviteCode(null); }} className="btn-secondary w-full">Done</button>
-                      </>
-                    )}
-                  </div>
-                </div>
+              {members === null && !membersFailed && <LoadingState message="Loading members..." />}
+              {membersFailed && <ErrorState message="We couldn't load the member list." onRetry={loadMembers} />}
+              {members && (
+                <CircleMemberList
+                  members={members}
+                  canRemove={isOwner}
+                  onRemove={(m) => { vibrate(8); setRemoveError(null); setMemberToRemove(m); }}
+                />
+              )}
+
+              {isLeader && (
+                <PendingInvitationsList circleId={circle.id} circleName={circle.name} refreshKey={pendingRefreshKey} />
               )}
             </>
           )}
         </div>
       </div>
+
+      {showInvite && (
+        <InvitePeopleSheet
+          circleId={circle.id}
+          circleName={circle.name}
+          onChanged={() => setPendingRefreshKey((k) => k + 1)}
+          onClose={() => setShowInvite(false)}
+        />
+      )}
+
+      {memberToRemove && (
+        <CircleConfirmDialog
+          title="Remove this member?"
+          body="They will lose access to this Circle and its shared content. Content they previously shared may remain unless that content has its own delete controls."
+          confirmLabel="Remove Member"
+          cancelLabel="Cancel"
+          destructive
+          busy={removing}
+          error={removeError}
+          onConfirm={handleRemoveMember}
+          onCancel={() => setMemberToRemove(null)}
+        />
+      )}
+
+      {showOwnerLeaveNotice && (
+        <CircleConfirmDialog
+          title="Circle owners can't leave yet"
+          body="To keep the Circle from becoming ownerless, the owner must remain in the Circle. Ownership transfer can be added in a future update."
+          confirmLabel="OK"
+          onConfirm={() => setShowOwnerLeaveNotice(false)}
+        />
+      )}
+
+      {confirmLeave && (
+        <CircleConfirmDialog
+          title="Leave this Circle?"
+          body="You'll lose access to this Circle and its shared content. You can join again later with a new invitation."
+          confirmLabel="Leave Circle"
+          cancelLabel="Cancel"
+          destructive
+          busy={leaving}
+          error={leaveError}
+          onConfirm={handleLeave}
+          onCancel={() => setConfirmLeave(false)}
+        />
+      )}
     </div>
   );
 }
