@@ -15,7 +15,7 @@ function progressLabel(progress: TranscriptionProgress | null): string {
   switch (progress?.stage) {
     case 'uploading': return `Uploading part ${progress.partIndex} of ${progress.partCount}`;
     case 'transcribing': return `Transcribing (part ${progress.partIndex} of ${progress.partCount})`;
-    case 'finalizing': return 'Finalizing transcript';
+    case 'finalizing': return 'Finishing transcript…';
     default: return 'Preparing audio…';
   }
 }
@@ -47,6 +47,17 @@ export default function TranscriptionProgressCard({ status, progress, error, can
     );
   }
 
+  if (status === 'cancelling') {
+    return (
+      <div className="premium-card p-5 mb-4" role="status" aria-live="polite">
+        <p className="text-ivory-100 text-sm font-medium mb-2">Cancelling transcription…</p>
+        <p className="text-ivory-500 text-xs leading-relaxed">
+          Stopping the current transfer and cleaning up temporary transcription data. Your original recording will remain on this device.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="premium-card p-5 mb-4" role="status" aria-live="polite">
       <p className="text-ivory-100 text-sm font-medium mb-3">{progressLabel(progress)}</p>
@@ -56,7 +67,9 @@ export default function TranscriptionProgressCard({ status, progress, error, can
       <p className="text-ivory-500 text-xs leading-relaxed mb-4">
         Your original recording stays on this device while the transcript is created.
       </p>
-      <button onClick={onCancel} className="btn-secondary w-full">Cancel Transcript</button>
+      {progress?.stage !== 'finalizing' && (
+        <button onClick={onCancel} className="btn-secondary w-full">Cancel Transcript</button>
+      )}
     </div>
   );
 }

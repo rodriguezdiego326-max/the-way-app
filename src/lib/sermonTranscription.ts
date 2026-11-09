@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { sermonRecorderNative, type TranscriptionAudioPart } from '@/lib/sermonRecorderNative';
-import { saveSermonTranscript, type SermonTranscript } from '@/lib/sermonRecordingStore';
+import { saveSermonTranscript, deleteSermonTranscript, type SermonTranscript } from '@/lib/sermonRecordingStore';
 
 const BUCKET = 'sermon-transcription-temp';
 const PREVIOUS_TAIL_CHARS = 300;
@@ -114,6 +114,17 @@ async function saveServerState(job: TranscriptionJob, userId: string, status: 'p
     { onConflict: 'user_id,recording_id' },
   );
   if (error) throw new TranscriptionError(TRANSCRIPT_FAILURE_MESSAGE);
+  if (job.cancelled) {
+    await deleteServerRows(job);
+    throw new TranscriptionCancelledError();
+  }
+}
+
+async function deleteServerRows(job: TranscriptionJob) {
+  const { error: partsError } = await supabase.from('sermon_transcript_parts').delete().eq('job_id', job.jobId);
+  if (partsError) console.warn('Transcript part rows could not be removed', partsError.message);
+  const { error: rowError } = await supabase.from('sermon_transcripts').delete().eq('recording_id', job.recordingId);
+  if (rowError) console.warn('Transcript job row could not be removed', rowError.message);
 }
 
 async function removeCloudAudio(userId: string, jobId: string) {
@@ -145,6 +156,7 @@ async function uploadPart(job: TranscriptionJob, token: string, userId: string, 
   for (let attempt = 0; ; attempt++) {
     try {
       const result = await sermonRecorderNative.uploadTranscriptionPart({
+        jobId: job.jobId,
         token,
         partIndex,
         uploadUrl,
@@ -172,6 +184,10 @@ async function prepareParts(job: TranscriptionJob, fileName: string, userId: str
   job.token = prepared.token;
   job.parts = prepared.parts;
   job.texts = [];
+  if (job.cancelled) {
+    await removeLocalParts(job);
+    throw new TranscriptionCancelledError();
+  }
   await saveServerState(job, userId, 'processing');
 }
 
@@ -185,6 +201,7 @@ async function uploadPendingParts(job: TranscriptionJob, userId: string, accessT
     assertActive(job);
     onProgress({ stage: 'uploading', partIndex: index + 1, partCount });
     await uploadPart(job, token, userId, accessToken, index);
+    assertActive(job);
     await saveServerState(job, userId, 'processing');
   }
 }
@@ -215,6 +232,7 @@ async function transcribeParts(job: TranscriptionJob, userId: string, onProgress
         previousTail,
       },
     });
+    assertActive(job);
     if (error) throw await functionStageError(error, index);
     if (typeof data?.text !== 'string') throw new TranscriptionStageError('edge_function_failed', { partIndex: index });
     job.texts[index] = data.text;
@@ -232,11 +250,12 @@ async function finalizeJob(job: TranscriptionJob, userId: string): Promise<Sermo
     createdAt: new Date().toISOString(),
   };
   await saveSermonTranscript(transcript);
+  if (job.cancelled) {
+    await deleteSermonTranscript(job.recordingId);
+    throw new TranscriptionCancelledError();
+  }
 
-  const { error: partsError } = await supabase.from('sermon_transcript_parts').delete().eq('job_id', job.jobId);
-  if (partsError) console.warn('Transcript part rows could not be removed', partsError.message);
-  const { error: rowError } = await supabase.from('sermon_transcripts').delete().eq('recording_id', job.recordingId);
-  if (rowError) console.warn('Transcript job row could not be removed', rowError.message);
+  await deleteServerRows(job);
   try {
     await removeCloudAudio(userId, job.jobId);
   } catch (cause) {
@@ -301,6 +320,11 @@ async function failJob(job: TranscriptionJob, userId: string, failureCode: strin
 
 export async function cancelTranscriptionJob(job: TranscriptionJob) {
   job.cancelled = true;
+  try {
+    await sermonRecorderNative.cancelTranscriptionUploads({ jobId: job.jobId });
+  } catch (cause) {
+    console.warn('Native transcription uploads could not be cancelled', cause);
+  }
   const { data } = await supabase.auth.getSession();
   const userId = data.session?.user.id;
   if (userId) {
@@ -309,9 +333,8 @@ export async function cancelTranscriptionJob(job: TranscriptionJob) {
     } catch (cause) {
       console.warn('Temporary cloud audio could not be removed after cancel', cause);
     }
-    await supabase.from('sermon_transcript_parts').delete().eq('job_id', job.jobId);
-    await supabase.from('sermon_transcripts').delete().eq('recording_id', job.recordingId);
   }
+  await deleteServerRows(job);
   await removeLocalParts(job);
 }
 

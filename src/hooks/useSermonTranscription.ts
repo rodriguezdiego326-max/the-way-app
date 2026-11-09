@@ -8,7 +8,7 @@ import {
   type TranscriptionJob, type TranscriptionProgress,
 } from '@/lib/sermonTranscription';
 
-export type TranscriptionStatus = 'idle' | 'running' | 'failed';
+export type TranscriptionStatus = 'idle' | 'running' | 'cancelling' | 'failed';
 
 export function useSermonTranscription(recordingId: string, fileName: string | null) {
   const [transcript, setTranscript] = useState<SermonTranscript | null>(null);
@@ -17,6 +17,7 @@ export function useSermonTranscription(recordingId: string, fileName: string | n
   const [progress, setProgress] = useState<TranscriptionProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const jobRef = useRef<TranscriptionJob | null>(null);
+  const cancelPromiseRef = useRef<Promise<void> | null>(null);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -42,7 +43,7 @@ export function useSermonTranscription(recordingId: string, fileName: string | n
     setError(null);
     try {
       const saved = await runTranscriptionJob(job, fileName, (next) => {
-        if (mountedRef.current && jobRef.current === job) setProgress(next);
+        if (mountedRef.current && jobRef.current === job && !job.cancelled) setProgress(next);
       });
       if (jobRef.current !== job) return;
       jobRef.current = null;
@@ -61,19 +62,29 @@ export function useSermonTranscription(recordingId: string, fileName: string | n
     }
   }, [fileName]);
 
-  const start = useCallback(() => run(createTranscriptionJob(recordingId)), [recordingId, run]);
+  const start = useCallback(() => {
+    if (jobRef.current || cancelPromiseRef.current) return Promise.resolve();
+    return run(createTranscriptionJob(recordingId));
+  }, [recordingId, run]);
 
   const retry = useCallback(() => {
-    if (jobRef.current) void run(jobRef.current);
+    if (jobRef.current && !cancelPromiseRef.current) void run(jobRef.current);
   }, [run]);
 
-  const cancel = useCallback(async () => {
+  const cancel = useCallback((): Promise<void> => {
+    if (cancelPromiseRef.current) return cancelPromiseRef.current;
     const job = jobRef.current;
-    jobRef.current = null;
-    setStatus('idle');
+    if (!job) return Promise.resolve();
+    setStatus('cancelling');
     setProgress(null);
     setError(null);
-    if (job) await cancelTranscriptionJob(job);
+    const pending = cancelTranscriptionJob(job).finally(() => {
+      if (jobRef.current === job) jobRef.current = null;
+      cancelPromiseRef.current = null;
+      if (mountedRef.current) setStatus('idle');
+    });
+    cancelPromiseRef.current = pending;
+    return pending;
   }, []);
 
   const removeTranscript = useCallback(async () => {

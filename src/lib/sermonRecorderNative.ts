@@ -39,6 +39,7 @@ export interface SermonRecorderPlugin {
   prepareTranscriptionParts(options: { fileName: string }): Promise<PreparedTranscriptionParts>;
   cleanupTranscriptionParts(options: { token: string }): Promise<void>;
   uploadTranscriptionPart(options: TranscriptionPartUploadOptions): Promise<TranscriptionPartUploadResult>;
+  cancelTranscriptionUploads(options: { jobId: string }): Promise<{ cancelledCount: number }>;
 }
 
 export interface TranscriptionAudioPart {
@@ -49,6 +50,7 @@ export interface TranscriptionAudioPart {
 }
 
 export interface TranscriptionPartUploadOptions {
+  jobId: string;
   token: string;
   partIndex: number;
   uploadUrl: string;

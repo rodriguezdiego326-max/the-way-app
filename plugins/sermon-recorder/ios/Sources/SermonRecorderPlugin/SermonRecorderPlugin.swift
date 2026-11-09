@@ -21,7 +21,8 @@ public class SermonRecorderPlugin: CAPPlugin, CAPBridgedPlugin, AVAudioPlayerDel
         CAPPluginMethod(name: "deleteRecording", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "prepareTranscriptionParts", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "cleanupTranscriptionParts", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "uploadTranscriptionPart", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "uploadTranscriptionPart", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "cancelTranscriptionUploads", returnType: CAPPluginReturnPromise)
     ]
 
     private static let folderName = "SermonRecordings"
@@ -34,6 +35,8 @@ public class SermonRecorderPlugin: CAPPlugin, CAPBridgedPlugin, AVAudioPlayerDel
 
     private var player: AVAudioPlayer?
     private var playerFileName: String?
+
+    let transcriptionUploads = TranscriptionUploadRegistry()
 
     private enum RecorderError: Error {
         case couldNotStart
@@ -50,6 +53,7 @@ public class SermonRecorderPlugin: CAPPlugin, CAPBridgedPlugin, AVAudioPlayerDel
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+        transcriptionUploads.takeEverything().forEach { $0.cancel() }
     }
 
     @objc private func handleAudioInterruption(_ notification: Notification) {

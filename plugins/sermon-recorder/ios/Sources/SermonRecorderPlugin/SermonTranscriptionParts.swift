@@ -99,8 +99,19 @@ extension SermonRecorderPlugin {
         call.resolve()
     }
 
+    @objc func cancelTranscriptionUploads(_ call: CAPPluginCall) {
+        guard let jobId = call.getString("jobId"), UUID(uuidString: jobId) != nil else {
+            call.reject("Transcription could not be cancelled. Please try again.", "invalid_job")
+            return
+        }
+        let tasks = transcriptionUploads.takeAll(jobId: jobId)
+        tasks.forEach { $0.cancel() }
+        call.resolve(["cancelledCount": tasks.count])
+    }
+
     @objc func uploadTranscriptionPart(_ call: CAPPluginCall) {
-        guard let token = call.getString("token"), UUID(uuidString: token) != nil,
+        guard let jobId = call.getString("jobId"), UUID(uuidString: jobId) != nil,
+              let token = call.getString("token"), UUID(uuidString: token) != nil,
               let partIndex = call.getInt("partIndex"), partIndex >= 0,
               let uploadURLString = call.getString("uploadUrl"), let uploadURL = URL(string: uploadURLString),
               uploadURL.scheme == "https",
@@ -120,9 +131,17 @@ extension SermonRecorderPlugin {
         request.setValue("true", forHTTPHeaderField: "x-upsert")
         request.setValue("audio/mp4", forHTTPHeaderField: "Content-Type")
 
+        let registry = transcriptionUploads
+        let uploadKey = UUID()
         let task = URLSession.shared.uploadTask(with: request, fromFile: file) { _, response, error in
+            registry.remove(key: uploadKey, jobId: jobId)
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            let wasCancelled = (error as? URLError)?.code == .cancelled
             DispatchQueue.main.async {
+                if wasCancelled {
+                    call.reject("This upload was cancelled.", "upload_cancelled")
+                    return
+                }
                 guard error == nil, (200..<300).contains(status) else {
                     call.reject("This recording could not be uploaded. Please try again.", "upload_failed")
                     return
@@ -130,6 +149,7 @@ extension SermonRecorderPlugin {
                 call.resolve(["success": true, "httpStatus": status, "uploadedBytes": size])
             }
         }
+        registry.register(task, key: uploadKey, jobId: jobId)
         task.resume()
     }
 
