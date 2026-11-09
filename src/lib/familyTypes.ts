@@ -33,6 +33,21 @@ export interface FamilyMember {
   updated_at: string;
 }
 
+export type FamilySermonDiscussionStatus = 'ready' | 'complete';
+
+export interface FamilySermonDiscussion {
+  id: string;
+  family_profile_id: string;
+  sermon_title: string | null;
+  main_point: string | null;
+  scripture_references: string[];
+  discussion_question: string | null;
+  discussion_body: string;
+  status: FamilySermonDiscussionStatus;
+  created_at: string;
+  completed_at: string | null;
+}
+
 export interface AgeQuestions {
   '3-5': string[];
   '6-8': string[];

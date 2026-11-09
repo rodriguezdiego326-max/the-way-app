@@ -179,6 +179,7 @@ export default function ShareSermonDiscussionFlow({ profile, sermonTitle, insigh
 
           {step === 'edit' && (
             <DiscussionEditStep
+              heading="You control what your Circle receives."
               body={body}
               error={bodyError}
               onChange={(next) => { setBody(next); setBodyError(null); }}

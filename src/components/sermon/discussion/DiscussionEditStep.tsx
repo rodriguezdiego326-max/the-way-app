@@ -2,18 +2,19 @@ import { AlertCircle } from 'lucide-react';
 import { DISCUSSION_BODY_MAX } from '@/lib/sermonDiscussion';
 
 interface Props {
+  heading: string;
   body: string;
   error: string | null;
   onChange: (next: string) => void;
   onContinue: () => void;
 }
 
-export default function DiscussionEditStep({ body, error, onChange, onContinue }: Props) {
+export default function DiscussionEditStep({ heading, body, error, onChange, onContinue }: Props) {
   const length = body.length;
 
   return (
     <div className="animate-fade-in-up">
-      <p className="text-ivory-50 font-medium text-sm mb-1">You control what your Circle receives.</p>
+      <p className="text-ivory-50 font-medium text-sm mb-1">{heading}</p>
       <p className="text-ivory-400 text-sm leading-relaxed mb-5">This starter is built from what you selected. Edit it in your own words before you share.</p>
 
       <div className="premium-card p-5 mb-3">

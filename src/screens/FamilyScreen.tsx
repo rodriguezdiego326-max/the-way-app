@@ -22,9 +22,10 @@ type SubView = 'main' | 'walk' | 'child_asked' | 'catechism' | 'journey' | 'pare
 interface FamilyScreenProps {
   onClose: () => void;
   onAskHandoff: (handoff: ChildAskedHandoff) => void;
+  onOpenSermonDiscussions: () => void;
 }
 
-export default function FamilyScreen({ onClose, onAskHandoff }: FamilyScreenProps) {
+export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscussions }: FamilyScreenProps) {
   const [subView, setSubView] = useState<SubView>('main');
   const [familyProfile, setFamilyProfile] = useState<FamilyProfile | null>(null);
   const [members, setMembers] = useState<FamilyMember[]>([]);
@@ -428,6 +429,24 @@ export default function FamilyScreen({ onClose, onAskHandoff }: FamilyScreenProp
                 })}
               </div>
             )}
+          </section>
+
+          {/* Sermon Discussions */}
+          <section className="mt-6 animate-fade-in-up" style={{ animationDelay: '0.08s' }}>
+            <button
+              onClick={() => {
+                vibrate(8);
+                onOpenSermonDiscussions();
+              }}
+              className="premium-card p-5 w-full text-left no-tap-highlight hover:border-gold-500/30 transition-all duration-300 group"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <BookOpen size={16} className="text-gold-400" />
+                <p className="text-ivory-100 font-medium text-sm">Sermon Discussions</p>
+                <ChevronRight size={16} className="text-ivory-600 group-hover:text-gold-300 transition-colors ml-auto" />
+              </div>
+              <p className="text-ivory-500 text-xs leading-relaxed">Bring a sermon point back to Scripture and talk through it together.</p>
+            </button>
           </section>
 
           {/* Feature Grid */}

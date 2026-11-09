@@ -39,6 +39,8 @@ import TogetherScreen from '@/screens/TogetherScreen';
 import CircleHomeScreen from '@/screens/CircleHomeScreen';
 import CircleSermonDiscussionsScreen from '@/screens/CircleSermonDiscussionsScreen';
 import CircleSermonDiscussionDetailScreen from '@/screens/CircleSermonDiscussionDetailScreen';
+import FamilySermonDiscussionsScreen from '@/screens/FamilySermonDiscussionsScreen';
+import FamilySermonDiscussionDetailScreen from '@/screens/FamilySermonDiscussionDetailScreen';
 import CreateCircleScreen from '@/screens/CreateCircleScreen';
 import PrayerTogetherScreen from '@/screens/PrayerTogetherScreen';
 import ScriptureTogetherScreen from '@/screens/ScriptureTogetherScreen';
@@ -60,6 +62,7 @@ import ManageChurchStudiesScreen from '@/screens/ManageChurchStudiesScreen';
 import SmallGroupModeScreen from '@/screens/SmallGroupModeScreen';
 import ChurchPrayerScreen from '@/screens/ChurchPrayerScreen';
 import type { Circle, CircleSermonDiscussion, Sermon } from '@/lib/togetherTypes';
+import type { FamilySermonDiscussion } from '@/lib/familyTypes';
 
 // Phase 9 imports
 import LegacyHomeScreen from '@/screens/LegacyHomeScreen';
@@ -109,6 +112,8 @@ export type Overlay =
   | { type: 'circle_home'; circle: Circle }
   | { type: 'circle_sermon_discussions'; circle: Circle }
   | { type: 'circle_sermon_discussion'; circle: Circle; discussion: CircleSermonDiscussion }
+  | { type: 'family_sermon_discussions' }
+  | { type: 'family_sermon_discussion'; discussion: FamilySermonDiscussion }
   | { type: 'create_circle' }
   | { type: 'prayer_together'; circle?: Circle }
   | { type: 'scripture_together'; circle?: Circle }
@@ -465,6 +470,7 @@ export default function App() {
               onOpenBible={handleOpenBibleReference}
               profile={profile}
               onViewSharedDiscussion={(circle, discussion) => setOverlay({ type: 'circle_sermon_discussion', circle, discussion })}
+              onOpenFamilyDiscussion={(discussion) => setOverlay({ type: 'family_sermon_discussion', discussion })}
               onContinueInAsk={(handoff) => {
                 setSermonAskRecordingId(studyDetail.recordingId);
                 setActiveAskConversationId(null);
@@ -500,6 +506,7 @@ export default function App() {
         <>
           <FamilyScreen
             onClose={() => setOverlay({ type: 'none' })}
+            onOpenSermonDiscussions={() => setOverlay({ type: 'family_sermon_discussions' })}
             onAskHandoff={(handoff) => {
               setActiveAskConversationId(null);
               localStorage.removeItem('solapath_active_ask_conv');
@@ -605,6 +612,30 @@ export default function App() {
           circle={overlay.circle}
           onBack={() => setOverlay({ type: 'circle_home', circle: overlay.circle })}
           onOpenDiscussion={(discussion) => setOverlay({ type: 'circle_sermon_discussion', circle: overlay.circle, discussion })}
+        />
+      </ErrorBoundary>
+    );
+  }
+
+  if (overlay.type === 'family_sermon_discussions') {
+    return (
+      <ErrorBoundary>
+        <FamilySermonDiscussionsScreen
+          onBack={() => setOverlay({ type: 'family' })}
+          onOpenDiscussion={(discussion) => setOverlay({ type: 'family_sermon_discussion', discussion })}
+        />
+      </ErrorBoundary>
+    );
+  }
+
+  if (overlay.type === 'family_sermon_discussion') {
+    return (
+      <ErrorBoundary>
+        <FamilySermonDiscussionDetailScreen
+          discussion={overlay.discussion}
+          onBack={() => setOverlay({ type: 'family_sermon_discussions' })}
+          onDeleted={() => setOverlay({ type: 'family_sermon_discussions' })}
+          onOpenScripture={(reference) => handleOpenDiscussionScripture(reference, overlay)}
         />
       </ErrorBoundary>
     );
