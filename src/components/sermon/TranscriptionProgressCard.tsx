@@ -13,7 +13,7 @@ interface Props {
 
 function progressLabel(progress: TranscriptionProgress | null): string {
   switch (progress?.stage) {
-    case 'uploading': return `Uploading… ${progress.percent}%`;
+    case 'uploading': return `Uploading part ${progress.partIndex} of ${progress.partCount}`;
     case 'transcribing': return `Transcribing (part ${progress.partIndex} of ${progress.partCount})`;
     case 'finalizing': return 'Finalizing transcript';
     default: return 'Preparing audio…';
@@ -22,7 +22,7 @@ function progressLabel(progress: TranscriptionProgress | null): string {
 
 function progressWidth(progress: TranscriptionProgress | null): number {
   switch (progress?.stage) {
-    case 'uploading': return progress.percent;
+    case 'uploading': return Math.round(((progress.partIndex - 1) / progress.partCount) * 100);
     case 'transcribing': return Math.round(((progress.partIndex - 1) / progress.partCount) * 100);
     case 'finalizing': return 100;
     default: return 0;

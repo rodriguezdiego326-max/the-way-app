@@ -14,6 +14,7 @@ extension SermonRecorderPlugin {
     static let transcriptionOverlapSeconds: Double = 3
     static let transcriptionMaxSeconds: Double = 3 * 60 * 60
     static let transcriptionMaxPartBytes: Int64 = 5_500_000
+    static let transcriptionUploadHardLimitBytes: Int64 = 6_000_000
     static let transcriptionMinSplitSeconds: Double = 30
 
     @objc func prepareTranscriptionParts(_ call: CAPPluginCall) {
@@ -78,25 +79,13 @@ extension SermonRecorderPlugin {
     }
 
     private func resolvePreparedParts(_ call: CAPPluginCall, token: String, exported: [TranscriptionExportedPart]) {
-        guard let bridge = bridge else {
-            try? FileManager.default.removeItem(at: Self.transcriptionCacheFolder(token: token))
-            call.reject("This recording could not be prepared. Please try again.", "portable_path_unavailable")
-            return
-        }
-
-        var parts: [[String: Any]] = []
-        for part in exported {
-            guard let webURL = bridge.portablePath(fromLocalURL: part.localURL) else {
-                try? FileManager.default.removeItem(at: Self.transcriptionCacheFolder(token: token))
-                call.reject("This recording could not be prepared. Please try again.", "portable_path_unavailable")
-                return
-            }
-            parts.append([
-                "webPath": webURL.absoluteString,
+        let parts: [[String: Any]] = exported.enumerated().map { index, part in
+            [
+                "partIndex": index,
                 "startMs": part.startMs,
                 "endMs": part.endMs,
                 "sizeBytes": part.sizeBytes,
-            ])
+            ]
         }
         call.resolve(["token": token, "parts": parts])
     }
@@ -108,6 +97,54 @@ extension SermonRecorderPlugin {
         }
         try? FileManager.default.removeItem(at: Self.transcriptionCacheFolder(token: token))
         call.resolve()
+    }
+
+    @objc func uploadTranscriptionPart(_ call: CAPPluginCall) {
+        guard let token = call.getString("token"), UUID(uuidString: token) != nil,
+              let partIndex = call.getInt("partIndex"), partIndex >= 0,
+              let uploadURLString = call.getString("uploadUrl"), let uploadURL = URL(string: uploadURLString),
+              uploadURL.scheme == "https",
+              uploadURL.path.hasPrefix("/storage/v1/object/sermon-transcription-temp/"),
+              let accessToken = call.getString("accessToken"), !accessToken.isEmpty,
+              let apiKey = call.getString("apiKey"), !apiKey.isEmpty,
+              let file = Self.transcriptionPartFile(token: token, index: partIndex),
+              let size = Self.uploadableSize(of: file) else {
+            call.reject("This recording could not be uploaded. Please try again.", "invalid_upload")
+            return
+        }
+
+        var request = URLRequest(url: uploadURL)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(apiKey, forHTTPHeaderField: "apikey")
+        request.setValue("true", forHTTPHeaderField: "x-upsert")
+        request.setValue("audio/mp4", forHTTPHeaderField: "Content-Type")
+
+        let task = URLSession.shared.uploadTask(with: request, fromFile: file) { _, response, error in
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            DispatchQueue.main.async {
+                guard error == nil, (200..<300).contains(status) else {
+                    call.reject("This recording could not be uploaded. Please try again.", "upload_failed")
+                    return
+                }
+                call.resolve(["success": true, "httpStatus": status, "uploadedBytes": size])
+            }
+        }
+        task.resume()
+    }
+
+    static func transcriptionPartFile(token: String, index: Int) -> URL? {
+        let folder = transcriptionCacheFolder(token: token).standardizedFileURL
+        let file = folder.appendingPathComponent("part-\(index).m4a").standardizedFileURL
+        guard file.deletingLastPathComponent() == folder,
+              FileManager.default.fileExists(atPath: file.path) else { return nil }
+        return file
+    }
+
+    static func uploadableSize(of file: URL) -> Int64? {
+        let size = (try? FileManager.default.attributesOfItem(atPath: file.path)[.size] as? NSNumber)?.int64Value ?? 0
+        guard size > 0, size < transcriptionUploadHardLimitBytes else { return nil }
+        return size
     }
 
     static func transcriptionCacheFolder(token: String) -> URL {

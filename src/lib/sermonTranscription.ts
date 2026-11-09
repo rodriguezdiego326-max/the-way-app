@@ -4,7 +4,6 @@ import { saveSermonTranscript, type SermonTranscript } from '@/lib/sermonRecordi
 
 const BUCKET = 'sermon-transcription-temp';
 const PREVIOUS_TAIL_CHARS = 300;
-const MAX_PART_UPLOAD_BYTES = 6_000_000;
 const UPLOAD_RETRY_DELAYS_MS = [0, 2000, 5000];
 const SUPABASE_URL: string = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY: string = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -19,7 +18,6 @@ export class NoSpeechError extends TranscriptionError {}
 
 export type TranscriptionFailureStage =
   | 'native_prepare_failed'
-  | 'local_chunk_read_failed'
   | 'upload_failed'
   | 'edge_function_failed'
   | 'provider_failed'
@@ -40,7 +38,7 @@ export class TranscriptionStageError extends TranscriptionError {
 
 export type TranscriptionProgress =
   | { stage: 'preparing' }
-  | { stage: 'uploading'; percent: number }
+  | { stage: 'uploading'; partIndex: number; partCount: number }
   | { stage: 'transcribing'; partIndex: number; partCount: number }
   | { stage: 'finalizing' };
 
@@ -51,7 +49,6 @@ export interface TranscriptionJob {
   parts: TranscriptionAudioPart[];
   texts: string[];
   cancelled: boolean;
-  abortUpload: (() => void) | null;
 }
 
 export function createTranscriptionJob(recordingId: string): TranscriptionJob {
@@ -62,7 +59,6 @@ export function createTranscriptionJob(recordingId: string): TranscriptionJob {
     parts: [],
     texts: [],
     cancelled: false,
-    abortUpload: null,
   };
 }
 
@@ -140,76 +136,30 @@ async function removeLocalParts(job: TranscriptionJob) {
   }
 }
 
-function isAcceptedAudioType(type: string): boolean {
-  return type === '' || type.startsWith('audio/') || type === 'video/mp4' || type === 'application/octet-stream';
-}
-
-async function readLocalPart(part: TranscriptionAudioPart, partIndex: number): Promise<Blob> {
-  let response: Response;
-  try {
-    response = await fetch(part.webPath);
-  } catch {
-    throw new TranscriptionStageError('local_chunk_read_failed', { partIndex });
-  }
-  if (!response.ok) throw new TranscriptionStageError('local_chunk_read_failed', { partIndex, httpStatus: response.status });
-
-  let blob: Blob;
-  try {
-    blob = await response.blob();
-  } catch {
-    throw new TranscriptionStageError('local_chunk_read_failed', { partIndex });
-  }
-  if (blob.size <= 0 || blob.size >= MAX_PART_UPLOAD_BYTES || blob.size !== part.sizeBytes || !isAcceptedAudioType(blob.type)) {
-    throw new TranscriptionStageError('local_chunk_read_failed', { partIndex, partBytes: blob.size });
-  }
-  return blob;
-}
-
-async function uploadPart(job: TranscriptionJob, path: string, blob: Blob, accessToken: string, partIndex: number, onBytes: (loaded: number) => void) {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      await uploadStandardPart(job, path, blob, accessToken, partIndex, onBytes);
-      return;
-    } catch (cause) {
-      if (job.cancelled || cause instanceof TranscriptionCancelledError) throw cause;
-      if (attempt >= UPLOAD_RETRY_DELAYS_MS.length) throw cause;
-      await delay(UPLOAD_RETRY_DELAYS_MS[attempt]);
-      assertActive(job);
-    }
-  }
-}
-
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function uploadStandardPart(job: TranscriptionJob, path: string, blob: Blob, accessToken: string, partIndex: number, onBytes: (loaded: number) => void) {
-  return new Promise<void>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    job.abortUpload = () => xhr.abort();
-    xhr.open('POST', `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`);
-    xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
-    xhr.setRequestHeader('apikey', SUPABASE_ANON_KEY);
-    xhr.setRequestHeader('x-upsert', 'true');
-    xhr.setRequestHeader('Content-Type', 'audio/mp4');
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable) onBytes(event.loaded);
-    };
-    xhr.onload = () => {
-      job.abortUpload = null;
-      if (xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new TranscriptionStageError('upload_failed', { partIndex, httpStatus: xhr.status }));
-    };
-    xhr.onerror = () => {
-      job.abortUpload = null;
-      reject(new TranscriptionStageError('upload_failed', { partIndex }));
-    };
-    xhr.onabort = () => {
-      job.abortUpload = null;
-      reject(new TranscriptionCancelledError());
-    };
-    xhr.send(blob);
-  });
+async function uploadPart(job: TranscriptionJob, token: string, userId: string, accessToken: string, partIndex: number) {
+  const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${userId}/${job.jobId}/part-${partIndex}.m4a`;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const result = await sermonRecorderNative.uploadTranscriptionPart({
+        token,
+        partIndex,
+        uploadUrl,
+        accessToken,
+        apiKey: SUPABASE_ANON_KEY,
+      });
+      if (result?.success !== true) throw new TranscriptionStageError('upload_failed', { partIndex });
+      return;
+    } catch {
+      assertActive(job);
+      if (attempt >= UPLOAD_RETRY_DELAYS_MS.length) throw new TranscriptionStageError('upload_failed', { partIndex });
+      await delay(UPLOAD_RETRY_DELAYS_MS[attempt]);
+      assertActive(job);
+    }
+  }
 }
 
 function assertActive(job: TranscriptionJob) {
@@ -226,24 +176,17 @@ async function prepareParts(job: TranscriptionJob, fileName: string, userId: str
 }
 
 async function uploadPendingParts(job: TranscriptionJob, userId: string, accessToken: string, onProgress: (p: TranscriptionProgress) => void) {
-  const pending = job.parts.map((part, index) => ({ part, index })).filter(({ index }) => job.texts[index] === undefined);
-  const totalBytes = pending.reduce((sum, { part }) => sum + part.sizeBytes, 0);
-  let completedBytes = 0;
-  onProgress({ stage: 'uploading', percent: 0 });
+  const token = job.token;
+  if (!token) throw new TranscriptionStageError('upload_failed');
+  const partCount = job.parts.length;
+  const pending = job.parts.map((_, index) => index).filter((index) => job.texts[index] === undefined);
 
-  for (const { part, index } of pending) {
+  for (const index of pending) {
     assertActive(job);
-    const blob = await readLocalPart(part, index);
-    const path = `${userId}/${job.jobId}/part-${index}.m4a`;
-    const bytesBefore = completedBytes;
-    await uploadPart(job, path, blob, accessToken, index, (loaded) => {
-      const percent = totalBytes > 0 ? Math.floor(((bytesBefore + loaded) / totalBytes) * 100) : 100;
-      onProgress({ stage: 'uploading', percent: Math.min(percent, 99) });
-    });
-    completedBytes += part.sizeBytes;
+    onProgress({ stage: 'uploading', partIndex: index + 1, partCount });
+    await uploadPart(job, token, userId, accessToken, index);
     await saveServerState(job, userId, 'processing');
   }
-  if (pending.length > 0) onProgress({ stage: 'uploading', percent: 100 });
 }
 
 async function functionStageError(error: unknown, partIndex: number): Promise<TranscriptionStageError> {
@@ -358,7 +301,6 @@ async function failJob(job: TranscriptionJob, userId: string, failureCode: strin
 
 export async function cancelTranscriptionJob(job: TranscriptionJob) {
   job.cancelled = true;
-  job.abortUpload?.();
   const { data } = await supabase.auth.getSession();
   const userId = data.session?.user.id;
   if (userId) {

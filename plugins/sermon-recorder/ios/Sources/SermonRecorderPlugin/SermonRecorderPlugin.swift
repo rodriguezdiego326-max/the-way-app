@@ -20,7 +20,8 @@ public class SermonRecorderPlugin: CAPPlugin, CAPBridgedPlugin, AVAudioPlayerDel
         CAPPluginMethod(name: "playbackStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "deleteRecording", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "prepareTranscriptionParts", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "cleanupTranscriptionParts", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "cleanupTranscriptionParts", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "uploadTranscriptionPart", returnType: CAPPluginReturnPromise)
     ]
 
     private static let folderName = "SermonRecordings"

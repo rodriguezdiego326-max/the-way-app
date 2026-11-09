@@ -38,13 +38,28 @@ export interface SermonRecorderPlugin {
   deleteRecording(options: { fileName: string }): Promise<void>;
   prepareTranscriptionParts(options: { fileName: string }): Promise<PreparedTranscriptionParts>;
   cleanupTranscriptionParts(options: { token: string }): Promise<void>;
+  uploadTranscriptionPart(options: TranscriptionPartUploadOptions): Promise<TranscriptionPartUploadResult>;
 }
 
 export interface TranscriptionAudioPart {
-  webPath: string;
+  partIndex: number;
   startMs: number;
   endMs: number;
   sizeBytes: number;
+}
+
+export interface TranscriptionPartUploadOptions {
+  token: string;
+  partIndex: number;
+  uploadUrl: string;
+  accessToken: string;
+  apiKey: string;
+}
+
+export interface TranscriptionPartUploadResult {
+  success: boolean;
+  httpStatus: number;
+  uploadedBytes: number;
 }
 
 export interface PreparedTranscriptionParts {
