@@ -5,6 +5,7 @@ import { LoadingState, ErrorState, EmptyState } from '@/components/States';
 import {
   createScriptureStudy, getScriptureStudies, createReflection, getReflections,
 } from '@/lib/togetherEngine';
+import { useKeyboardInset, revealFocusedField } from '@/hooks/useKeyboardInset';
 
 import type { Profile } from '@/lib/types';
 import type { Circle, SharedScriptureStudy, SharedReflection } from '@/lib/togetherTypes';
@@ -31,6 +32,9 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
   const [reflectionVisibility, setReflectionVisibility] = useState<string>('private');
   const [sharedReflections, setSharedReflections] = useState<SharedReflection[]>([]);
   const [savingReflection, setSavingReflection] = useState(false);
+  const [reflectionError, setReflectionError] = useState<string | null>(null);
+  const [reflectionsLoadError, setReflectionsLoadError] = useState<string | null>(null);
+  const keyboardInset = useKeyboardInset();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -70,20 +74,32 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
     }
   }
 
+  async function loadSharedReflections(studyId: string) {
+    setReflectionsLoadError(null);
+    try {
+      const refs = await getReflections(circle?.id, studyId);
+      setSharedReflections(refs.filter((r) => r.visibility === 'circle'));
+    } catch {
+      setSharedReflections([]);
+      setReflectionsLoadError("We couldn't load shared reflections. Please try again.");
+    }
+  }
+
   async function handleOpenStudy(study: SharedScriptureStudy) {
     vibrate(10);
     setActiveStudy(study);
     setPhase('open');
     setReflection('');
     setReflectionVisibility('private');
-    const refs = await getReflections(circle?.id, study.id);
-    setSharedReflections(refs.filter((r) => r.visibility === 'circle'));
+    setReflectionError(null);
+    await loadSharedReflections(study.id);
   }
 
   async function handleSaveReflection() {
     if (!reflection.trim() || !activeStudy) return;
     vibrate(15);
     setSavingReflection(true);
+    setReflectionError(null);
     try {
       await createReflection(
         profile.id, reflection.trim(),
@@ -92,10 +108,9 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
       );
       setReflection('');
       setPhase('discuss');
-      const refs = await getReflections(circle?.id, activeStudy.id);
-      setSharedReflections(refs.filter((r) => r.visibility === 'circle'));
+      await loadSharedReflections(activeStudy.id);
     } catch {
-      setError('Could not save reflection.');
+      setReflectionError("We couldn't save your reflection. Please try again.");
     } finally {
       setSavingReflection(false);
     }
@@ -109,7 +124,7 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
           <p className="ui-label">Scripture Together</p><span className="w-10" />
         </header>
 
-        <div className="flex-1 overflow-y-auto px-6 mt-4">
+        <div className="flex-1 overflow-y-auto px-6 mt-4" style={{ paddingBottom: keyboardInset }}>
           <div className="animate-fade-in-up">
             {/* Phase: Open */}
             {phase === 'open' && (
@@ -156,6 +171,7 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
                 <textarea
                   value={reflection}
                   onChange={(e) => setReflection(e.target.value)}
+                  onFocus={revealFocusedField}
                   placeholder="What is God teaching you through this passage?"
                   className="input-field min-h-[160px] resize-none text-sm"
                   autoFocus
@@ -172,6 +188,7 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
                     <Users size={12} className="inline mr-1" /> Share With Circle
                   </button>
                 </div>
+                {reflectionError && <p role="alert" className="text-clay-400 text-xs mb-3">{reflectionError}</p>}
                 <button onClick={handleSaveReflection} disabled={savingReflection || !reflection.trim()} className="btn-primary w-full disabled:opacity-40">
                   {savingReflection ? 'Saving...' : reflectionVisibility === 'circle' ? 'Share With Circle' : 'Save Privately'}
                 </button>
@@ -194,7 +211,10 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
                 {activeStudy.apply_prompt && <StudyPrompt label="Apply" text={activeStudy.apply_prompt} />}
                 {activeStudy.prayer_prompt && <StudyPrompt label="Pray" text={activeStudy.prayer_prompt} />}
 
-                {sharedReflections.length > 0 && (
+                {reflectionsLoadError && (
+                  <ErrorState message={reflectionsLoadError} onRetry={() => loadSharedReflections(activeStudy.id)} />
+                )}
+                {!reflectionsLoadError && sharedReflections.length > 0 && (
                   <>
                     <p className="ui-label mt-6 mb-3">Shared Reflections</p>
                     <div className="space-y-2">
@@ -207,7 +227,7 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
                     </div>
                   </>
                 )}
-                {sharedReflections.length === 0 && (
+                {!reflectionsLoadError && sharedReflections.length === 0 && (
                   <div className="premium-card p-4 mt-4 text-center">
                     <p className="text-ivory-500 text-xs">No one has shared a reflection yet. You encounter Scripture before seeing others' responses.</p>
                   </div>
@@ -280,15 +300,15 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
       </div>
 
       {showCreate && circle && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowCreate(false)}>
-          <div className="w-full max-w-md bg-ink-900 rounded-t-3xl p-6 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm transition-[padding] duration-200" style={{ paddingBottom: keyboardInset }} onClick={() => setShowCreate(false)}>
+          <div className="w-full max-w-md bg-ink-900 rounded-t-3xl p-6 animate-fade-in-up max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-serif text-xl text-ivory-50">Assign a Passage</h3>
               <button onClick={() => setShowCreate(false)} className="btn-ghost"><X size={18} /></button>
             </div>
             <div className="flex flex-col gap-4">
-              <input value={passage} onChange={(e) => setPassage(e.target.value)} placeholder="Romans 8:1–17" className="input-field" autoFocus />
-              <textarea value={objective} onChange={(e) => setObjective(e.target.value)} placeholder="Reading objective (optional)" className="input-field min-h-[60px] resize-none text-sm" />
+              <input value={passage} onChange={(e) => setPassage(e.target.value)} onFocus={revealFocusedField} placeholder="Romans 8:1–17" className="input-field" autoFocus />
+              <textarea value={objective} onChange={(e) => setObjective(e.target.value)} onFocus={revealFocusedField} placeholder="Reading objective (optional)" className="input-field min-h-[60px] resize-none text-sm" />
               <button onClick={handleCreate} disabled={creating || !passage.trim()} className="btn-primary w-full disabled:opacity-40">
                 <Plus size={16} /> {creating ? 'Creating...' : 'Assign Study'}
               </button>

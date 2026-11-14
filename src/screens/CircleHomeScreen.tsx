@@ -129,7 +129,7 @@ export default function CircleHomeScreen({
 
   const isOwner = myRole === 'OWNER';
   const isLeader = isOwner || myRole === 'LEADER' || myRole === 'PASTOR' || myRole === 'CHURCH_LEADER';
-  const recentPrayers = prayers.slice(0, 3);
+  const sharedPrayerCount = prayers.filter((p) => p.visibility === 'circle').length;
   const recentCheckIns = checkIns.filter((c) => c.visibility !== 'private').slice(0, 3);
   const memberCount = members?.length;
 
@@ -167,7 +167,7 @@ export default function CircleHomeScreen({
               <div className="flex flex-col gap-2 mb-6">
                 <CircleActionCard icon={BookOpen} label="Scripture" desc={studies.length > 0 ? `${studies[0].passage_reference}` : 'No study assigned'} onClick={() => onOpenScripture(circle)} />
                 <CircleActionCard icon={MessageSquare} label="Sermon Discussions" desc={discussionSummary(discussions)} onClick={() => onOpenSermonDiscussions(circle)} />
-                <CircleActionCard icon={Heart} label="Prayer" desc={recentPrayers.length > 0 ? `${recentPrayers.length} prayer request${recentPrayers.length !== 1 ? 's' : ''}` : 'No prayers shared yet'} onClick={() => onOpenPrayer(circle)} />
+                <CircleActionCard icon={Heart} label="Prayer" desc={sharedPrayerCount > 0 ? `${sharedPrayerCount} shared prayer request${sharedPrayerCount !== 1 ? 's' : ''}` : 'No prayers shared yet'} onClick={() => onOpenPrayer(circle)} />
                 <CircleActionCard icon={CheckCircle} label="Check-In" desc={recentCheckIns.length > 0 ? `${recentCheckIns.length} recent check-in${recentCheckIns.length !== 1 ? 's' : ''}` : 'How is everyone arriving?'} onClick={() => onOpenCheckIn(circle)} />
                 <CircleActionCard icon={HandHeart} label="Encouragement" desc="Encourage someone intentionally" onClick={() => onOpenEncouragement(circle)} />
                 <CircleActionCard icon={Shield} label="Accountability" desc="Private · Opt-in" onClick={() => onOpenAccountability(circle)} />

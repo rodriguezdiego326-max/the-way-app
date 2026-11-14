@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, HandHeart, BookOpen, Heart, MessageCircle, Lock } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
-import { LoadingState, EmptyState } from '@/components/States';
-import { sendEncouragement, getEncouragementsForProfile, getEncouragementsForCircle } from '@/lib/togetherEngine';
-import { getCircleMembers } from '@/lib/togetherEngine';
+import { LoadingState, ErrorState, EmptyState } from '@/components/States';
+import { sendEncouragement, getEncouragementsForProfile, getCircleMemberSummaries } from '@/lib/togetherEngine';
 import type { Profile } from '@/lib/types';
-import type { Circle, CircleMember, Encouragement } from '@/lib/togetherTypes';
+import type { Circle, CircleMemberSummary, Encouragement } from '@/lib/togetherTypes';
 import { ENCOURAGEMENT_ACTIONS } from '@/lib/togetherTypes';
 
 interface Props {
@@ -15,24 +14,29 @@ interface Props {
 }
 
 export default function EncouragementScreen({ profile, circle, onBack }: Props) {
-  const [members, setMembers] = useState<CircleMember[]>([]);
+  const [members, setMembers] = useState<CircleMemberSummary[]>([]);
   const [received, setReceived] = useState<Encouragement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMember, setSelectedMember] = useState<CircleMember | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [selectedMember, setSelectedMember] = useState<CircleMemberSummary | null>(null);
   const [action, setAction] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
-      const [encs, m] = await Promise.all([
-        circle?.id ? getEncouragementsForCircle(circle.id) : getEncouragementsForProfile(profile.id),
-        circle?.id ? getCircleMembers(circle.id) : [],
+      const [encs, summaries] = await Promise.all([
+        getEncouragementsForProfile(profile.id),
+        circle?.id ? getCircleMemberSummaries(circle.id) : Promise.resolve([]),
       ]);
       setReceived(encs.filter((e) => e.to_profile_id === profile.id));
-      setMembers(m.filter((m) => m.profile_id !== profile.id));
-    } catch { /* ignore */ } finally {
+      setMembers(summaries.filter((m) => m.member_profile_id !== profile.id));
+    } catch {
+      setLoadError("We couldn't load encouragement. Please try again.");
+    } finally {
       setLoading(false);
     }
   }, [circle?.id, profile.id]);
@@ -43,15 +47,18 @@ export default function EncouragementScreen({ profile, circle, onBack }: Props) 
     if (!selectedMember || !action) return;
     vibrate(15);
     setSending(true);
+    setSendError(null);
     try {
       await sendEncouragement(
-        profile.id, selectedMember.profile_id,
+        profile.id, selectedMember.member_profile_id,
         action, message.trim() || undefined,
         circle?.id,
       );
       setSelectedMember(null); setAction(null); setMessage('');
       await load();
-    } catch { /* ignore */ } finally {
+    } catch {
+      setSendError("We couldn't send that encouragement. Please try again.");
+    } finally {
       setSending(false);
     }
   }
@@ -82,11 +89,11 @@ export default function EncouragementScreen({ profile, circle, onBack }: Props) 
               {!selectedMember ? (
                 <div className="flex flex-col gap-2">
                   {members.map((m) => (
-                    <button key={m.id} onClick={() => { vibrate(8); setSelectedMember(m); }} className="premium-card p-3 flex items-center gap-3 text-left no-tap-highlight hover:border-gold-500/30 transition-all">
+                    <button key={m.member_profile_id} onClick={() => { vibrate(8); setSendError(null); setSelectedMember(m); }} className="premium-card p-3 flex items-center gap-3 text-left no-tap-highlight hover:border-gold-500/30 transition-all">
                       <div className="w-8 h-8 rounded-lg bg-ink-700/50 flex items-center justify-center shrink-0">
                         <Heart size={14} className="text-ivory-400" />
                       </div>
-                      <p className="text-ivory-200 text-sm flex-1">{m.role === 'OWNER' ? 'Circle Owner' : 'Circle Member'}</p>
+                      <p className="text-ivory-200 text-sm flex-1">{m.member_display_name || 'SOLAPATH Member'}</p>
                     </button>
                   ))}
                 </div>
@@ -107,8 +114,9 @@ export default function EncouragementScreen({ profile, circle, onBack }: Props) 
                   {action && (
                     <>
                       <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Optional message" className="input-field min-h-[60px] resize-none text-sm mb-3" />
+                      {sendError && <p role="alert" className="text-clay-400 text-xs mb-3">{sendError}</p>}
                       <div className="flex gap-2">
-                        <button onClick={() => { setSelectedMember(null); setAction(null); setMessage(''); }} className="btn-secondary flex-1">Cancel</button>
+                        <button onClick={() => { setSelectedMember(null); setAction(null); setMessage(''); setSendError(null); }} className="btn-secondary flex-1">Cancel</button>
                         <button onClick={handleSend} disabled={sending} className="btn-primary flex-1 disabled:opacity-40">{sending ? 'Sending...' : 'Send'}</button>
                       </div>
                     </>
@@ -120,7 +128,9 @@ export default function EncouragementScreen({ profile, circle, onBack }: Props) 
 
           {/* Received */}
           <p className="ui-label mb-3">Encouragement Received</p>
-          {loading ? <LoadingState message="Loading..." /> : received.length === 0 ? (
+          {loading ? <LoadingState message="Loading..." /> : loadError ? (
+            <ErrorState message={loadError} onRetry={load} />
+          ) : received.length === 0 ? (
             <EmptyState message="No encouragement yet." />
           ) : (
             <div className="flex flex-col gap-2">

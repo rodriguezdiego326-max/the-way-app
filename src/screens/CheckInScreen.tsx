@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Lock, Users, Shield } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
-import { LoadingState } from '@/components/States';
+import { LoadingState, ErrorState, EmptyState } from '@/components/States';
 import { createCheckIn, getCheckIns } from '@/lib/togetherEngine';
 import type { Profile } from '@/lib/types';
 import type { Circle, CircleCheckIn, CheckInState } from '@/lib/togetherTypes';
@@ -30,17 +30,22 @@ export default function CheckInScreen({ profile, circle, onBack }: Props) {
   const [note, setNote] = useState('');
   const [visibility, setVisibility] = useState<string>('private');
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [checkIns, setCheckIns] = useState<CircleCheckIn[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       if (circle?.id) {
         const data = await getCheckIns(circle.id);
         setCheckIns(data.filter((c) => c.visibility !== 'private'));
       }
-    } catch { /* ignore */ } finally {
+    } catch {
+      setLoadError("We couldn't load Circle check-ins. Please try again.");
+    } finally {
       setLoading(false);
     }
   }, [circle?.id]);
@@ -51,11 +56,14 @@ export default function CheckInScreen({ profile, circle, onBack }: Props) {
     if (!state) return;
     vibrate(15);
     setSaving(true);
+    setSaveError(null);
     try {
       await createCheckIn(profile.id, state, note.trim() || undefined, visibility, circle?.id);
       setState(null); setNote(''); setVisibility('private');
       await load();
-    } catch { /* ignore */ } finally {
+    } catch {
+      setSaveError("We couldn't save your check-in. Please try again.");
+    } finally {
       setSaving(false);
     }
   }
@@ -117,13 +125,22 @@ export default function CheckInScreen({ profile, circle, onBack }: Props) {
                 )}
               </div>
 
+              {saveError && <p role="alert" className="text-clay-400 text-xs mb-3">{saveError}</p>}
               <button onClick={handleSave} disabled={saving} className="btn-primary w-full disabled:opacity-40">
                 {saving ? 'Saving...' : 'Save Check-in'}
               </button>
             </div>
           )}
 
-          {circle && checkIns.length > 0 && (
+          {circle && loading && <LoadingState message="Loading..." />}
+          {circle && !loading && loadError && <ErrorState message={loadError} onRetry={load} />}
+          {circle && !loading && !loadError && checkIns.length === 0 && (
+            <div className="mt-8">
+              <EmptyState message="No shared Circle check-ins yet." />
+            </div>
+          )}
+
+          {circle && !loading && !loadError && checkIns.length > 0 && (
             <>
               <p className="ui-label mt-8 mb-3">Recent Circle Check-ins</p>
               <div className="flex flex-col gap-2">
@@ -131,7 +148,12 @@ export default function CheckInScreen({ profile, circle, onBack }: Props) {
                   <div key={c.id} className="premium-card p-3">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-gold-500/10 text-gold-300">{c.state}</span>
-                      <span className="text-ivory-600 text-xs">{formatRelative(c.created_at)}</span>
+                      {c.visibility === 'leader_only' && (
+                        <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-ink-700/40 text-ivory-300 flex items-center gap-1">
+                          <Shield size={10} /> Leader Only
+                        </span>
+                      )}
+                      <span className="text-ivory-600 text-xs ml-auto">{formatRelative(c.created_at)}</span>
                     </div>
                     {c.note && <p className="text-ivory-300 text-sm mt-1 leading-relaxed">{c.note}</p>}
                   </div>
@@ -139,8 +161,6 @@ export default function CheckInScreen({ profile, circle, onBack }: Props) {
               </div>
             </>
           )}
-
-          {loading && <LoadingState message="Loading..." />}
 
           <div className="flex items-start gap-2 mt-5 px-1">
             <Shield size={13} className="text-gold-400/60 shrink-0 mt-0.5" />

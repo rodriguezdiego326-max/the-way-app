@@ -5,7 +5,7 @@ import { LoadingState, ErrorState, EmptyState } from '@/components/States';
 import { useKeyboardInset, revealFocusedField } from '@/hooks/useKeyboardInset';
 import {
   createSharedPrayer, getSharedPrayers, updatePrayerStatus,
-  acknowledgePrayer, getAcknowledgementCount,
+  acknowledgePrayer, getAcknowledgementCounts, getMyAcknowledgedPrayerIds,
 } from '@/lib/togetherEngine';
 import type { Profile } from '@/lib/types';
 import type { Circle, SharedPrayer } from '@/lib/togetherTypes';
@@ -21,6 +21,7 @@ export default function PrayerTogetherScreen({ profile, circle, onBack }: Props)
   const [prayers, setPrayers] = useState<SharedPrayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -34,18 +35,15 @@ export default function PrayerTogetherScreen({ profile, circle, onBack }: Props)
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setActionError(null);
     try {
       const data = await getSharedPrayers(circle?.id);
+      const ids = data.map((p) => p.id);
+      const [counts, prayed] = await Promise.all([
+        getAcknowledgementCounts(ids),
+        getMyAcknowledgedPrayerIds(profile.id, ids),
+      ]);
       setPrayers(data);
-      const counts: Record<string, number> = {};
-      const prayed = new Set<string>();
-      for (const p of data) {
-        counts[p.id] = await getAcknowledgementCount(p.id);
-        if (p.profile_id === profile.id) {
-          const acks = await getAcknowledgementCount(p.id);
-          if (acks > 0) prayed.add(p.id);
-        }
-      }
       setPrayerCounts(counts);
       setPrayedSet(prayed);
     } catch {
@@ -81,17 +79,27 @@ export default function PrayerTogetherScreen({ profile, circle, onBack }: Props)
 
   async function handlePrayed(prayerId: string) {
     vibrate(10);
-    const wasNew = await acknowledgePrayer(prayerId, profile.id);
-    if (wasNew) {
-      setPrayedSet((prev) => new Set(prev).add(prayerId));
-      setPrayerCounts((prev) => ({ ...prev, [prayerId]: (prev[prayerId] || 0) + 1 }));
+    setActionError(null);
+    try {
+      const wasNew = await acknowledgePrayer(prayerId, profile.id);
+      if (wasNew) {
+        setPrayedSet((prev) => new Set(prev).add(prayerId));
+        setPrayerCounts((prev) => ({ ...prev, [prayerId]: (prev[prayerId] || 0) + 1 }));
+      }
+    } catch {
+      setActionError("We couldn't record your prayer. Please try again.");
     }
   }
 
   async function handleStatusChange(prayerId: string, status: string) {
     vibrate(8);
-    await updatePrayerStatus(prayerId, status);
-    setPrayers((prev) => prev.map((p) => p.id === prayerId ? { ...p, status } : p));
+    setActionError(null);
+    try {
+      await updatePrayerStatus(prayerId, status);
+      setPrayers((prev) => prev.map((p) => p.id === prayerId ? { ...p, status } : p));
+    } catch {
+      setActionError("We couldn't update that status. Please try again.");
+    }
   }
 
   return (
@@ -120,6 +128,7 @@ export default function PrayerTogetherScreen({ profile, circle, onBack }: Props)
           {error && <ErrorState message={error} onRetry={load} />}
           {!loading && !error && prayers.length === 0 && <EmptyState message="No prayers shared yet." />}
 
+          {actionError && <p role="alert" className="text-clay-400 text-xs mb-3">{actionError}</p>}
           {!loading && !error && prayers.length > 0 && (
             <div className="flex flex-col gap-3">
               {prayers.map((p) => (
@@ -129,7 +138,11 @@ export default function PrayerTogetherScreen({ profile, circle, onBack }: Props)
                       <p className="text-ivory-100 font-medium text-sm">{p.title}</p>
                       {p.description && <p className="text-ivory-400 text-xs mt-1 leading-relaxed">{p.description}</p>}
                     </div>
-                    {p.visibility === 'private' && <Lock size={12} className="text-ivory-600 shrink-0 mt-1" />}
+                    {p.visibility === 'private' && (
+                      <span className="flex items-center gap-1 text-ivory-600 text-[10px] uppercase tracking-wider shrink-0 mt-1">
+                        <Lock size={12} /> Private
+                      </span>
+                    )}
                   </div>
                   {p.related_scripture && (
                     <p className="text-gold-300/80 text-xs mt-1 font-serif italic">{p.related_scripture}</p>

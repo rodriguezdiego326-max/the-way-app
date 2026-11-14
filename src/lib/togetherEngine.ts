@@ -161,7 +161,7 @@ export async function createSharedPrayer(
   circleId?: string,
   visibility: string = 'private',
 ): Promise<SharedPrayer | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('shared_prayers')
     .insert({
       title,
@@ -173,18 +173,21 @@ export async function createSharedPrayer(
     })
     .select('*')
     .single();
-  return (data as SharedPrayer) || null;
+  if (error) throw error;
+  return data as SharedPrayer;
 }
 
 export async function getSharedPrayers(circleId?: string): Promise<SharedPrayer[]> {
   let query = supabase.from('shared_prayers').select('*').order('created_at', { ascending: false });
   if (circleId) query = query.eq('circle_id', circleId);
-  const { data } = await query;
-  return (data as SharedPrayer[]) || [];
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data as SharedPrayer[]) ?? [];
 }
 
 export async function updatePrayerStatus(prayerId: string, status: string): Promise<void> {
-  await supabase.from('shared_prayers').update({ status, updated_at: new Date().toISOString() }).eq('id', prayerId);
+  const { error } = await supabase.from('shared_prayers').update({ status, updated_at: new Date().toISOString() }).eq('id', prayerId);
+  if (error) throw error;
 }
 
 // ============================================================
@@ -192,36 +195,44 @@ export async function updatePrayerStatus(prayerId: string, status: string): Prom
 // ============================================================
 
 export async function acknowledgePrayer(prayerId: string, profileId: string): Promise<boolean> {
-  const { data: existing } = await supabase
+  const { data: existing, error: lookupError } = await supabase
     .from('prayer_acknowledgements')
     .select('id')
     .eq('shared_prayer_id', prayerId)
     .eq('profile_id', profileId)
     .maybeSingle();
+  if (lookupError) throw lookupError;
 
   if (existing) return false;
 
-  await supabase.from('prayer_acknowledgements').insert({
+  const { error } = await supabase.from('prayer_acknowledgements').insert({
     shared_prayer_id: prayerId,
     profile_id: profileId,
   });
+  if (error) throw error;
   return true;
 }
 
-export async function getAcknowledgementCount(prayerId: string): Promise<number> {
-  const { count } = await supabase
-    .from('prayer_acknowledgements')
-    .select('id', { count: 'exact', head: true })
-    .eq('shared_prayer_id', prayerId);
-  return count || 0;
+export async function getAcknowledgementCounts(prayerIds: string[]): Promise<Record<string, number>> {
+  if (prayerIds.length === 0) return {};
+  const { data, error } = await supabase.rpc('get_prayer_acknowledgement_counts', { p_prayer_ids: prayerIds });
+  if (error) throw error;
+  const counts: Record<string, number> = {};
+  for (const row of (data as { shared_prayer_id: string; ack_count: number }[]) ?? []) {
+    counts[row.shared_prayer_id] = Number(row.ack_count);
+  }
+  return counts;
 }
 
-export async function getAcknowledgementsForPrayer(prayerId: string): Promise<PrayerAcknowledgement[]> {
-  const { data } = await supabase
+export async function getMyAcknowledgedPrayerIds(profileId: string, prayerIds: string[]): Promise<Set<string>> {
+  if (prayerIds.length === 0) return new Set();
+  const { data, error } = await supabase
     .from('prayer_acknowledgements')
-    .select('*')
-    .eq('shared_prayer_id', prayerId);
-  return (data as PrayerAcknowledgement[]) || [];
+    .select('shared_prayer_id')
+    .eq('profile_id', profileId)
+    .in('shared_prayer_id', prayerIds);
+  if (error) throw error;
+  return new Set((data ?? []).map((row) => row.shared_prayer_id as string));
 }
 
 // ============================================================
@@ -256,12 +267,13 @@ export async function createScriptureStudy(
 }
 
 export async function getScriptureStudies(circleId: string): Promise<SharedScriptureStudy[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('shared_scripture_studies')
     .select('*')
     .eq('circle_id', circleId)
     .order('created_at', { ascending: false });
-  return (data as SharedScriptureStudy[]) || [];
+  if (error) throw error;
+  return (data as SharedScriptureStudy[]) ?? [];
 }
 
 // ============================================================
@@ -275,7 +287,7 @@ export async function createReflection(
   circleId?: string,
   scriptureStudyId?: string,
 ): Promise<SharedReflection | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('shared_reflections')
     .insert({
       profile_id: profileId,
@@ -286,28 +298,32 @@ export async function createReflection(
     })
     .select('*')
     .single();
-  return (data as SharedReflection) || null;
+  if (error) throw error;
+  return data as SharedReflection;
 }
 
 export async function updateReflectionVisibility(reflectionId: string, visibility: string): Promise<void> {
-  await supabase.from('shared_reflections').update({ visibility }).eq('id', reflectionId);
+  const { error } = await supabase.from('shared_reflections').update({ visibility }).eq('id', reflectionId);
+  if (error) throw error;
 }
 
 export async function getReflections(circleId?: string, scriptureStudyId?: string): Promise<SharedReflection[]> {
   let query = supabase.from('shared_reflections').select('*').order('created_at', { ascending: false });
   if (circleId) query = query.eq('circle_id', circleId);
   if (scriptureStudyId) query = query.eq('scripture_study_id', scriptureStudyId);
-  const { data } = await query;
-  return (data as SharedReflection[]) || [];
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data as SharedReflection[]) ?? [];
 }
 
 export async function getMyReflections(profileId: string): Promise<SharedReflection[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('shared_reflections')
     .select('*')
     .eq('profile_id', profileId)
     .order('created_at', { ascending: false });
-  return (data as SharedReflection[]) || [];
+  if (error) throw error;
+  return (data as SharedReflection[]) ?? [];
 }
 
 // ============================================================
@@ -321,7 +337,7 @@ export async function createCheckIn(
   visibility: string = 'private',
   circleId?: string,
 ): Promise<CircleCheckIn | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('circle_check_ins')
     .insert({
       profile_id: profileId,
@@ -332,16 +348,18 @@ export async function createCheckIn(
     })
     .select('*')
     .single();
-  return (data as CircleCheckIn) || null;
+  if (error) throw error;
+  return data as CircleCheckIn;
 }
 
 export async function getCheckIns(circleId: string): Promise<CircleCheckIn[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('circle_check_ins')
     .select('*')
     .eq('circle_id', circleId)
     .order('created_at', { ascending: false });
-  return (data as CircleCheckIn[]) || [];
+  if (error) throw error;
+  return (data as CircleCheckIn[]) ?? [];
 }
 
 // ============================================================
@@ -355,7 +373,7 @@ export async function sendEncouragement(
   message?: string,
   circleId?: string,
 ): Promise<Encouragement | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('encouragements')
     .insert({
       from_profile_id: fromProfileId,
@@ -366,25 +384,18 @@ export async function sendEncouragement(
     })
     .select('*')
     .single();
-  return (data as Encouragement) || null;
+  if (error) throw error;
+  return data as Encouragement;
 }
 
 export async function getEncouragementsForProfile(profileId: string): Promise<Encouragement[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('encouragements')
     .select('*')
-    .eq('to_profile_id', profileId)
+    .or(`to_profile_id.eq.${profileId},from_profile_id.eq.${profileId}`)
     .order('created_at', { ascending: false });
-  return (data as Encouragement[]) || [];
-}
-
-export async function getEncouragementsForCircle(circleId: string): Promise<Encouragement[]> {
-  const { data } = await supabase
-    .from('encouragements')
-    .select('*')
-    .eq('circle_id', circleId)
-    .order('created_at', { ascending: false });
-  return (data as Encouragement[]) || [];
+  if (error) throw error;
+  return (data as Encouragement[]) ?? [];
 }
 
 // ============================================================

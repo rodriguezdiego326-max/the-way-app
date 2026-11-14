@@ -3,7 +3,7 @@ import { X, Check, AlertCircle, FlaskConical, ChevronDown, Shield, Lock, Databas
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import { supabase } from '@/lib/supabase';
-import { createCircle, getMyCircles, createReflection, getReflections, createSharedPrayer, acknowledgePrayer, leaveCircle, createCircleInvitation, previewCircleInvitation, revokeCircleInvitation, getAcknowledgementCount } from '@/lib/togetherEngine';
+import { createCircle, getMyCircles, createReflection, getReflections, createSharedPrayer, acknowledgePrayer, leaveCircle, createCircleInvitation, previewCircleInvitation, revokeCircleInvitation, getAcknowledgementCounts } from '@/lib/togetherEngine';
 import { retrieveSources } from '@/lib/libraryEngine';
 import type { Profile } from '@/lib/types';
 
@@ -261,7 +261,7 @@ export default function Phase8TestScreen({ profile, onBack }: Props) {
           // Verify shared prayer has circle_id
           const sharedHasCircle = sharedPrayer?.circle_id === prayerCircle.id;
           // Verify acknowledgement was stored
-          const ackCount = sharedPrayer ? await getAcknowledgementCount(sharedPrayer.id) : 0;
+          const ackCount = sharedPrayer ? (await getAcknowledgementCounts([sharedPrayer.id]))[sharedPrayer.id] ?? 0 : 0;
 
           updateTest('prayer_sharing_controls',
             privateHasNoCircle && sharedHasCircle && ackStored && ackCount > 0 ? 'pass' : 'fail',
