@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import type { Profile } from '@/lib/types';
 import type {
   Circle, CircleMember, CircleMemberSummary, CircleInvitation, CircleInvitePreview,
-  CircleInviteAcceptResult, SharedPrayer, PrayerAcknowledgement,
+  CircleInviteAcceptResult, SharedPrayer,
   SharedScriptureStudy, SharedReflection, CircleCheckIn, Encouragement,
   AccountabilityRelationship, CircleSermonDiscussion,
 } from '@/lib/togetherTypes';
