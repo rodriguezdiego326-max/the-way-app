@@ -63,6 +63,7 @@ import ManageChurchStudiesScreen from '@/screens/ManageChurchStudiesScreen';
 import SmallGroupModeScreen from '@/screens/SmallGroupModeScreen';
 import ChurchPrayerScreen from '@/screens/ChurchPrayerScreen';
 import type { Circle, CircleSermonDiscussion, Sermon } from '@/lib/togetherTypes';
+import type { ScriptureResume } from '@/screens/ScriptureTogetherScreen';
 import type { FamilySermonDiscussion } from '@/lib/familyTypes';
 
 // Phase 9 imports
@@ -116,7 +117,7 @@ export type Overlay =
   | { type: 'family_sermon_discussion'; discussion: FamilySermonDiscussion }
   | { type: 'create_circle' }
   | { type: 'prayer_together'; circle?: Circle }
-  | { type: 'scripture_together'; circle?: Circle }
+  | { type: 'scripture_together'; circle?: Circle; resume?: ScriptureResume }
   | { type: 'check_in'; circle?: Circle }
   | { type: 'encouragement'; circle?: Circle }
   | { type: 'accountability'; circle?: Circle }
@@ -664,7 +665,17 @@ export default function App() {
   }
 
   if (overlay.type === 'scripture_together' && profile) {
-    return <ErrorBoundary><ScriptureTogetherScreen profile={profile} circle={overlay.circle} onBack={() => setOverlay(overlay.circle ? { type: 'circle_home', circle: overlay.circle } : { type: 'together' })} /></ErrorBoundary>;
+    return (
+      <ErrorBoundary>
+        <ScriptureTogetherScreen
+          profile={profile}
+          circle={overlay.circle}
+          resume={overlay.resume}
+          onBack={() => setOverlay(overlay.circle ? { type: 'circle_home', circle: overlay.circle } : { type: 'together' })}
+          onReadPassage={(reference, studyCircle, study) => handleOpenDiscussionScripture(reference, { type: 'scripture_together', circle: overlay.circle, resume: { circle: studyCircle, study } })}
+        />
+      </ErrorBoundary>
+    );
   }
 
   if (overlay.type === 'check_in' && profile) {

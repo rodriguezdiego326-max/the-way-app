@@ -28,9 +28,13 @@ export default function PrayerTogetherScreen({ profile, circle, onBack }: Props)
   const [scripture, setScripture] = useState('');
   const [visibility, setVisibility] = useState<string>(circle ? 'circle' : 'private');
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [prayedSet, setPrayedSet] = useState<Set<string>>(new Set());
   const [prayerCounts, setPrayerCounts] = useState<Record<string, number>>({});
   const keyboardInset = useKeyboardInset();
+
+  const privatePrayers = prayers.filter((p) => p.visibility === 'private' && p.profile_id === profile.id);
+  const sharedPrayers = prayers.filter((p) => p.visibility !== 'private');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -47,7 +51,7 @@ export default function PrayerTogetherScreen({ profile, circle, onBack }: Props)
       setPrayerCounts(counts);
       setPrayedSet(prayed);
     } catch {
-      setError('Could not load prayers.');
+      setError("We couldn't load prayers. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -55,10 +59,17 @@ export default function PrayerTogetherScreen({ profile, circle, onBack }: Props)
 
   useEffect(() => { load(); }, [load]);
 
+  function openCreate() {
+    vibrate(8);
+    setCreateError(null);
+    setShowCreate(true);
+  }
+
   async function handleCreate() {
     if (!title.trim()) return;
     vibrate(15);
     setCreating(true);
+    setCreateError(null);
     try {
       await createSharedPrayer(
         profile.id, title.trim(),
@@ -71,7 +82,7 @@ export default function PrayerTogetherScreen({ profile, circle, onBack }: Props)
       setShowCreate(false);
       await load();
     } catch {
-      setError('Could not create prayer.');
+      setCreateError("We couldn't share that prayer. Your words are still here, so please try again.");
     } finally {
       setCreating(false);
     }
@@ -102,12 +113,75 @@ export default function PrayerTogetherScreen({ profile, circle, onBack }: Props)
     }
   }
 
+  function renderPrayer(p: SharedPrayer) {
+    const isOwn = p.profile_id === profile.id;
+    return (
+      <div key={p.id} className="premium-card p-4">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex-1">
+            <p className="text-ivory-100 font-medium text-sm">{p.title}</p>
+            {p.description && <p className="text-ivory-400 text-xs mt-1 leading-relaxed">{p.description}</p>}
+          </div>
+          {p.visibility === 'private' && (
+            <span className="flex items-center gap-1 text-ivory-600 text-[10px] uppercase tracking-wider shrink-0 mt-1">
+              <Lock size={12} /> Private
+            </span>
+          )}
+        </div>
+        {p.related_scripture && (
+          <p className="text-gold-300/80 text-xs mt-1 font-serif italic">{p.related_scripture}</p>
+        )}
+        <div className="flex items-center gap-2 mt-3">
+          <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded ${
+            p.status === 'ANSWERED' ? 'bg-sage-500/15 text-sage-400' :
+            p.status === 'CLOSED' ? 'bg-ink-700/40 text-ivory-600' :
+            'bg-gold-500/10 text-gold-300'
+          }`}>{p.status.replace(/_/g, ' ')}</span>
+          <span className="text-ivory-600 text-xs">{formatRelative(p.created_at)}</span>
+        </div>
+
+        {!isOwn && (
+          <div className="flex items-center gap-3 mt-3 pt-3 border-t border-ink-700/30">
+            <button
+              onClick={() => handlePrayed(p.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all no-tap-highlight ${
+                prayedSet.has(p.id) ? 'bg-sage-500/10 text-sage-400' : 'bg-ink-700/40 text-ivory-400'
+              }`}
+            >
+              <Heart size={12} className={prayedSet.has(p.id) ? 'fill-sage-400' : ''} />
+              I Prayed For You
+            </button>
+            {prayerCounts[p.id] > 0 && (
+              <p className="text-ivory-600 text-xs">{prayerCounts[p.id]} {prayerCounts[p.id] === 1 ? 'person' : 'people'} prayed for this.</p>
+            )}
+          </div>
+        )}
+
+        {isOwn && (
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {PRAYER_STATUSES.map((s) => (
+              <button
+                key={s}
+                onClick={() => handleStatusChange(p.id, s)}
+                className={`px-2 py-1 rounded text-[10px] font-medium transition-all ${
+                  p.status === s ? 'bg-gold-500/20 text-gold-300' : 'bg-ink-700/30 text-ivory-600'
+                }`}
+              >
+                {s.replace(/_/g, ' ')}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28 flex flex-col">
       <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
         <button onClick={onBack} className="btn-ghost"><X size={20} /></button>
         <p className="ui-label">Prayer Together</p>
-        <button onClick={() => { vibrate(8); setShowCreate(true); }} className="btn-ghost">
+        <button onClick={openCreate} className="btn-ghost">
           <Plus size={18} />
         </button>
       </header>
@@ -126,71 +200,30 @@ export default function PrayerTogetherScreen({ profile, circle, onBack }: Props)
 
           {loading && <LoadingState message="Loading prayers..." />}
           {error && <ErrorState message={error} onRetry={load} />}
-          {!loading && !error && prayers.length === 0 && <EmptyState message="No prayers shared yet." />}
 
           {actionError && <p role="alert" className="text-clay-400 text-xs mb-3">{actionError}</p>}
-          {!loading && !error && prayers.length > 0 && (
-            <div className="flex flex-col gap-3">
-              {prayers.map((p) => (
-                <div key={p.id} className="premium-card p-4">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex-1">
-                      <p className="text-ivory-100 font-medium text-sm">{p.title}</p>
-                      {p.description && <p className="text-ivory-400 text-xs mt-1 leading-relaxed">{p.description}</p>}
-                    </div>
-                    {p.visibility === 'private' && (
-                      <span className="flex items-center gap-1 text-ivory-600 text-[10px] uppercase tracking-wider shrink-0 mt-1">
-                        <Lock size={12} /> Private
-                      </span>
-                    )}
-                  </div>
-                  {p.related_scripture && (
-                    <p className="text-gold-300/80 text-xs mt-1 font-serif italic">{p.related_scripture}</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-3">
-                    <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded ${
-                      p.status === 'ANSWERED' ? 'bg-sage-500/15 text-sage-400' :
-                      p.status === 'CLOSED' ? 'bg-ink-700/40 text-ivory-600' :
-                      'bg-gold-500/10 text-gold-300'
-                    }`}>{p.status.replace(/_/g, ' ')}</span>
-                    <span className="text-ivory-600 text-xs">{formatRelative(p.created_at)}</span>
-                  </div>
 
-                  {/* I Prayed For You */}
-                  <div className="flex items-center gap-3 mt-3 pt-3 border-t border-ink-700/30">
-                    <button
-                      onClick={() => handlePrayed(p.id)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all no-tap-highlight ${
-                        prayedSet.has(p.id) ? 'bg-sage-500/10 text-sage-400' : 'bg-ink-700/40 text-ivory-400'
-                      }`}
-                    >
-                      <Heart size={12} className={prayedSet.has(p.id) ? 'fill-sage-400' : ''} />
-                      I Prayed For You
-                    </button>
-                    {prayerCounts[p.id] > 0 && (
-                      <p className="text-ivory-600 text-xs">{prayerCounts[p.id]} {prayerCounts[p.id] === 1 ? 'person' : 'people'} prayed for this.</p>
-                    )}
+          {!loading && !error && (
+            <>
+              {privatePrayers.length > 0 && (
+                <div className="mb-6">
+                  <p className="ui-label mb-1">Your Private Prayers</p>
+                  <p className="text-ivory-600 text-xs mb-3">Only you can see these.</p>
+                  <div className="flex flex-col gap-3">
+                    {privatePrayers.map(renderPrayer)}
                   </div>
-
-                  {/* Status update (only for own prayers) */}
-                  {p.profile_id === profile.id && (
-                    <div className="flex flex-wrap gap-1.5 mt-3">
-                      {PRAYER_STATUSES.map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => handleStatusChange(p.id, s)}
-                          className={`px-2 py-1 rounded text-[10px] font-medium transition-all ${
-                            p.status === s ? 'bg-gold-500/20 text-gold-300' : 'bg-ink-700/30 text-ivory-600'
-                          }`}
-                        >
-                          {s.replace(/_/g, ' ')}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
-              ))}
-            </div>
+              )}
+
+              <p className="ui-label mb-3">Circle Prayers</p>
+              {sharedPrayers.length === 0 ? (
+                <EmptyState message="No prayers shared yet." />
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {sharedPrayers.map(renderPrayer)}
+                </div>
+              )}
+            </>
           )}
 
           <div className="flex items-start gap-2 mt-5 px-1">
@@ -227,6 +260,7 @@ export default function PrayerTogetherScreen({ profile, circle, onBack }: Props)
               <input value={title} onChange={(e) => setTitle(e.target.value)} onFocus={revealFocusedField} placeholder="Prayer title" className="input-field" autoFocus />
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} onFocus={revealFocusedField} placeholder="What would you like prayer for?" className="input-field min-h-[80px] resize-none text-sm" />
               <input value={scripture} onChange={(e) => setScripture(e.target.value)} onFocus={revealFocusedField} placeholder="Related Scripture (optional)" className="input-field" />
+              {createError && <p role="alert" className="text-clay-400 text-xs">{createError}</p>}
               <button onClick={handleCreate} disabled={creating || !title.trim()} className="btn-primary w-full disabled:opacity-40">
                 <Plus size={16} /> {creating ? 'Sharing...' : 'Share Prayer'}
               </button>

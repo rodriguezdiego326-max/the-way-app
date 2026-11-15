@@ -25,13 +25,36 @@ interface Props {
   onBack: () => void;
 }
 
+function renderCheckIn(c: CircleCheckIn, isPrivate: boolean) {
+  return (
+    <div key={c.id} className="premium-card p-3">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-gold-500/10 text-gold-300">{c.state}</span>
+        {isPrivate && (
+          <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-ink-700/40 text-ivory-300 flex items-center gap-1">
+            <Lock size={10} /> Private
+          </span>
+        )}
+        {c.visibility === 'leader_only' && (
+          <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-ink-700/40 text-ivory-300 flex items-center gap-1">
+            <Shield size={10} /> Leader Only
+          </span>
+        )}
+        <span className="text-ivory-600 text-xs ml-auto">{formatRelative(c.created_at)}</span>
+      </div>
+      {c.note && <p className="text-ivory-300 text-sm mt-1 leading-relaxed">{c.note}</p>}
+    </div>
+  );
+}
+
 export default function CheckInScreen({ profile, circle, onBack }: Props) {
   const [state, setState] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [visibility, setVisibility] = useState<string>('private');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [checkIns, setCheckIns] = useState<CircleCheckIn[]>([]);
+  const [privateCheckIns, setPrivateCheckIns] = useState<CircleCheckIn[]>([]);
+  const [sharedCheckIns, setSharedCheckIns] = useState<CircleCheckIn[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -41,14 +64,15 @@ export default function CheckInScreen({ profile, circle, onBack }: Props) {
     try {
       if (circle?.id) {
         const data = await getCheckIns(circle.id);
-        setCheckIns(data.filter((c) => c.visibility !== 'private'));
+        setPrivateCheckIns(data.filter((c) => c.visibility === 'private' && c.profile_id === profile.id));
+        setSharedCheckIns(data.filter((c) => c.visibility !== 'private'));
       }
     } catch {
-      setLoadError("We couldn't load Circle check-ins. Please try again.");
+      setLoadError("We couldn't load check-ins for this Circle. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, [circle?.id]);
+  }, [circle?.id, profile.id]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -132,33 +156,27 @@ export default function CheckInScreen({ profile, circle, onBack }: Props) {
             </div>
           )}
 
-          {circle && loading && <LoadingState message="Loading..." />}
+          {circle && loading && <LoadingState message="Loading check-ins..." />}
           {circle && !loading && loadError && <ErrorState message={loadError} onRetry={load} />}
-          {circle && !loading && !loadError && checkIns.length === 0 && (
-            <div className="mt-8">
-              <EmptyState message="No shared Circle check-ins yet." />
-            </div>
-          )}
-
-          {circle && !loading && !loadError && checkIns.length > 0 && (
+          {circle && !loading && !loadError && (
             <>
-              <p className="ui-label mt-8 mb-3">Recent Circle Check-ins</p>
-              <div className="flex flex-col gap-2">
-                {checkIns.map((c) => (
-                  <div key={c.id} className="premium-card p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-gold-500/10 text-gold-300">{c.state}</span>
-                      {c.visibility === 'leader_only' && (
-                        <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-ink-700/40 text-ivory-300 flex items-center gap-1">
-                          <Shield size={10} /> Leader Only
-                        </span>
-                      )}
-                      <span className="text-ivory-600 text-xs ml-auto">{formatRelative(c.created_at)}</span>
-                    </div>
-                    {c.note && <p className="text-ivory-300 text-sm mt-1 leading-relaxed">{c.note}</p>}
+              {privateCheckIns.length > 0 && (
+                <>
+                  <p className="ui-label mt-8 mb-3">Your Private Check-ins</p>
+                  <div className="flex flex-col gap-2">
+                    {privateCheckIns.map((c) => renderCheckIn(c, true))}
                   </div>
-                ))}
-              </div>
+                </>
+              )}
+
+              <p className="ui-label mt-8 mb-3">Recent Circle Check-ins</p>
+              {sharedCheckIns.length === 0 ? (
+                <EmptyState message="No shared Circle check-ins yet." />
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {sharedCheckIns.map((c) => renderCheckIn(c, false))}
+                </div>
+              )}
             </>
           )}
 

@@ -246,7 +246,7 @@ export async function createScriptureStudy(
   readingObjective?: string,
   meetingDate?: string,
 ): Promise<SharedScriptureStudy | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('shared_scripture_studies')
     .insert({
       circle_id: circleId,
@@ -263,7 +263,8 @@ export async function createScriptureStudy(
     })
     .select('*')
     .single();
-  return (data as SharedScriptureStudy) || null;
+  if (error) throw error;
+  return data as SharedScriptureStudy;
 }
 
 export async function getScriptureStudies(circleId: string): Promise<SharedScriptureStudy[]> {
@@ -388,12 +389,14 @@ export async function sendEncouragement(
   return data as Encouragement;
 }
 
-export async function getEncouragementsForProfile(profileId: string): Promise<Encouragement[]> {
-  const { data, error } = await supabase
+export async function getEncouragementsForProfile(profileId: string, circleId?: string): Promise<Encouragement[]> {
+  let query = supabase
     .from('encouragements')
     .select('*')
     .or(`to_profile_id.eq.${profileId},from_profile_id.eq.${profileId}`)
     .order('created_at', { ascending: false });
+  if (circleId) query = query.eq('circle_id', circleId);
+  const { data, error } = await query;
   if (error) throw error;
   return (data as Encouragement[]) ?? [];
 }

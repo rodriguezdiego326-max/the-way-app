@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Plus, BookOpen, Lock, Users, ChevronRight, Eye, EyeOff, ArrowDown } from 'lucide-react';
+import { X, Plus, BookOpen, Lock, Users, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';
+import CircleChooser from '@/components/CircleChooser';
 import {
   createScriptureStudy, getScriptureStudies, createReflection, getReflections,
 } from '@/lib/togetherEngine';
@@ -10,89 +11,120 @@ import { useKeyboardInset, revealFocusedField } from '@/hooks/useKeyboardInset';
 import type { Profile } from '@/lib/types';
 import type { Circle, SharedScriptureStudy, SharedReflection } from '@/lib/togetherTypes';
 
+export interface ScriptureResume {
+  circle: Circle;
+  study: SharedScriptureStudy;
+}
+
 interface Props {
   profile: Profile;
   circle?: Circle;
+  resume?: ScriptureResume;
   onBack: () => void;
+  onReadPassage: (reference: string, circle: Circle, study: SharedScriptureStudy) => boolean;
 }
 
-type StudyPhase = 'list' | 'open' | 'read' | 'reflect' | 'share' | 'discuss';
+type StudyPhase = 'list' | 'open' | 'read' | 'reflect' | 'discuss';
 
-export default function ScriptureTogetherScreen({ profile, circle, onBack }: Props) {
+export default function ScriptureTogetherScreen({ profile, circle, resume, onBack, onReadPassage }: Props) {
+  const [pickedCircle, setPickedCircle] = useState<Circle | null>(resume?.circle ?? null);
+  const activeCircle = circle ?? pickedCircle;
+  const activeCircleId = activeCircle?.id;
+
   const [studies, setStudies] = useState<SharedScriptureStudy[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [passage, setPassage] = useState('');
   const [objective, setObjective] = useState('');
   const [creating, setCreating] = useState(false);
-  const [activeStudy, setActiveStudy] = useState<SharedScriptureStudy | null>(null);
-  const [phase, setPhase] = useState<StudyPhase>('list');
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [activeStudy, setActiveStudy] = useState<SharedScriptureStudy | null>(resume?.study ?? null);
+  const [phase, setPhase] = useState<StudyPhase>(resume ? 'read' : 'list');
+  const [readError, setReadError] = useState<string | null>(null);
   const [reflection, setReflection] = useState('');
   const [reflectionVisibility, setReflectionVisibility] = useState<string>('private');
+  const [privateReflections, setPrivateReflections] = useState<SharedReflection[]>([]);
   const [sharedReflections, setSharedReflections] = useState<SharedReflection[]>([]);
   const [savingReflection, setSavingReflection] = useState(false);
   const [reflectionError, setReflectionError] = useState<string | null>(null);
   const [reflectionsLoadError, setReflectionsLoadError] = useState<string | null>(null);
   const keyboardInset = useKeyboardInset();
 
-  const load = useCallback(async () => {
+  const loadStudies = useCallback(async () => {
+    if (!activeCircleId) return;
     setLoading(true);
     setError(null);
     try {
-      if (circle?.id) {
-        const data = await getScriptureStudies(circle.id);
-        setStudies(data);
-      }
+      setStudies(await getScriptureStudies(activeCircleId));
     } catch {
-      setError('Could not load studies.');
+      setError("We couldn't load studies for this Circle. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, [circle?.id]);
+  }, [activeCircleId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadStudies(); }, [loadStudies]);
+
+  const loadReflections = useCallback(async (studyId: string) => {
+    setReflectionsLoadError(null);
+    try {
+      const refs = await getReflections(activeCircleId, studyId);
+      setPrivateReflections(refs.filter((r) => r.visibility === 'private' && r.profile_id === profile.id));
+      setSharedReflections(refs.filter((r) => r.visibility === 'circle'));
+    } catch {
+      setPrivateReflections([]);
+      setSharedReflections([]);
+      setReflectionsLoadError("We couldn't load reflections for this study. Please try again.");
+    }
+  }, [activeCircleId, profile.id]);
+
+  const activeStudyId = activeStudy?.id;
+  useEffect(() => {
+    if (activeStudyId) loadReflections(activeStudyId);
+  }, [activeStudyId, loadReflections]);
+
+  function openCreate() {
+    vibrate(8);
+    setCreateError(null);
+    setShowCreate(true);
+  }
 
   async function handleCreate() {
-    if (!passage.trim() || !circle) return;
+    if (!passage.trim() || !activeCircleId) return;
     vibrate(15);
     setCreating(true);
+    setCreateError(null);
     try {
-      const study = await createScriptureStudy(
-        circle.id, profile.id, passage.trim(),
-        objective.trim() || undefined,
-      );
-      if (study) {
-        setPassage(''); setObjective('');
-        setShowCreate(false);
-        await load();
-      }
+      await createScriptureStudy(activeCircleId, profile.id, passage.trim(), objective.trim() || undefined);
+      setPassage('');
+      setObjective('');
+      setShowCreate(false);
+      await loadStudies();
     } catch {
-      setError('Could not create study.');
+      setCreateError("We couldn't assign this passage. Please try again.");
     } finally {
       setCreating(false);
     }
   }
 
-  async function loadSharedReflections(studyId: string) {
-    setReflectionsLoadError(null);
-    try {
-      const refs = await getReflections(circle?.id, studyId);
-      setSharedReflections(refs.filter((r) => r.visibility === 'circle'));
-    } catch {
-      setSharedReflections([]);
-      setReflectionsLoadError("We couldn't load shared reflections. Please try again.");
-    }
-  }
-
-  async function handleOpenStudy(study: SharedScriptureStudy) {
+  function handleOpenStudy(study: SharedScriptureStudy) {
     vibrate(10);
     setActiveStudy(study);
     setPhase('open');
     setReflection('');
     setReflectionVisibility('private');
     setReflectionError(null);
-    await loadSharedReflections(study.id);
+    setReadError(null);
+  }
+
+  function handleReadPassage() {
+    if (!activeStudy || !activeCircle) return;
+    vibrate(10);
+    const opened = onReadPassage(activeStudy.passage_reference, activeCircle, activeStudy);
+    if (!opened) {
+      setReadError("We couldn't open this passage in the Bible. Check the Scripture reference and try again.");
+    }
   }
 
   async function handleSaveReflection() {
@@ -104,11 +136,11 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
       await createReflection(
         profile.id, reflection.trim(),
         reflectionVisibility,
-        circle?.id, activeStudy.id,
+        activeCircleId, activeStudy.id,
       );
       setReflection('');
       setPhase('discuss');
-      await loadSharedReflections(activeStudy.id);
+      await loadReflections(activeStudy.id);
     } catch {
       setReflectionError("We couldn't save your reflection. Please try again.");
     } finally {
@@ -126,7 +158,6 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
 
         <div className="flex-1 overflow-y-auto px-6 mt-4" style={{ paddingBottom: keyboardInset }}>
           <div className="animate-fade-in-up">
-            {/* Phase: Open */}
             {phase === 'open' && (
               <div className="text-center py-8">
                 <div className="w-16 h-16 rounded-2xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center mx-auto mb-6">
@@ -137,33 +168,32 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
                 {activeStudy.reading_objective && (
                   <p className="text-ivory-300 text-sm leading-relaxed mb-8 max-w-xs mx-auto">{activeStudy.reading_objective}</p>
                 )}
-                <button onClick={() => { vibrate(10); setPhase('read'); }} className="btn-primary">
-                  <ArrowDown size={16} /> Read
+                <button onClick={handleReadPassage} className="btn-primary">
+                  <BookOpen size={16} /> Read
                 </button>
+                {readError && <p role="alert" className="text-clay-400 text-xs mt-4">{readError}</p>}
               </div>
             )}
 
-            {/* Phase: Read */}
             {phase === 'read' && (
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-gold-400/80 font-medium mb-3">Read</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-gold-400/80 font-medium mb-3">After Reading</p>
                 <h2 className="font-serif text-3xl text-ivory-50 mb-4">{activeStudy.passage_reference}</h2>
-                <div className="premium-card p-5 mb-6">
-                  <p className="text-ivory-300 text-sm leading-relaxed">
-                    Open your Bible to {activeStudy.passage_reference}. Read the passage slowly. Let the text speak before you reflect.
-                  </p>
-                </div>
+                <p className="text-ivory-400 text-sm leading-relaxed mb-6">Let the text settle before you reflect. Your Bible opened at this passage.</p>
                 <div className="space-y-3 mb-6">
                   {activeStudy.observe_prompt && <StudyPrompt label="Observe" text={activeStudy.observe_prompt} />}
                   {activeStudy.understand_prompt && <StudyPrompt label="Understand" text={activeStudy.understand_prompt} />}
                 </div>
+                {readError && <p role="alert" className="text-clay-400 text-xs mb-3">{readError}</p>}
+                <button onClick={handleReadPassage} className="btn-secondary w-full mb-2">
+                  <BookOpen size={16} /> Open the Passage Again
+                </button>
                 <button onClick={() => { vibrate(10); setPhase('reflect'); }} className="btn-primary w-full">
-                  <ArrowDown size={16} /> Personal Reflection
+                  Personal Reflection
                 </button>
               </div>
             )}
 
-            {/* Phase: Reflect */}
             {phase === 'reflect' && (
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-gold-400/80 font-medium mb-3">Personal Reflection</p>
@@ -198,7 +228,6 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
               </div>
             )}
 
-            {/* Phase: Discuss */}
             {phase === 'discuss' && (
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-gold-400/80 font-medium mb-3">Discussion</p>
@@ -212,13 +241,14 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
                 {activeStudy.prayer_prompt && <StudyPrompt label="Pray" text={activeStudy.prayer_prompt} />}
 
                 {reflectionsLoadError && (
-                  <ErrorState message={reflectionsLoadError} onRetry={() => loadSharedReflections(activeStudy.id)} />
+                  <ErrorState message={reflectionsLoadError} onRetry={() => loadReflections(activeStudy.id)} />
                 )}
-                {!reflectionsLoadError && sharedReflections.length > 0 && (
+                {!reflectionsLoadError && privateReflections.length > 0 && (
                   <>
-                    <p className="ui-label mt-6 mb-3">Shared Reflections</p>
+                    <p className="ui-label mt-6 mb-1">Your Private Reflection</p>
+                    <p className="text-ivory-600 text-xs mb-3">Only you can see this.</p>
                     <div className="space-y-2">
-                      {sharedReflections.map((r) => (
+                      {privateReflections.map((r) => (
                         <div key={r.id} className="premium-card p-3">
                           <p className="text-ivory-300 text-sm leading-relaxed">{r.body}</p>
                           <p className="text-ivory-600 text-xs mt-2">{formatRelative(r.created_at)}</p>
@@ -227,10 +257,24 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
                     </div>
                   </>
                 )}
-                {!reflectionsLoadError && sharedReflections.length === 0 && (
-                  <div className="premium-card p-4 mt-4 text-center">
-                    <p className="text-ivory-500 text-xs">No one has shared a reflection yet. You encounter Scripture before seeing others' responses.</p>
-                  </div>
+                {!reflectionsLoadError && (
+                  <>
+                    <p className="ui-label mt-6 mb-3">Shared Reflections</p>
+                    {sharedReflections.length > 0 ? (
+                      <div className="space-y-2">
+                        {sharedReflections.map((r) => (
+                          <div key={r.id} className="premium-card p-3">
+                            <p className="text-ivory-300 text-sm leading-relaxed">{r.body}</p>
+                            <p className="text-ivory-600 text-xs mt-2">{formatRelative(r.created_at)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="premium-card p-4 text-center">
+                        <p className="text-ivory-500 text-xs">No one has shared a reflection yet. You encounter Scripture before seeing others' responses.</p>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {activeStudy.go_deeper_prompt && (
@@ -251,8 +295,7 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
       <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
         <button onClick={onBack} className="btn-ghost"><X size={20} /></button>
         <p className="ui-label">Scripture Together</p>
-        {circle && <button onClick={() => { vibrate(8); setShowCreate(true); }} className="btn-ghost"><Plus size={18} /></button>}
-        {!circle && <span className="w-10" />}
+        {activeCircle ? <button onClick={openCreate} className="btn-ghost"><Plus size={18} /></button> : <span className="w-10" />}
       </header>
 
       <div className="flex-1 overflow-y-auto px-6 mt-4">
@@ -267,27 +310,49 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
             </div>
           </div>
 
-          {loading && <LoadingState message="Loading studies..." />}
-          {error && <ErrorState message={error} onRetry={load} />}
-          {!loading && !error && studies.length === 0 && (
-            <EmptyState message={circle ? 'No studies assigned yet. Tap + to assign a passage.' : 'Open a Circle to start a group study.'} />
+          {!activeCircle && (
+            <>
+              <p className="ui-label mb-3">Choose a Circle</p>
+              <CircleChooser
+                profile={profile}
+                emptyMessage="Join or create a Circle to study Scripture together."
+                onChoose={setPickedCircle}
+                onBack={onBack}
+              />
+            </>
           )}
 
-          {!loading && !error && studies.length > 0 && (
-            <div className="flex flex-col gap-2">
-              {studies.map((s) => (
-                <button key={s.id} onClick={() => handleOpenStudy(s)} className="premium-card p-4 flex items-center gap-3 text-left no-tap-highlight hover:border-gold-500/30 transition-all duration-300 group">
-                  <div className="w-9 h-9 rounded-lg bg-ink-700/50 flex items-center justify-center shrink-0">
-                    <BookOpen size={16} className="text-ivory-400 group-hover:text-gold-300 transition-colors" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-ivory-100 font-medium text-sm font-serif">{s.passage_reference}</p>
-                    <p className="text-ivory-600 text-xs">{formatRelative(s.created_at)}</p>
-                  </div>
-                  <ChevronRight size={16} className="text-ivory-600 shrink-0" />
-                </button>
-              ))}
-            </div>
+          {activeCircle && (
+            <>
+              {!circle && (
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-ivory-400 text-sm">Studying with {activeCircle.name}</p>
+                  <button onClick={() => { vibrate(6); setPickedCircle(null); }} className="text-gold-300 text-xs font-medium">Change Circle</button>
+                </div>
+              )}
+              {loading && <LoadingState message="Loading studies..." />}
+              {error && <ErrorState message={error} onRetry={loadStudies} />}
+              {!loading && !error && studies.length === 0 && (
+                <EmptyState message="No studies assigned yet. Tap + to assign a passage." />
+              )}
+
+              {!loading && !error && studies.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {studies.map((s) => (
+                    <button key={s.id} onClick={() => handleOpenStudy(s)} className="premium-card p-4 flex items-center gap-3 text-left no-tap-highlight hover:border-gold-500/30 transition-all duration-300 group">
+                      <div className="w-9 h-9 rounded-lg bg-ink-700/50 flex items-center justify-center shrink-0">
+                        <BookOpen size={16} className="text-ivory-400 group-hover:text-gold-300 transition-colors" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-ivory-100 font-medium text-sm font-serif">{s.passage_reference}</p>
+                        <p className="text-ivory-600 text-xs">{formatRelative(s.created_at)}</p>
+                      </div>
+                      <ChevronRight size={16} className="text-ivory-600 shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
           <div className="flex items-start gap-2 mt-5 px-1">
@@ -299,7 +364,7 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
         </div>
       </div>
 
-      {showCreate && circle && (
+      {showCreate && activeCircle && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm transition-[padding] duration-200" style={{ paddingBottom: keyboardInset }} onClick={() => setShowCreate(false)}>
           <div className="w-full max-w-md bg-ink-900 rounded-t-3xl p-6 animate-fade-in-up max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
@@ -309,6 +374,7 @@ export default function ScriptureTogetherScreen({ profile, circle, onBack }: Pro
             <div className="flex flex-col gap-4">
               <input value={passage} onChange={(e) => setPassage(e.target.value)} onFocus={revealFocusedField} placeholder="Romans 8:1–17" className="input-field" autoFocus />
               <textarea value={objective} onChange={(e) => setObjective(e.target.value)} onFocus={revealFocusedField} placeholder="Reading objective (optional)" className="input-field min-h-[60px] resize-none text-sm" />
+              {createError && <p role="alert" className="text-clay-400 text-xs">{createError}</p>}
               <button onClick={handleCreate} disabled={creating || !passage.trim()} className="btn-primary w-full disabled:opacity-40">
                 <Plus size={16} /> {creating ? 'Creating...' : 'Assign Study'}
               </button>
