@@ -119,7 +119,7 @@ export type Overlay =
   | { type: 'prayer_together'; circle?: Circle }
   | { type: 'scripture_together'; circle?: Circle; resume?: ScriptureResume }
   | { type: 'check_in'; circle?: Circle }
-  | { type: 'encouragement'; circle?: Circle }
+  | { type: 'encouragement'; circle?: Circle; pickedCircle?: Circle }
   | { type: 'accountability'; circle?: Circle }
   | { type: 'my_church' }
   | { type: 'sunday_mode' }
@@ -683,7 +683,17 @@ export default function App() {
   }
 
   if (overlay.type === 'encouragement' && profile) {
-    return <ErrorBoundary><EncouragementScreen profile={profile} circle={overlay.circle} onBack={() => setOverlay(overlay.circle ? { type: 'circle_home', circle: overlay.circle } : { type: 'together' })} /></ErrorBoundary>;
+    return (
+      <ErrorBoundary>
+        <EncouragementScreen
+          profile={profile}
+          circle={overlay.circle}
+          initialPickedCircle={overlay.pickedCircle}
+          onBack={() => setOverlay(overlay.circle ? { type: 'circle_home', circle: overlay.circle } : { type: 'together' })}
+          onOpenScripture={(reference, pickedCircle) => handleOpenDiscussionScripture(reference, { type: 'encouragement', circle: overlay.circle, pickedCircle })}
+        />
+      </ErrorBoundary>
+    );
   }
 
   if (overlay.type === 'accountability' && profile) {
