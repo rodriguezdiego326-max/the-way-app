@@ -197,7 +197,7 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
           <p className="ui-label">Create Family</p>
           <span className="w-10" />
         </header>
-        <div className="flex-1 px-6 py-6 animate-fade-in">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 py-6 animate-fade-in">
           <div className="flex flex-col gap-5">
             <div>
               <label className="text-sm text-ivory-400 mb-2 block">Family Name (optional)</label>
