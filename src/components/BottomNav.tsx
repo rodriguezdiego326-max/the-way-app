@@ -6,6 +6,7 @@ export type Tab = 'today' | 'bible' | 'ask' | 'prayer' | 'explore';
 interface BottomNavProps {
   active: Tab;
   onChange: (tab: Tab) => void;
+  badges?: Partial<Record<Tab, number>>;
 }
 
 const tabs: { id: Tab; label: string; icon: typeof Home }[] = [
@@ -16,13 +17,14 @@ const tabs: { id: Tab; label: string; icon: typeof Home }[] = [
   { id: 'explore', label: 'Explore', icon: Compass },
 ];
 
-export default function BottomNav({ active, onChange }: BottomNavProps) {
+export default function BottomNav({ active, onChange, badges }: BottomNavProps) {
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-50 safe-bottom">
       <div className="mx-2 mb-2 rounded-3xl bg-ink-850/90 backdrop-blur-2xl border border-ink-700/50 shadow-2xl shadow-stone-900/15">
         <div className="flex items-stretch px-2 py-1.5">
           {tabs.map(({ id, label, icon: Icon }) => {
             const isActive = active === id;
+            const badge = badges?.[id] ?? 0;
             return (
               <button
                 key={id}
@@ -48,6 +50,14 @@ export default function BottomNav({ active, onChange }: BottomNavProps) {
                   />
                   {isActive && (
                     <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-gold-400 animate-fade-in" />
+                  )}
+                  {badge > 0 && (
+                    <span
+                      aria-label={`${badge} unread`}
+                      className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-gold-400 text-ink-950 text-[10px] font-semibold leading-[18px] text-center animate-fade-in"
+                    >
+                      {badge > 99 ? '99+' : badge}
+                    </span>
                   )}
                 </div>
                 <span

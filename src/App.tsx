@@ -38,6 +38,7 @@ function getInitialTranslation(): BibleTranslation {
 
 // Phase 8 imports
 import TogetherScreen from '@/screens/TogetherScreen';
+import ActivityScreen from '@/screens/ActivityScreen';
 import JoinCircleScreen from '@/screens/JoinCircleScreen';
 import CircleHomeScreen from '@/screens/CircleHomeScreen';
 import CircleSermonDiscussionsScreen from '@/screens/CircleSermonDiscussionsScreen';
@@ -65,6 +66,9 @@ import ManageChurchStudiesScreen from '@/screens/ManageChurchStudiesScreen';
 import SmallGroupModeScreen from '@/screens/SmallGroupModeScreen';
 import ChurchPrayerScreen from '@/screens/ChurchPrayerScreen';
 import type { Circle, CircleSermonDiscussion, Sermon } from '@/lib/togetherTypes';
+import type { ActivityItem } from '@/lib/activityTypes';
+import { loadCircleForActivity, resolveActivityDestination } from '@/lib/activityRouter';
+import { useActivityUnread } from '@/hooks/useActivityUnread';
 import type { ScriptureResume } from '@/screens/ScriptureTogetherScreen';
 import type { FamilySermonDiscussion } from '@/lib/familyTypes';
 
@@ -111,6 +115,7 @@ export type Overlay =
   | { type: 'production_status' }
   // Phase 8 overlays
   | { type: 'together' }
+  | { type: 'activity' }
   | { type: 'together_join_code' }
   | { type: 'circle_home'; circle: Circle }
   | { type: 'circle_sermon_discussions'; circle: Circle }
@@ -182,6 +187,7 @@ export default function App() {
     return () => window.removeEventListener(OPEN_SERMON_RECORDER_EVENT, openRecorder);
   }, []);
   const [session, setSession] = useState<{ user: { id: string; email?: string } | null } | null>(null);
+  const { counts: activityCounts, refresh: refreshActivity } = useActivityUnread(session?.user?.id ?? null);
   const [authLoading, setAuthLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
   const [askContext, setAskContext] = useState<string | AskHandoffContext | ChildAskedHandoff | SermonAskHandoff | null>(null);
@@ -256,6 +262,21 @@ export default function App() {
     });
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  async function handleOpenActivity(item: ActivityItem) {
+    const destination = resolveActivityDestination(item);
+    if (!destination) return;
+    if (destination.kind === 'family') {
+      setOverlay({ type: 'family' });
+      return;
+    }
+    try {
+      const circle = await loadCircleForActivity(destination.circleId);
+      if (circle) setOverlay({ type: 'circle_home', circle });
+    } catch {
+      // Stay on the Activity feed if the Circle cannot be loaded.
+    }
+  }
 
   async function handleSignOut() {
     authGenerationRef.current++;
@@ -554,6 +575,7 @@ export default function App() {
               setOverlay({ type: 'none' });
               setActiveTab(tab);
             }}
+            badges={{ explore: activityCounts?.total ?? 0 }}
           />
         </>
       </ErrorBoundary>
@@ -580,6 +602,19 @@ export default function App() {
   }
 
   // Phase 8 overlays
+  if (overlay.type === 'activity' && session?.user?.id) {
+    return (
+      <ErrorBoundary>
+        <ActivityScreen
+          userId={session.user.id}
+          onBack={() => setOverlay({ type: 'none' })}
+          onOpenItem={handleOpenActivity}
+          onReadStateChanged={refreshActivity}
+        />
+      </ErrorBoundary>
+    );
+  }
+
   if (overlay.type === 'together' && profile) {
     return (
       <ErrorBoundary>
@@ -921,9 +956,9 @@ export default function App() {
       {activeTab === 'ask' && <AskScreen theologicalDepth={profile?.theological_depth || 'simple'} profile={profile} onProfileUpdate={handleProfileUpdate} onOpenBibleReference={handleOpenBibleReference} initialContext={askContext} onContextConsumed={() => setAskContext(null)} onKeyboardVisibilityChange={setAskKeyboardOpen} activeConversationId={activeAskConversationId} onConversationChange={setActiveAskConversationId} translation={globalTranslation} onTranslationChange={handleTranslationChange} onBackToFamily={() => setOverlay({ type: 'family' })} onBackToSermon={sermonAskRecordingId ? () => setOverlay({ type: 'sermon_recording_detail', recordingId: sermonAskRecordingId, fresh: false, interrupted: false, initialView: 'insights' }) : undefined} />}
 
       {activeTab === 'prayer' && <PrayerScreen profile={profile} />}
-      {activeTab === 'explore' && <YouScreen profile={profile} onProfileUpdate={handleProfileUpdate} session={session} onSignOut={handleSignOut} onOpenFamily={() => setOverlay({ type: 'family' })} onOpenReach={() => setOverlay({ type: 'reach' })} onOpenLibrarySearch={() => setOverlay({ type: 'library_search' })} onOpenTogether={() => setOverlay({ type: 'together' })} onOpenMyChurch={() => setOverlay({ type: 'my_church' })} onOpenLegacy={() => setOverlay({ type: 'legacy_home' })} onOpenPrivacyCenter={() => setOverlay({ type: 'privacy_center' })} onOpenBetaFeedback={() => setOverlay({ type: 'beta_feedback' })} {...(import.meta.env.DEV ? { onOpenAdminSources: () => setOverlay({ type: 'admin_sources' }), onOpenRetrievalDebug: () => setOverlay({ type: 'retrieval_debug' }), onOpenRAGTests: () => setOverlay({ type: 'rag_tests' }), onOpenPhase6Tests: () => setOverlay({ type: 'phase6_tests' }), onOpenQADashboard: () => setOverlay({ type: 'qa_dashboard' }), onOpenSourceBatches: () => setOverlay({ type: 'source_batches' }), onOpenReleaseGate: () => setOverlay({ type: 'release_gate' }), onOpenProductionStatus: () => setOverlay({ type: 'production_status' }), onOpenPhase8Tests: () => setOverlay({ type: 'phase8_tests' }), onOpenPhase9Tests: () => setOverlay({ type: 'phase9_tests' }), onOpenProductionReadiness: () => setOverlay({ type: 'production_readiness' }), onOpenPhase10Tests: () => setOverlay({ type: 'phase10_tests' }) } : {})} />}
+      {activeTab === 'explore' && <YouScreen profile={profile} onProfileUpdate={handleProfileUpdate} session={session} onSignOut={handleSignOut} onOpenFamily={() => setOverlay({ type: 'family' })} onOpenReach={() => setOverlay({ type: 'reach' })} onOpenLibrarySearch={() => setOverlay({ type: 'library_search' })} onOpenTogether={() => setOverlay({ type: 'together' })} onOpenActivity={() => setOverlay({ type: 'activity' })} activityCounts={activityCounts} onOpenMyChurch={() => setOverlay({ type: 'my_church' })} onOpenLegacy={() => setOverlay({ type: 'legacy_home' })} onOpenPrivacyCenter={() => setOverlay({ type: 'privacy_center' })} onOpenBetaFeedback={() => setOverlay({ type: 'beta_feedback' })} {...(import.meta.env.DEV ? { onOpenAdminSources: () => setOverlay({ type: 'admin_sources' }), onOpenRetrievalDebug: () => setOverlay({ type: 'retrieval_debug' }), onOpenRAGTests: () => setOverlay({ type: 'rag_tests' }), onOpenPhase6Tests: () => setOverlay({ type: 'phase6_tests' }), onOpenQADashboard: () => setOverlay({ type: 'qa_dashboard' }), onOpenSourceBatches: () => setOverlay({ type: 'source_batches' }), onOpenReleaseGate: () => setOverlay({ type: 'release_gate' }), onOpenProductionStatus: () => setOverlay({ type: 'production_status' }), onOpenPhase8Tests: () => setOverlay({ type: 'phase8_tests' }), onOpenPhase9Tests: () => setOverlay({ type: 'phase9_tests' }), onOpenProductionReadiness: () => setOverlay({ type: 'production_readiness' }), onOpenPhase10Tests: () => setOverlay({ type: 'phase10_tests' }) } : {})} />}
 
-      {!(activeTab === 'ask' && askKeyboardOpen) && <BottomNav active={activeTab} onChange={setActiveTab} />}
+      {!(activeTab === 'ask' && askKeyboardOpen) && <BottomNav active={activeTab} onChange={setActiveTab} badges={{ explore: activityCounts?.total ?? 0 }} />}
     </>
     </ErrorBoundary>
   );

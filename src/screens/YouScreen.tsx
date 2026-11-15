@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Brain, Heart, Users, Church, Settings, ChevronRight, Trash2, Eye, EyeOff, X, ShieldCheck, Sparkles, Landmark, FlaskConical, Search, Shield, BarChart3, Package, Cpu, BookHeart, MessageSquare } from 'lucide-react';
+import { Brain, Heart, Users, Church, Settings, ChevronRight, Trash2, Eye, EyeOff, X, ShieldCheck, Sparkles, Landmark, FlaskConical, Search, Shield, BarChart3, Package, Cpu, BookHeart, MessageSquare, Bell } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import type { UnreadCounts } from '@/lib/activityEngine';
 import { vibrate, formatDate } from '@/lib/utils';
 import DeleteAllMemoriesDialog from '@/components/DeleteAllMemoriesDialog';
 const TestSuite = import.meta.env.DEV ? lazy(() => import('@/screens/TestSuite')) : null;
@@ -21,6 +22,8 @@ interface YouScreenProps {
   onOpenReleaseGate?: () => void;
   onOpenProductionStatus?: () => void;
   onOpenTogether: () => void;
+  onOpenActivity: () => void;
+  activityCounts: UnreadCounts | null;
   onOpenMyChurch: () => void;
   onOpenPhase8Tests?: () => void;
   onOpenLegacy: () => void;
@@ -41,7 +44,7 @@ const depthLabels: Record<TheologicalDepth, string> = {
   deep_study: 'Deep Study',
 };
 
-export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOpenReach, onOpenLibrarySearch, onOpenAdminSources, onOpenRetrievalDebug, onOpenRAGTests, onOpenPhase6Tests, onOpenQADashboard, onOpenSourceBatches, onOpenReleaseGate, onOpenProductionStatus, onOpenTogether, onOpenMyChurch, onOpenPhase8Tests, onOpenLegacy, onOpenPhase9Tests, onOpenPrivacyCenter, onOpenProductionReadiness, onOpenPhase10Tests, onOpenBetaFeedback, session, onSignOut }: YouScreenProps) {
+export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOpenReach, onOpenLibrarySearch, onOpenAdminSources, onOpenRetrievalDebug, onOpenRAGTests, onOpenPhase6Tests, onOpenQADashboard, onOpenSourceBatches, onOpenReleaseGate, onOpenProductionStatus, onOpenTogether, onOpenActivity, activityCounts, onOpenMyChurch, onOpenPhase8Tests, onOpenLegacy, onOpenPhase9Tests, onOpenPrivacyCenter, onOpenProductionReadiness, onOpenPhase10Tests, onOpenBetaFeedback, session, onSignOut }: YouScreenProps) {
   const [subView, setSubView] = useState<SubView>('main');
   const [memories, setMemories] = useState<Memory[]>([]);
   const [confirmDeleteAllOpen, setConfirmDeleteAllOpen] = useState(false);
@@ -416,12 +419,13 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
         <p className="ui-label mb-3">Journey</p>
         <div className="flex flex-col gap-2">
           {[
-            { icon: Brain, label: 'Theological Learning', desc: 'Doctrine and depth', onClick: () => setSubView('library') },
-            { icon: Users, label: 'Together', desc: 'Walk with other believers', onClick: onOpenTogether },
-            { icon: Church, label: 'My Church', desc: 'Strengthen your local church', onClick: onOpenMyChurch },
-            { icon: BookHeart, label: 'Legacy', desc: 'Remember God\'s faithfulness', onClick: onOpenLegacy },
-            { icon: Users, label: 'Family Discipleship', desc: 'SOLAPATH Family', onClick: onOpenFamily },
-            { icon: Heart, label: 'Reach & Evangelism', desc: 'Share Christ faithfully', onClick: onOpenReach },
+            { icon: Bell, label: 'Activity', desc: 'Updates from your Family and Circles', onClick: onOpenActivity, badge: activityCounts?.total ?? 0 },
+            { icon: Brain, label: 'Theological Learning', desc: 'Doctrine and depth', onClick: () => setSubView('library'), badge: 0 },
+            { icon: Users, label: 'Together', desc: 'Walk with other believers', onClick: onOpenTogether, badge: activityCounts?.circle ?? 0 },
+            { icon: Church, label: 'My Church', desc: 'Strengthen your local church', onClick: onOpenMyChurch, badge: 0 },
+            { icon: BookHeart, label: 'Legacy', desc: 'Remember God\'s faithfulness', onClick: onOpenLegacy, badge: 0 },
+            { icon: Users, label: 'Family Discipleship', desc: 'SOLAPATH Family', onClick: onOpenFamily, badge: activityCounts?.family ?? 0 },
+            { icon: Heart, label: 'Reach & Evangelism', desc: 'Share Christ faithfully', onClick: onOpenReach, badge: 0 },
           ].map((item) => (
             <button
               key={item.label}
@@ -435,6 +439,11 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
                 <p className="text-ivory-100 font-medium text-sm">{item.label}</p>
                 <p className="text-ivory-600 text-xs">{item.desc}</p>
               </div>
+              {item.badge > 0 && (
+                <span aria-label={`${item.badge} unread`} className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-gold-400 text-ink-950 text-[11px] font-semibold leading-[22px] text-center shrink-0">
+                  {item.badge > 99 ? '99+' : item.badge}
+                </span>
+              )}
               <ChevronRight size={16} className="text-ivory-600 shrink-0" />
             </button>
           ))}
