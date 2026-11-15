@@ -5,6 +5,7 @@ import { vibrate } from '@/lib/utils';
 import { createLegacyEvent } from '@/lib/legacyEngine';
 import PrayerDetailScreen from '@/screens/PrayerDetailScreen';
 import { formatPrayerDate, getPrayerCopy, getPrayerLang } from '@/lib/prayerCopy';
+import PullToRefresh from '@/components/PullToRefresh';
 import type { Prayer, PrayerSession, PrayerStatus, Profile } from '@/lib/types';
 
 type Tab = 'active' | 'faithfulness';
@@ -36,39 +37,46 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadPrayers();
+    setLoading(true);
+    fetchPrayerData()
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  async function loadPrayers() {
-    setLoading(true);
-    const { data } = await supabase
+  async function fetchPrayerData() {
+    const { data, error } = await supabase
       .from('prayers')
       .select('*')
       .order('created_at', { ascending: false });
+    if (error) throw error;
 
     const prayerList = (data as Prayer[]) || [];
     setPrayers(prayerList);
-    setLoading(false);
-
-    if (prayerList.length > 0) {
-      const [{ data: updatesData }, { data: sessionsData }] = await Promise.all([
-        supabase.from('prayer_updates').select('prayer_id'),
-        supabase.from('prayer_sessions').select('prayer_id, prayed_at'),
-      ]);
-
-      const counts: Record<string, number> = {};
-      for (const row of (updatesData as { prayer_id: string }[]) || []) {
-        counts[row.prayer_id] = (counts[row.prayer_id] || 0) + 1;
-      }
-      setUpdateCounts(counts);
-
-      const lastPrayed: Record<string, string> = {};
-      for (const row of (sessionsData as Pick<PrayerSession, 'prayer_id' | 'prayed_at'>[]) || []) {
-        const current = lastPrayed[row.prayer_id];
-        if (!current || row.prayed_at > current) lastPrayed[row.prayer_id] = row.prayed_at;
-      }
-      setLastPrayedAt(lastPrayed);
+    if (prayerList.length === 0) {
+      setUpdateCounts({});
+      setLastPrayedAt({});
+      return;
     }
+
+    const [updatesResult, sessionsResult] = await Promise.all([
+      supabase.from('prayer_updates').select('prayer_id'),
+      supabase.from('prayer_sessions').select('prayer_id, prayed_at'),
+    ]);
+    if (updatesResult.error) throw updatesResult.error;
+    if (sessionsResult.error) throw sessionsResult.error;
+
+    const counts: Record<string, number> = {};
+    for (const row of (updatesResult.data as { prayer_id: string }[]) || []) {
+      counts[row.prayer_id] = (counts[row.prayer_id] || 0) + 1;
+    }
+    setUpdateCounts(counts);
+
+    const lastPrayed: Record<string, string> = {};
+    for (const row of (sessionsResult.data as Pick<PrayerSession, 'prayer_id' | 'prayed_at'>[]) || []) {
+      const current = lastPrayed[row.prayer_id];
+      if (!current || row.prayed_at > current) lastPrayed[row.prayer_id] = row.prayed_at;
+    }
+    setLastPrayedAt(lastPrayed);
   }
 
   async function createPrayer() {
@@ -292,7 +300,8 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
 
   // Main prayer list
   return (
-    <div className="app-container bg-ink-950 bg-parchment min-h-screen nav-safe-padding">
+    <div className="app-container bg-ink-950 bg-parchment h-[100dvh] flex flex-col overflow-hidden">
+    <PullToRefresh onRefresh={fetchPrayerData} className="flex-1 min-h-0 nav-safe-padding">
       <header className="px-6 pt-14 safe-top">
         <h1 className="font-serif text-4xl text-ivory-50 tracking-tight animate-fade-in-down">{copy.pageTitle}</h1>
       </header>
@@ -397,6 +406,7 @@ export default function PrayerScreen({ profile }: { profile?: Profile | null }) 
           )}
         </div>
       )}
+    </PullToRefresh>
     </div>
   );
 }

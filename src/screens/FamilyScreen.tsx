@@ -20,6 +20,7 @@ import FamilyAdultsPanel from '@/components/family/FamilyAdultsPanel';
 import FamilyInviteAdult from '@/components/family/FamilyInviteAdult';
 import FamilyJoinForm from '@/components/family/FamilyJoinForm';
 import { createFamilyProfile, familyErrorMessage } from '@/lib/familyAccountEngine';
+import PullToRefresh from '@/components/PullToRefresh';
 
 type SubView = 'main' | 'walk' | 'child_asked' | 'catechism' | 'journey' | 'parent_guide' | 'family_prayer' | 'invite_adult' | 'join';
 
@@ -60,38 +61,44 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
   async function loadFamilyData() {
     setLoading(true);
     setFamilyLoadError(false);
+    try {
+      await fetchFamilyData();
+    } catch (e) {
+      console.error('[SOLAPATH] Error loading family data:', e instanceof Error ? e.message : e);
+      setFamilyLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function fetchFamilyData() {
     const { data: profile, error } = await supabase
       .from('family_profiles')
       .select('*')
       .order('created_at', { ascending: false })
       .maybeSingle();
+    if (error) throw error;
+    if (!profile) return;
 
-    if (error) {
-      console.error('[SOLAPATH] Error loading family profile:', error.message);
-      setFamilyLoadError(true);
-    }
+    setFamilyProfile(profile as FamilyProfile);
+    const { data: membs, error: membersError } = await supabase
+      .from('family_members')
+      .select('*')
+      .eq('family_profile_id', profile.id)
+      .order('created_at', { ascending: true });
+    if (membersError) throw membersError;
+    setMembers((membs as FamilyMember[]) || []);
 
-    if (profile) {
-      setFamilyProfile(profile as FamilyProfile);
-      const { data: membs } = await supabase
-        .from('family_members')
-        .select('*')
-        .eq('family_profile_id', profile.id)
-        .order('created_at', { ascending: true });
-      setMembers((membs as FamilyMember[]) || []);
+    const { data: recentWalks, error: walksError } = await supabase
+      .from('family_walks')
+      .select('topic')
+      .eq('family_profile_id', profile.id)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    if (walksError) throw walksError;
 
-      // Get recent walk topics for continuity
-      const { data: recentWalks } = await supabase
-        .from('family_walks')
-        .select('topic')
-        .eq('family_profile_id', profile.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      const rec = recommendFamilyWalk((recentWalks as { topic: string }[])?.map((w) => w.topic) || []);
-      setWalkRec(rec);
-    }
-    setLoading(false);
+    const rec = recommendFamilyWalk((recentWalks as { topic: string }[])?.map((w) => w.topic) || []);
+    setWalkRec(rec);
   }
 
   async function createFamily() {
@@ -285,7 +292,8 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
 
   // MAIN VIEW
   return (
-    <div className="app-container bg-ink-950 bg-parchment min-h-screen nav-safe-padding">
+    <div className="app-container bg-ink-950 bg-parchment h-[100dvh] flex flex-col overflow-hidden">
+    <PullToRefresh onRefresh={fetchFamilyData} className="flex-1 min-h-0 nav-safe-padding">
       <header className="px-6 pt-14 safe-top">
         <div className="flex items-center justify-between">
           <button onClick={onClose} className="btn-ghost" aria-label="Close Family">
@@ -553,6 +561,7 @@ Family Prayer, Journey, Catechism, Walks, and Sermon Discussions are shared with
           </section>
         </div>
       )}
+    </PullToRefresh>
     </div>
   );
 }
