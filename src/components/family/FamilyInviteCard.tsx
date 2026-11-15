@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Check, Copy, Share2, Trash2 } from 'lucide-react';
+import { Check, Copy, Link, Share2, Trash2 } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import type { FamilyInvitation } from '@/lib/familyAccountEngine';
-import { copyFamilyInviteCode, formatInviteExpiry, shareFamilyInvite } from '@/lib/familyInviteShare';
+import { copyFamilyInviteCode, copyFamilyInviteLink, formatInviteExpiry, shareFamilyInvite } from '@/lib/familyInviteShare';
 
 interface FamilyInviteCardProps {
   invitation: FamilyInvitation;
@@ -20,6 +20,7 @@ export default function FamilyInviteCard({
   onRevoke,
 }: FamilyInviteCardProps) {
   const [copied, setCopied] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,12 +29,23 @@ export default function FamilyInviteCard({
     return () => window.clearTimeout(timer);
   }, [copied]);
 
-  async function handleCopy() {
+  async function handleCopyLink() {
+    vibrate(8);
+    setActionError(null);
+    try {
+      await copyFamilyInviteLink(invitation.invite_code);
+      setCopied(true);
+    } catch {
+      setActionError('We could not copy the link. Copy the code instead.');
+    }
+  }
+
+  async function handleCopyCode() {
     vibrate(8);
     setActionError(null);
     try {
       await copyFamilyInviteCode(invitation.invite_code);
-      setCopied(true);
+      setCopiedCode(true);
     } catch {
       setActionError('We could not copy the code. Select it and copy it manually.');
     }
@@ -63,14 +75,18 @@ export default function FamilyInviteCard({
         </p>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <button onClick={handleCopy} className="btn-secondary w-full">
-          {copied ? <Check size={16} /> : <Copy size={16} />}
-          {copied ? 'Copied' : 'Copy Code'}
+        <button onClick={handleCopyLink} className="btn-secondary w-full">
+          {copied ? <Check size={16} /> : <Link size={16} />}
+          {copied ? 'Link Copied' : 'Copy Invite Link'}
         </button>
         <button onClick={handleShare} className="btn-secondary w-full">
           <Share2 size={16} /> {shareLabel}
         </button>
       </div>
+      <button onClick={handleCopyCode} className="text-ivory-400 text-xs font-medium min-h-[44px] flex items-center justify-center gap-2">
+        {copiedCode ? <Check size={14} /> : <Copy size={14} />}
+        {copiedCode ? 'Code copied' : 'Copy Code'}
+      </button>
       <button
         onClick={() => {
           vibrate(8);

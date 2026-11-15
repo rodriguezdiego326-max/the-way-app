@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Copy, Share2, Ban, Check } from 'lucide-react';
+import { Link, Share2, Ban, Check } from 'lucide-react';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';
 import { getPendingCircleInvitations, revokeCircleInvitation } from '@/lib/togetherEngine';
 import { vibrate } from '@/lib/utils';
 import type { CircleInvitation } from '@/lib/togetherTypes';
 import CircleConfirmDialog from './CircleConfirmDialog';
-import { formatInviteCreated, formatInviteExpiry, shareInvitation } from './circleInviteFormat';
+import { copyCircleInviteLink, formatInviteCreated, formatInviteExpiry, shareInvitation } from './circleInviteFormat';
 
 interface Props {
   circleId: string;
@@ -40,11 +40,11 @@ export default function PendingInvitationsList({ circleId, circleName, refreshKe
   async function handleCopy(inv: CircleInvitation) {
     vibrate(8);
     try {
-      await navigator.clipboard.writeText(inv.invite_code);
+      await copyCircleInviteLink(inv.invite_code);
       setCopiedId(inv.id);
       setTimeout(() => setCopiedId((current) => (current === inv.id ? null : current)), 2000);
     } catch {
-      setShareError('Could not copy the code. Select it and copy it manually.');
+      setShareError('Could not copy the link. Select the code and copy it manually.');
     }
   }
 
@@ -97,7 +97,7 @@ export default function PendingInvitationsList({ circleId, circleName, refreshKe
               <p className="font-mono text-gold-300 tracking-wider text-base break-all select-all mb-3">{inv.invite_code}</p>
               <div className="flex items-center gap-2">
                 <button onClick={() => handleCopy(inv)} className="btn-secondary text-xs flex-1">
-                  {copiedId === inv.id ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
+                  {copiedId === inv.id ? <><Check size={12} /> Link Copied</> : <><Link size={12} /> Copy Invite Link</>}
                 </button>
                 <button onClick={() => handleShareAgain(inv)} className="btn-secondary text-xs flex-1">
                   <Share2 size={12} /> Share Again

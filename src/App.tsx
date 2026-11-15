@@ -23,6 +23,8 @@ import BrandMark from '@/components/BrandMark';
 import type { BibleTranslation } from '@/lib/bibleTypes';
 import type { AskHandoffContext, ChildAskedHandoff, SermonAskHandoff } from '@/lib/askHandoff';
 import { OPEN_SERMON_RECORDER_EVENT } from '@/hooks/sermonRecordingContext';
+import InviteRoutePreview from '@/components/invite/InviteRoutePreview';
+import { clearPendingInvite, loadInviteRoute, startInviteLinkListener, type InviteRoute } from '@/lib/inviteRouter';
 
 const DevOverlayRenderer = import.meta.env.DEV
   ? lazy(() => import('@/components/DevOverlayRenderer'))
@@ -170,6 +172,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('today');
   const [profile, setProfile] = useState<Profile | null>(null);
   const [overlay, setOverlay] = useState<Overlay>({ type: 'none' });
+  const [inviteRoute, setInviteRoute] = useState<InviteRoute | null>(loadInviteRoute);
+
+  useEffect(() => startInviteLinkListener(setInviteRoute), []);
 
   useEffect(() => {
     const openRecorder = () => setOverlay({ type: 'sermon_recording' });
@@ -244,6 +249,7 @@ export default function App() {
         setAuthLoading(false);
         setOverlay({ type: 'none' });
         setActiveTab('today');
+        setInviteRoute(loadInviteRoute());
         return;
       }
       setSession(s as typeof session);
@@ -259,6 +265,7 @@ export default function App() {
     setProfile(null);
     setOverlay({ type: 'none' });
     setActiveTab('today');
+    setInviteRoute(loadInviteRoute());
     await supabase.auth.signOut();
   }
 
@@ -395,6 +402,30 @@ export default function App() {
 
   if (appState === 'onboarding') {
     return <Onboarding onComplete={handleOnboardingComplete} saving={onboardingSaving} error={onboardingError} />;
+  }
+
+  if (inviteRoute && profile) {
+    return (
+      <ErrorBoundary>
+        <InviteRoutePreview
+          route={inviteRoute}
+          onTerminal={clearPendingInvite}
+          onClose={() => setInviteRoute(null)}
+          onOpenFamily={() => {
+            setInviteRoute(null);
+            setOverlay({ type: 'family' });
+          }}
+          onOpenCircle={(circle) => {
+            setInviteRoute(null);
+            setOverlay({ type: 'circle_home', circle });
+          }}
+          onOpenTogether={() => {
+            setInviteRoute(null);
+            setOverlay({ type: 'together' });
+          }}
+        />
+      </ErrorBoundary>
+    );
   }
 
   if (overlay.type === 'bible-mode') {

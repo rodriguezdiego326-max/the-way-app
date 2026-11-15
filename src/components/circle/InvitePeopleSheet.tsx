@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Copy, Share2, Ban, Check } from 'lucide-react';
+import { X, Link, Share2, Ban, Check } from 'lucide-react';
 import { createCircleInvitation, revokeCircleInvitation } from '@/lib/togetherEngine';
 import { vibrate } from '@/lib/utils';
 import type { CircleInvitation } from '@/lib/togetherTypes';
@@ -7,6 +7,7 @@ import {
   INVITE_EXPIRY_OPTIONS,
   DEFAULT_INVITE_EXPIRY_HOURS,
   formatInviteExpiry,
+  copyCircleInviteLink,
   shareInvitation,
 } from './circleInviteFormat';
 
@@ -47,11 +48,11 @@ export default function InvitePeopleSheet({ circleId, circleName, onChanged, onC
     if (!invitation) return;
     vibrate(8);
     try {
-      await navigator.clipboard.writeText(invitation.invite_code);
+      await copyCircleInviteLink(invitation.invite_code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      setError('Could not copy the code. Select it and copy it manually.');
+      setError('Could not copy the link. Select the code and copy it manually.');
     }
   }
 
@@ -61,7 +62,7 @@ export default function InvitePeopleSheet({ circleId, circleName, onChanged, onC
     try {
       await shareInvitation(circleName, invitation.invite_code, invitation.expires_at);
     } catch {
-      setError('Sharing is not available right now. Use Copy Code instead.');
+      setError('Sharing is not available right now. Use Copy Invite Link instead.');
     }
   }
 
@@ -135,7 +136,7 @@ export default function InvitePeopleSheet({ circleId, circleName, onChanged, onC
 
             <div className="grid grid-cols-2 gap-2 mb-2">
               <button onClick={handleCopy} className="btn-secondary w-full">
-                {copied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy Code</>}
+                {copied ? <><Check size={14} /> Link Copied</> : <><Link size={14} /> Copy Invite Link</>}
               </button>
               <button onClick={handleShare} className="btn-secondary w-full">
                 <Share2 size={14} /> Share Invite

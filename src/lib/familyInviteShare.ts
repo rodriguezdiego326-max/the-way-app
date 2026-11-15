@@ -1,5 +1,6 @@
 import { Share } from '@capacitor/share';
 import type { FamilyInvitation } from '@/lib/familyAccountEngine';
+import { buildSolapathInviteUrl } from '@/lib/inviteLinks';
 
 const EXPIRY_FORMAT: Intl.DateTimeFormatOptions = {
   month: 'short',
@@ -30,8 +31,8 @@ export function formatFamilyInviteShareText(
     : 'This invitation does not expire.';
   return [
     `You're invited to join “${familyName}” in SOLAPATH Family.`,
-    'Open SOLAPATH → Family → Join a Family and enter this invitation code:',
-    invitation.invite_code,
+    `Tap to open the invitation:\n${buildSolapathInviteUrl('family', invitation.invite_code)}`,
+    `Invitation code:\n${invitation.invite_code}`,
     expiryLine,
   ].join('\n\n');
 }
@@ -45,6 +46,10 @@ export async function shareFamilyInvite(
     text: formatFamilyInviteShareText(familyName, invitation),
     dialogTitle: 'Share invitation',
   });
+}
+
+export async function copyFamilyInviteLink(code: string): Promise<void> {
+  await navigator.clipboard.writeText(buildSolapathInviteUrl('family', code));
 }
 
 export async function copyFamilyInviteCode(code: string): Promise<void> {

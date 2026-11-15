@@ -1,4 +1,5 @@
 import { Share } from '@capacitor/share';
+import { buildSolapathInviteUrl } from '@/lib/inviteLinks';
 
 export const INVITE_EXPIRY_OPTIONS: { label: string; hours: number | null }[] = [
   { label: '24 Hours', hours: 24 },
@@ -21,14 +22,20 @@ export function buildInviteShareText(circleName: string, code: string, expiresAt
   const lines = [
     `You're invited to join “${circleName}” in SOLAPATH.`,
     '',
-    'Open SOLAPATH → Together → Join a Circle and enter this invitation code:',
+    'Tap to open the invitation:',
+    buildSolapathInviteUrl('circle', code),
     '',
+    'Invitation code:',
     code,
   ];
   if (expiresAt) {
     lines.push('', `This invitation expires ${formatInviteExpiry(expiresAt)}.`);
   }
   return lines.join('\n');
+}
+
+export async function copyCircleInviteLink(code: string): Promise<void> {
+  await navigator.clipboard.writeText(buildSolapathInviteUrl('circle', code));
 }
 
 export async function shareInvitation(circleName: string, code: string, expiresAt: string | null): Promise<void> {
