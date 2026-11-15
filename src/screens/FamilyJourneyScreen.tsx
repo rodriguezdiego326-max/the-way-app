@@ -37,22 +37,18 @@ export default function FamilyJourneyScreen({ familyProfile, onBack }: FamilyJou
     if (!familyProfile) return;
     vibrate(10);
 
-    const existing = progress.find((p) => p.pathway === pathway && p.lesson_number === lessonNumber);
-    if (existing) {
-      await supabase.from('family_journey_progress').update({
-        status: newStatus,
-        completed_at: newStatus === 'completed' ? new Date().toISOString() : null,
-      }).eq('id', existing.id);
-    } else {
-      await supabase.from('family_journey_progress').insert({
+    const { error } = await supabase.from('family_journey_progress').upsert(
+      {
         family_profile_id: familyProfile.id,
         pathway,
         lesson_number: lessonNumber,
         lesson_title: title,
         status: newStatus,
         completed_at: newStatus === 'completed' ? new Date().toISOString() : null,
-      });
-    }
+      },
+      { onConflict: 'family_profile_id,pathway,lesson_number' },
+    );
+    if (error) console.error('[SOLAPATH] Journey progress save failed:', error.message);
 
     loadProgress();
   }

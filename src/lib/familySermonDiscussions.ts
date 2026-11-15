@@ -20,11 +20,7 @@ export async function loadMyFamilyProfile(): Promise<FamilyProfile | null> {
 }
 
 export async function createMyFamilyProfile(): Promise<FamilyProfile> {
-  const { data, error } = await supabase
-    .from('family_profiles')
-    .insert({ family_name: 'My Family', memory_enabled: true })
-    .select('*')
-    .single();
+  const { data, error } = await supabase.rpc('create_family_profile', { p_family_name: 'My Family' });
   if (error || !data) throw error ?? new Error('Family profile was not created');
   return data as FamilyProfile;
 }

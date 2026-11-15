@@ -16,8 +16,12 @@ import type { ChildAskedHandoff } from '@/lib/askHandoff';
 import FamilyPrayerScreen from '@/screens/FamilyPrayerScreen';
 import EditFamilyMemberScreen from '@/screens/EditFamilyMemberScreen';
 import FamilyMemberFields from '@/components/FamilyMemberFields';
+import FamilyAdultsPanel from '@/components/family/FamilyAdultsPanel';
+import FamilyInviteAdult from '@/components/family/FamilyInviteAdult';
+import FamilyJoinForm from '@/components/family/FamilyJoinForm';
+import { createFamilyProfile, familyErrorMessage } from '@/lib/familyAccountEngine';
 
-type SubView = 'main' | 'walk' | 'child_asked' | 'catechism' | 'journey' | 'parent_guide' | 'family_prayer';
+type SubView = 'main' | 'walk' | 'child_asked' | 'catechism' | 'journey' | 'parent_guide' | 'family_prayer' | 'invite_adult' | 'join';
 
 interface FamilyScreenProps {
   onClose: () => void;
@@ -52,7 +56,7 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
     loadFamilyData();
   }, []);
 
-  async function loadFamilyData(): Promise<FamilyProfile | null> {
+  async function loadFamilyData() {
     setLoading(true);
     const { data: profile, error } = await supabase
       .from('family_profiles')
@@ -85,14 +89,6 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
       setWalkRec(rec);
     }
     setLoading(false);
-    return (profile as FamilyProfile) ?? null;
-  }
-
-  function failCreateFamily(reason: string, dbError?: { code?: string; message?: string; details?: string; hint?: string } | null) {
-    console.error('[SOLAPATH] Family profile creation failed', { reason, ...dbError });
-    setFamilyError('We couldn\'t create your family profile. Please try again.');
-    setCreatingFamily(false);
-    creatingRef.current = false;
   }
 
   async function createFamily() {
@@ -102,51 +98,17 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
     setCreatingFamily(true);
     setFamilyError(null);
 
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    const userId = userData?.user?.id;
-    if (userError || !userId) {
-      failCreateFamily('no_authenticated_user', userError);
-      return;
+    try {
+      await createFamilyProfile(familyName.trim() || 'My Family');
+      await loadFamilyData();
+      setFamilyName('');
+      setShowCreateFamily(false);
+    } catch (e) {
+      setFamilyError(familyErrorMessage(e));
+    } finally {
+      setCreatingFamily(false);
+      creatingRef.current = false;
     }
-
-    const { data: existing, error: existingError } = await supabase
-      .from('family_profiles')
-      .select('id')
-      .eq('profile_id', userId)
-      .maybeSingle();
-
-    if (existingError) {
-      failCreateFamily('existing_check_failed', existingError);
-      return;
-    }
-
-    if (!existing) {
-      const name = familyName.trim() || 'My Family';
-      const { data, error } = await supabase
-        .from('family_profiles')
-        .insert({ family_name: name, memory_enabled: true, profile_id: userId })
-        .select('*')
-        .single();
-
-      if (error && error.code !== '23505') {
-        failCreateFamily('insert_failed', error);
-        return;
-      }
-      if (!error && (!data || data.profile_id !== userId)) {
-        failCreateFamily('owner_mismatch_on_return');
-        return;
-      }
-    }
-
-    const loaded = await loadFamilyData();
-    if (!loaded || loaded.profile_id !== userId) {
-      failCreateFamily('read_back_mismatch');
-      return;
-    }
-    setFamilyName('');
-    setShowCreateFamily(false);
-    setCreatingFamily(false);
-    creatingRef.current = false;
   }
 
   async function addMember() {
@@ -200,6 +162,20 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
   if (subView === 'family_prayer') {
     return <FamilyPrayerScreen familyProfile={familyProfile} onBack={() => setSubView('main')} />;
   }
+  if (subView === 'invite_adult' && familyProfile) {
+    return <FamilyInviteAdult familyProfileId={familyProfile.id} onBack={() => setSubView('main')} />;
+  }
+  if (subView === 'join') {
+    return (
+      <FamilyJoinForm
+        onBack={() => setSubView('main')}
+        onJoined={() => {
+          setSubView('main');
+          loadFamilyData();
+        }}
+      />
+    );
+  }
 
   // Create family form
   if (showCreateFamily) {
@@ -225,7 +201,7 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
                 className="input-field"
               />
               <p className="text-ivory-600 text-xs mt-2 leading-relaxed">
-                This stays private on your device. You do not need to use your real family name. Leave blank to use "My Family."
+                Only adults you invite can see shared Family content. You do not need to use your real family name. Leave blank to use "My Family."
               </p>
             </div>
             {familyError && (
@@ -334,6 +310,15 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
               <Users size={18} />
               Create Family Profile
             </button>
+            <button
+              onClick={() => {
+                vibrate(8);
+                setSubView('join');
+              }}
+              className="btn-ghost w-full mt-3 min-h-[44px] border border-ink-700 rounded-xl"
+            >
+              Join a Family with an invite code
+            </button>
           </div>
 
           <div className="flex items-start gap-2 mt-5 px-1">
@@ -379,6 +364,19 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
               </button>
             </section>
           )}
+
+          {/* Adults With Access */}
+          <section className="mt-6 animate-fade-in-up" style={{ animationDelay: '0.03s' }}>
+            <FamilyAdultsPanel
+              familyProfileId={familyProfile.id}
+              onInviteAdult={() => setSubView('invite_adult')}
+              onLeft={() => {
+                setFamilyProfile(null);
+                setMembers([]);
+                setWalkRec(null);
+              }}
+            />
+          </section>
 
           {/* Family Members */}
           <section className="mt-6 animate-fade-in-up" style={{ animationDelay: '0.05s' }}>
@@ -514,7 +512,7 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
             <div className="flex items-start gap-2 px-1">
               <Shield size={13} className="text-sage-400/60 shrink-0 mt-0.5" />
               <p className="text-ivory-600 text-xs leading-relaxed">
-                Family data is private. SOLAPATH does not create advertising profiles for children, infer sensitive characteristics, or enable social discovery. You control everything.
+Family Prayer, Journey, Catechism, Walks, and Sermon Discussions are shared with the adults you invite. Personal data stays private to each person. SOLAPATH does not create advertising profiles for children, infer sensitive characteristics, or enable social discovery.
               </p>
             </div>
           </section>

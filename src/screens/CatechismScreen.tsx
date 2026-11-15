@@ -58,16 +58,16 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
     if (!familyProfile) return;
     vibrate(10);
 
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData.user?.id;
+    if (!userId) return;
+
     const existing = progress.find((p) => p.question_number === q.number);
-    if (existing) {
-      const newCompleted = !existing.completed;
-      await supabase.from('catechism_progress').update({
-        completed: newCompleted,
-        completed_at: newCompleted ? new Date().toISOString() : null,
-      }).eq('id', existing.id);
-    } else {
-      await supabase.from('catechism_progress').insert({
+    const newCompleted = existing ? !existing.completed : true;
+    const { error } = await supabase.from('catechism_progress').upsert(
+      {
         family_profile_id: familyProfile.id,
+        user_id: userId,
         catechism_type: selectedType,
         question_number: q.number,
         question: q.question,
@@ -77,10 +77,12 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
         discussion_question: q.discussion_question,
         family_application: q.family_application,
         prayer: q.prayer,
-        completed: true,
-        completed_at: new Date().toISOString(),
-      });
-    }
+        completed: newCompleted,
+        completed_at: newCompleted ? new Date().toISOString() : null,
+      },
+      { onConflict: 'family_profile_id,catechism_type,question_number' },
+    );
+    if (error) console.error('[SOLAPATH] Catechism progress save failed:', error.message);
 
     loadProgress();
   }
