@@ -85,3 +85,10 @@ export function parsePassageReference(ref: string): ParsedReference | null {
 
   return { book: bookInfo.name, chapter, verseStart, verseEnd };
 }
+
+export function formatPassageReference(passage: ParsedReference): string {
+  const { book, chapter, verseStart, verseEnd } = passage;
+  if (verseStart === null) return `${book} ${chapter}`;
+  if (verseEnd === null || verseEnd === verseStart) return `${book} ${chapter}:${verseStart}`;
+  return `${book} ${chapter}:${verseStart}\u2013${verseEnd}`;
+}

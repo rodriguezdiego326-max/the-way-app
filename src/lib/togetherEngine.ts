@@ -373,6 +373,7 @@ export async function sendEncouragement(
   actionType: string,
   message?: string,
   circleId?: string,
+  scriptureReference?: string,
 ): Promise<Encouragement | null> {
   const { data, error } = await supabase
     .from('encouragements')
@@ -382,6 +383,7 @@ export async function sendEncouragement(
       action_type: actionType,
       message: message || null,
       circle_id: circleId || null,
+      scripture_reference: scriptureReference || null,
     })
     .select('*')
     .single();

@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, HandHeart, BookOpen, Heart, MessageCircle, Lock } from 'lucide-react';
-import { vibrate, formatRelative } from '@/lib/utils';
+import { vibrate } from '@/lib/utils';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';
 import CircleChooser from '@/components/CircleChooser';
+import EncouragementItem from '@/components/EncouragementItem';
 import { sendEncouragement, getEncouragementsForProfile, getCircleMemberSummaries } from '@/lib/togetherEngine';
+import { parsePassageReference, formatPassageReference } from '@/lib/passageParser';
 import type { Profile } from '@/lib/types';
 import type { Circle, CircleMemberSummary, Encouragement } from '@/lib/togetherTypes';
 import { ENCOURAGEMENT_ACTIONS } from '@/lib/togetherTypes';
@@ -11,11 +13,20 @@ import { ENCOURAGEMENT_ACTIONS } from '@/lib/togetherTypes';
 interface Props {
   profile: Profile;
   circle?: Circle;
+  initialPickedCircle?: Circle;
   onBack: () => void;
+  onOpenScripture: (reference: string, pickedCircle: Circle | undefined) => boolean;
 }
 
-export default function EncouragementScreen({ profile, circle, onBack }: Props) {
-  const [pickedCircle, setPickedCircle] = useState<Circle | null>(null);
+function normalizeScriptureReference(input: string): string | null {
+  const parsed = parsePassageReference(input.trim());
+  if (!parsed) return null;
+  if (parsed.verseStart !== null && parsed.verseEnd !== null && parsed.verseEnd < parsed.verseStart) return null;
+  return formatPassageReference(parsed);
+}
+
+export default function EncouragementScreen({ profile, circle, initialPickedCircle, onBack, onOpenScripture }: Props) {
+  const [pickedCircle, setPickedCircle] = useState<Circle | null>(initialPickedCircle ?? null);
   const activeCircle = circle ?? pickedCircle;
   const activeCircleId = activeCircle?.id;
   const [history, setHistory] = useState<Encouragement[]>([]);
@@ -26,9 +37,11 @@ export default function EncouragementScreen({ profile, circle, onBack }: Props) 
   const [membersError, setMembersError] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<CircleMemberSummary | null>(null);
   const [action, setAction] = useState<string | null>(null);
+  const [scriptureInput, setScriptureInput] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [openError, setOpenError] = useState<string | null>(null);
 
   const loadHistory = useCallback(async () => {
     setHistoryLoading(true);
@@ -67,12 +80,29 @@ export default function EncouragementScreen({ profile, circle, onBack }: Props) 
   function resetComposer() {
     setSelectedMember(null);
     setAction(null);
+    setScriptureInput('');
     setMessage('');
+    setSendError(null);
+  }
+
+  function chooseAction(actionId: string) {
+    vibrate(6);
+    setAction(actionId);
+    setScriptureInput('');
     setSendError(null);
   }
 
   async function handleSend() {
     if (!selectedMember || !action || !activeCircleId) return;
+    let scriptureReference: string | undefined;
+    if (action === 'share_scripture') {
+      const normalized = normalizeScriptureReference(scriptureInput);
+      if (!normalized) {
+        setSendError('Enter a valid Scripture reference, such as Romans 8:1–4.');
+        return;
+      }
+      scriptureReference = normalized;
+    }
     vibrate(15);
     setSending(true);
     setSendError(null);
@@ -80,7 +110,7 @@ export default function EncouragementScreen({ profile, circle, onBack }: Props) 
       await sendEncouragement(
         profile.id, selectedMember.member_profile_id,
         action, message.trim() || undefined,
-        activeCircleId,
+        activeCircleId, scriptureReference,
       );
       resetComposer();
       await loadHistory();
@@ -89,6 +119,12 @@ export default function EncouragementScreen({ profile, circle, onBack }: Props) 
     } finally {
       setSending(false);
     }
+  }
+
+  function handleOpenScripture(reference: string) {
+    const opened = onOpenScripture(reference, pickedCircle ?? undefined);
+    setOpenError(opened ? null : "We couldn't open this Scripture reference.");
+    return opened;
   }
 
   const received = history.filter((e) => e.to_profile_id === profile.id);
@@ -140,7 +176,7 @@ export default function EncouragementScreen({ profile, circle, onBack }: Props) 
                 {!membersLoading && !membersError && members.length > 0 && (!selectedMember ? (
                   <div className="flex flex-col gap-2">
                     {members.map((m) => (
-                      <button key={m.member_profile_id} onClick={() => { vibrate(8); setSendError(null); setSelectedMember(m); }} className="premium-card p-3 flex items-center gap-3 text-left no-tap-highlight hover:border-gold-500/30 transition-all">
+                      <button key={m.member_profile_id} onClick={() => { vibrate(8); resetComposer(); setSelectedMember(m); }} className="premium-card p-3 flex items-center gap-3 text-left no-tap-highlight hover:border-gold-500/30 transition-all">
                         <div className="w-8 h-8 rounded-lg bg-ink-700/50 flex items-center justify-center shrink-0">
                           <Heart size={14} className="text-ivory-400" />
                         </div>
@@ -153,7 +189,7 @@ export default function EncouragementScreen({ profile, circle, onBack }: Props) 
                     <p className="text-ivory-400 text-sm mb-3">Choose an action:</p>
                     <div className="flex flex-col gap-2 mb-4">
                       {ENCOURAGEMENT_ACTIONS.map((a) => (
-                        <button key={a.id} onClick={() => { vibrate(6); setAction(a.id); }} className={`flex items-center gap-2 px-4 py-3 rounded-xl border text-sm transition-all ${action === a.id ? 'bg-gold-500/10 border-gold-500/40 text-ivory-50' : 'bg-ink-800/40 border-ink-700/40 text-ivory-400'}`}>
+                        <button key={a.id} onClick={() => chooseAction(a.id)} className={`flex items-center gap-2 px-4 py-3 rounded-xl border text-sm transition-all ${action === a.id ? 'bg-gold-500/10 border-gold-500/40 text-ivory-50' : 'bg-ink-800/40 border-ink-700/40 text-ivory-400'}`}>
                           {a.id === 'encourage' && <HandHeart size={14} />}
                           {a.id === 'share_scripture' && <BookOpen size={14} />}
                           {a.id === 'praying_for_you' && <Heart size={14} />}
@@ -162,9 +198,25 @@ export default function EncouragementScreen({ profile, circle, onBack }: Props) 
                         </button>
                       ))}
                     </div>
+                    {action === 'share_scripture' && (
+                      <>
+                        <p className="ui-label mb-2">Scripture Reference</p>
+                        <input
+                          value={scriptureInput}
+                          onChange={(e) => setScriptureInput(e.target.value)}
+                          placeholder="Romans 8:1–17"
+                          aria-label="Scripture Reference"
+                          className="input-field text-sm mb-4"
+                        />
+                        <p className="ui-label mb-2">Personal Note</p>
+                        <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Why this passage made me think of you..." className="input-field min-h-[60px] resize-none text-sm mb-3" />
+                      </>
+                    )}
+                    {action && action !== 'share_scripture' && (
+                      <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Optional message" className="input-field min-h-[60px] resize-none text-sm mb-3" />
+                    )}
                     {action && (
                       <>
-                        <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Optional message" className="input-field min-h-[60px] resize-none text-sm mb-3" />
                         {sendError && <p role="alert" className="text-clay-400 text-xs mb-3">{sendError}</p>}
                         <div className="flex gap-2">
                           <button onClick={resetComposer} className="btn-secondary flex-1">Cancel</button>
@@ -182,12 +234,13 @@ export default function EncouragementScreen({ profile, circle, onBack }: Props) 
           {historyError && <ErrorState message={historyError} onRetry={loadHistory} />}
           {!historyLoading && !historyError && (
             <>
+              {openError && <p role="alert" className="text-clay-400 text-xs mb-3">{openError}</p>}
               <p className="ui-label mb-3">Encouragement Received</p>
               {received.length === 0 ? (
                 <EmptyState message="No encouragement received yet." />
               ) : (
                 <div className="flex flex-col gap-2">
-                  {received.map((e) => <EncouragementItem key={e.id} encouragement={e} />)}
+                  {received.map((e) => <EncouragementItem key={e.id} encouragement={e} onOpenScripture={handleOpenScripture} />)}
                 </div>
               )}
 
@@ -196,7 +249,7 @@ export default function EncouragementScreen({ profile, circle, onBack }: Props) 
                 <EmptyState message="You haven't sent any encouragement yet." />
               ) : (
                 <div className="flex flex-col gap-2">
-                  {sent.map((e) => <EncouragementItem key={e.id} encouragement={e} />)}
+                  {sent.map((e) => <EncouragementItem key={e.id} encouragement={e} onOpenScripture={handleOpenScripture} />)}
                 </div>
               )}
             </>
@@ -210,22 +263,6 @@ export default function EncouragementScreen({ profile, circle, onBack }: Props) 
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function EncouragementItem({ encouragement: e }: { encouragement: Encouragement }) {
-  return (
-    <div className="premium-card p-3">
-      <div className="flex items-center gap-2 mb-1">
-        {e.action_type === 'encourage' && <HandHeart size={12} className="text-gold-300" />}
-        {e.action_type === 'share_scripture' && <BookOpen size={12} className="text-gold-300" />}
-        {e.action_type === 'praying_for_you' && <Heart size={12} className="text-gold-300" />}
-        {e.action_type === 'check_in_privately' && <MessageCircle size={12} className="text-gold-300" />}
-        <span className="text-ivory-200 text-sm">{e.action_type.replace(/_/g, ' ')}</span>
-        <span className="text-ivory-600 text-xs ml-auto">{formatRelative(e.created_at)}</span>
-      </div>
-      {e.message && <p className="text-ivory-300 text-xs mt-1 leading-relaxed">{e.message}</p>}
     </div>
   );
 }

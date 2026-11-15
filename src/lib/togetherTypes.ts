@@ -178,6 +178,7 @@ export interface Encouragement {
   circle_id: string | null;
   action_type: EncouragementAction | string;
   message: string | null;
+  scripture_reference: string | null;
   created_at: string;
 }
 
