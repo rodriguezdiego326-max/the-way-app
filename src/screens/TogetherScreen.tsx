@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, Users, Heart, BookOpen, CheckCircle, HandHeart, Shield, Plus, ChevronRight, Sparkles, KeyRound } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
+import PullToRefresh from '@/components/PullToRefresh';
 import { getMyCircles } from '@/lib/togetherEngine';
 import type { Profile } from '@/lib/types';
 import type { Circle } from '@/lib/togetherTypes';
@@ -28,17 +29,21 @@ export default function TogetherScreen({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchCircles = useCallback(async () => {
+    setCircles(await getMyCircles(profile));
+  }, [profile]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      setCircles(await getMyCircles(profile));
+      await fetchCircles();
     } catch {
       setError('Could not load your Together data.');
     } finally {
       setLoading(false);
     }
-  }, [profile]);
+  }, [fetchCircles]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -51,13 +56,13 @@ export default function TogetherScreen({
   ];
 
   return (
-    <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28 flex flex-col">
+    <div className="app-container bg-ink-950 bg-parchment h-[100dvh] flex flex-col overflow-hidden">
       <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
         <button onClick={onBack} className="btn-ghost"><X size={20} /></button>
         <p className="ui-label">Together</p><span className="w-10" />
       </header>
 
-      <div className="flex-1 overflow-y-auto px-6 mt-4">
+      <PullToRefresh onRefresh={fetchCircles} className="flex-1 min-h-0 nav-safe-padding px-6 mt-4">
         <div className="animate-fade-in-up">
           <div className="flex items-start gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center shrink-0">
@@ -139,7 +144,7 @@ export default function TogetherScreen({
             </>
           )}
         </div>
-      </div>
+      </PullToRefresh>
     </div>
   );
 }

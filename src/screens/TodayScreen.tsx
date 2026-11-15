@@ -26,6 +26,7 @@ import type { StructuredTheologicalResponse } from '@/lib/intelligenceTypes';
 import type { AskHandoffContext } from '@/lib/askHandoff';
 import { getTodayCopy } from '@/lib/todayCopy';
 import { localizeReadingObjective } from '@/lib/readingObjectiveLocale';
+import PullToRefresh from '@/components/PullToRefresh';
 
 interface TodayScreenProps {
   profile: Profile | null;
@@ -268,9 +269,7 @@ function localizeReference(ref: string, translation: string): string {
     return recommendWalk(profile, recentWalks, new Date(), context, mood, memoryOn);
   }
 
-  async function loadOrCreateTodayWalk() {
-    setLoading(true);
-    setWalkError(null);
+  async function fetchTodayWalk() {
     const walkDate = localDateKey(new Date());
 
     // Query by canonical walk_date — not created_at DESC.
@@ -281,14 +280,11 @@ function localizeReference(ref: string, translation: string): string {
       .maybeSingle();
 
     if (existingErr) {
-      setWalkError('Something went wrong loading your walk. Please try again.');
-      setLoading(false);
-      return;
+      throw new Error('Something went wrong loading your walk. Please try again.');
     }
 
     if (existing) {
       setTodayWalk(existing as Walk);
-      setLoading(false);
       return;
     }
 
@@ -312,23 +308,29 @@ function localizeReference(ref: string, translation: string): string {
    .eq('walk_date', walkDate)
    .maybeSingle();
  if (retryErr || !retry) {
-   setWalkError('Something went wrong loading your walk. Please try again.');
-   setLoading(false);
-   return;
+   throw new Error('Something went wrong loading your walk. Please try again.');
  }
  setTodayWalk(retry as Walk);
- setLoading(false);
  return;
       }
-      setWalkError('We couldn\'t create your walk for today. Please try again.');
-      setLoading(false);
-      return;
+      throw new Error('We couldn\'t create your walk for today. Please try again.');
     }
 
     if (created) {
       setTodayWalk(created as Walk);
     }
-    setLoading(false);
+  }
+
+  async function loadOrCreateTodayWalk() {
+    setLoading(true);
+    setWalkError(null);
+    try {
+      await fetchTodayWalk();
+    } catch (e) {
+      setWalkError(e instanceof Error ? e.message : 'Something went wrong loading your walk. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function updateWalkRecommendation(mood: string, context: string) {
@@ -691,7 +693,8 @@ function localizeReference(ref: string, translation: string): string {
   const hasQuestion = hasSavedReflection && reflectionContainsQuestion(savedReflectionBody);
 
   return (
-    <div className="app-container bg-ink-950 bg-parchment min-h-screen nav-safe-padding">
+    <div className="app-container bg-ink-950 bg-parchment h-[100dvh] flex flex-col overflow-hidden">
+      <PullToRefresh onRefresh={fetchTodayWalk} className="flex-1 min-h-0 nav-safe-padding">
       <header className="relative z-10 flex items-start justify-between px-6 pt-10 pb-6 safe-top">
         <div>
           <p className="font-serif text-xl italic text-ivory-200 animate-fade-in-down">{greeting}{name ? `, ${name}` : ''}</p>
@@ -1037,6 +1040,7 @@ function localizeReference(ref: string, translation: string): string {
           </div>
         </div>
       </section>
+      </PullToRefresh>
       {consentDialog}
     </div>
   );

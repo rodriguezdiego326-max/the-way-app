@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Church, Plus, ChevronRight, Search, MapPin, Globe, BookOpen, Heart, Users, Sun, LogOut, Check, Pencil, Mic } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
+import PullToRefresh from '@/components/PullToRefresh';
 import ChurchSearchResults, { type AppleSearchStatus, type ChurchSearchStatus } from '@/components/ChurchSearchResults';
 import ChurchRoleSheet from '@/components/ChurchRoleSheet';
 import ChurchAdministrationCard from '@/components/church/ChurchAdministrationCard';
@@ -71,47 +72,51 @@ export default function MyChurchScreen({
 
   const activeChurchIdRef = useRef(activeChurchId);
 
+  const fetchChurchData = useCallback(async () => {
+    const [mems, ownNotes] = await Promise.all([getAllChurchMemberships(profile.id), getSermonNotes(profile.id)]);
+    setSermonNoteCount(ownNotes.length);
+    const enriched: ChurchWithMeta[] = [];
+    for (const m of mems) {
+      const c = await getChurch(m.church_id);
+      if (!c) continue;
+      const owner = await isChurchOwner(profile.id, c.id);
+      const [studs, prays, grps] = await Promise.all([
+        getChurchStudies(c.id),
+        getChurchPrayerItems(c.id),
+        getChurchGroups(c.id),
+      ]);
+      enriched.push({
+        church: c,
+        membership: m,
+        isOwner: owner,
+        studies: studs,
+        prayerItems: prays,
+        groups: grps,
+      });
+    }
+    setMemberships(enriched);
+    // Sync active church: use provided activeChurchId if it matches a membership, else first
+    if (enriched.length > 0) {
+      const matchIdx = enriched.findIndex((m) => m.church.id === activeChurchIdRef.current);
+      const newIdx = matchIdx >= 0 ? matchIdx : 0;
+      setActiveIndex(newIdx);
+      onActiveChurchChange(enriched[newIdx].church.id);
+    } else {
+      onActiveChurchChange(null);
+    }
+  }, [profile.id, onActiveChurchChange]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [mems, ownNotes] = await Promise.all([getAllChurchMemberships(profile.id), getSermonNotes(profile.id)]);
-      setSermonNoteCount(ownNotes.length);
-      const enriched: ChurchWithMeta[] = [];
-      for (const m of mems) {
-        const c = await getChurch(m.church_id);
-        if (!c) continue;
-        const owner = await isChurchOwner(profile.id, c.id);
-        const [studs, prays, grps] = await Promise.all([
-          getChurchStudies(c.id),
-          getChurchPrayerItems(c.id),
-          getChurchGroups(c.id),
-        ]);
-        enriched.push({
-          church: c,
-          membership: m,
-          isOwner: owner,
-          studies: studs,
-          prayerItems: prays,
-          groups: grps,
-        });
-      }
-      setMemberships(enriched);
-      // Sync active church: use provided activeChurchId if it matches a membership, else first
-      if (enriched.length > 0) {
-        const matchIdx = enriched.findIndex((m) => m.church.id === activeChurchIdRef.current);
-        const newIdx = matchIdx >= 0 ? matchIdx : 0;
-        setActiveIndex(newIdx);
-        onActiveChurchChange(enriched[newIdx].church.id);
-      } else {
-        onActiveChurchChange(null);
-      }
+      await fetchChurchData();
     } catch {
       setError('Could not load your church.');
     } finally {
       setLoading(false);
     }
-  }, [profile.id, onActiveChurchChange]);
+  }, [fetchChurchData]);
 
   useEffect(() => { activeChurchIdRef.current = activeChurchId; }, [activeChurchId]);
 
@@ -286,14 +291,14 @@ export default function MyChurchScreen({
   const active = memberships[activeIndex];
 
   return (
-    <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28 flex flex-col">
+    <div className="app-container bg-ink-950 bg-parchment h-[100dvh] flex flex-col overflow-hidden">
       <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
         <button onClick={onBack} className="btn-ghost"><X size={20} /></button>
         <p className="ui-label">My Church</p>
         <button onClick={() => { vibrate(8); setShowJoin(true); }} className="btn-ghost"><Plus size={18} /></button>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-6 mt-4">
+      <PullToRefresh onRefresh={fetchChurchData} className="flex-1 min-h-0 nav-safe-padding px-6 mt-4">
         <div className="animate-fade-in-up">
           <div className="flex items-start gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center shrink-0">
@@ -397,7 +402,7 @@ export default function MyChurchScreen({
             </>
           )}
         </div>
-      </div>
+      </PullToRefresh>
 
       {/* Join church modal */}
       {showJoin && (
