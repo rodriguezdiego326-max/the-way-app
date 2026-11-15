@@ -85,7 +85,7 @@ export default function FamilyJoinForm({ onBack, onJoined }: FamilyJoinFormProps
         <span className="w-10" />
       </header>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pt-6 nav-safe-padding animate-fade-in">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pt-6 pb-6 animate-fade-in">
         <div className="flex flex-col gap-6">
           <p className="text-ivory-400 text-sm leading-relaxed">
             Enter the invite code another adult shared with you. Once you join, you can use the Family's shared content together.
@@ -140,7 +140,7 @@ export default function FamilyJoinForm({ onBack, onJoined }: FamilyJoinFormProps
         </div>
       </div>
 
-      <div className="px-6 pb-10 safe-bottom">
+      <div className="shrink-0 px-6 pt-3 nav-safe-padding">
         {preview ? (
           <button onClick={joinFamily} disabled={joining} className="btn-primary w-full disabled:opacity-40">
             <Users size={18} />

@@ -220,7 +220,7 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
             )}
           </div>
         </div>
-        <div className="px-6 pb-10 safe-bottom">
+        <div className="shrink-0 px-6 pt-3 nav-safe-padding">
           <button onClick={createFamily} disabled={creatingFamily} className="btn-primary w-full disabled:opacity-40">
             <Users size={18} />
             {creatingFamily ? 'Creating...' : 'Create Family Profile'}

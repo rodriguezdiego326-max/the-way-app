@@ -81,7 +81,7 @@ export default function FamilyInviteAdult({ familyProfileId, familyName, onBack 
         <span className="w-10" />
       </header>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pt-6 nav-safe-padding animate-fade-in">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pt-6 pb-6 animate-fade-in">
         <div className="flex flex-col gap-6">
           <p className="text-ivory-400 text-sm leading-relaxed">
             Invite another adult, such as a spouse, to share your Family. Shared content includes Family Prayer, Journey, Catechism, Walks, and Sermon Discussions. Children are not given accounts.
@@ -141,7 +141,7 @@ export default function FamilyInviteAdult({ familyProfileId, familyName, onBack 
         </div>
       </div>
 
-      <div className="px-6 pb-10 safe-bottom grid grid-cols-2 gap-3">
+      <div className="shrink-0 px-6 pt-3 nav-safe-padding grid grid-cols-2 gap-3">
         <button onClick={onBack} className="btn-secondary w-full">
           Done
         </button>
