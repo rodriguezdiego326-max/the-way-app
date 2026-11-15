@@ -9,6 +9,7 @@ import {
   type InvitationPreview,
   type InvitationPreviewStatus,
 } from '@/lib/familyAccountEngine';
+import { formatInviteExpiry } from '@/lib/familyInviteShare';
 
 interface FamilyJoinFormProps {
   onBack: () => void;
@@ -108,18 +109,26 @@ export default function FamilyJoinForm({ onBack, onJoined }: FamilyJoinFormProps
           </div>
 
           {preview && (
-            <div className="premium-card p-5 flex items-center gap-4 animate-fade-in-up">
-              <div className="w-10 h-10 rounded-xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center shrink-0">
-                <Users size={18} className="text-gold-300" />
+            <div className="premium-card p-5 flex flex-col gap-4 animate-fade-in-up">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center shrink-0">
+                  <Users size={18} className="text-gold-300" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-ivory-100 font-medium text-sm truncate">
+                    {preview.family_name || 'My Family'}
+                  </p>
+                  <p className="text-ivory-600 text-xs mt-1">
+                    {preview.adult_count ?? 1} {preview.adult_count === 1 ? 'adult' : 'adults'} in this Family
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-ivory-100 font-medium text-sm truncate">
-                  {preview.family_name || 'My Family'}
-                </p>
-                <p className="text-ivory-600 text-xs mt-1">
-                  {preview.adult_count ?? 1} {preview.adult_count === 1 ? 'adult' : 'adults'} in this Family
-                </p>
-              </div>
+              <p className="text-ivory-500 text-xs">
+                {preview.expires_at ? `Expires ${formatInviteExpiry(preview.expires_at)}` : 'No expiration'}
+              </p>
+              <p className="text-ivory-600 text-xs leading-relaxed">
+                Joining gives the adults in this Family shared access to Family discipleship content. Your personal SOLAPATH data remains private.
+              </p>
             </div>
           )}
 

@@ -38,6 +38,7 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
   const [showCreateFamily, setShowCreateFamily] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
+  const [familyLoadError, setFamilyLoadError] = useState(false);
 
   // New family form
   const [familyName, setFamilyName] = useState('');
@@ -58,6 +59,7 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
 
   async function loadFamilyData() {
     setLoading(true);
+    setFamilyLoadError(false);
     const { data: profile, error } = await supabase
       .from('family_profiles')
       .select('*')
@@ -66,6 +68,7 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
 
     if (error) {
       console.error('[SOLAPATH] Error loading family profile:', error.message);
+      setFamilyLoadError(true);
     }
 
     if (profile) {
@@ -163,7 +166,13 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
     return <FamilyPrayerScreen familyProfile={familyProfile} onBack={() => setSubView('main')} />;
   }
   if (subView === 'invite_adult' && familyProfile) {
-    return <FamilyInviteAdult familyProfileId={familyProfile.id} onBack={() => setSubView('main')} />;
+    return (
+      <FamilyInviteAdult
+        familyProfileId={familyProfile.id}
+        familyName={familyProfile.family_name || 'My Family'}
+        onBack={() => setSubView('main')}
+      />
+    );
   }
   if (subView === 'join') {
     return (
@@ -246,7 +255,7 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
           <button onClick={() => setShowAddMember(false)} className="btn-ghost">
             <X size={20} />
           </button>
-          <p className="ui-label">Add Family Member</p>
+          <p className="ui-label">Add Household Profile</p>
           <span className="w-10" />
         </header>
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pt-6 nav-safe-padding animate-fade-in">
@@ -266,7 +275,7 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
             )}
             <button onClick={addMember} disabled={addingMember} className="btn-primary w-full disabled:opacity-40">
               <Plus size={18} />
-              {addingMember ? 'Adding...' : 'Add Family Member'}
+              {addingMember ? 'Adding...' : 'Add Household Profile'}
             </button>
           </div>
         </div>
@@ -286,6 +295,9 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
           <span className="w-10" />
         </div>
         <h1 className="font-serif text-4xl text-ivory-50 mt-6 tracking-tight">Family</h1>
+        {familyProfile && (
+          <p className="font-serif text-xl text-gold-300 mt-2">{familyProfile.family_name || 'My Family'}</p>
+        )}
         <p className="text-ivory-500 text-sm mt-2 leading-relaxed">
           Disciple your household.
         </p>
@@ -296,6 +308,13 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
           <div className="premium-card h-32 animate-pulse mb-3" />
           <div className="premium-card h-20 animate-pulse" />
         </div>
+      ) : familyLoadError ? (
+        <div className="px-6 mt-8 animate-fade-in-up">
+          <div className="premium-card p-6 text-center">
+            <p className="text-error text-sm mb-4">We couldn't load your Family. Please try again.</p>
+            <button onClick={() => loadFamilyData()} className="btn-primary w-full">Retry</button>
+          </div>
+        </div>
       ) : !familyProfile ? (
         <div className="px-6 mt-8 animate-fade-in-up">
           <div className="premium-card p-6 text-center">
@@ -304,7 +323,7 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
             </div>
             <p className="text-ivory-200 text-sm font-medium mb-2">Create a Family Profile to begin</p>
             <p className="text-ivory-500 text-xs leading-relaxed mb-5">
-              SOLAPATH Family helps you disciple your children through Scripture, prayer, catechism, and conversation. Your family data stays private.
+              SOLAPATH Family helps your household disciple children through Scripture, prayer, catechism, and conversation. Family content is private to the authenticated adults you invite.
             </p>
             <button onClick={() => setShowCreateFamily(true)} className="btn-primary w-full">
               <Users size={18} />
@@ -369,6 +388,7 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
           <section className="mt-6 animate-fade-in-up" style={{ animationDelay: '0.03s' }}>
             <FamilyAdultsPanel
               familyProfileId={familyProfile.id}
+              familyName={familyProfile.family_name || 'My Family'}
               onInviteAdult={() => setSubView('invite_adult')}
               onLeft={() => {
                 setFamilyProfile(null);
@@ -381,7 +401,12 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
           {/* Family Members */}
           <section className="mt-6 animate-fade-in-up" style={{ animationDelay: '0.05s' }}>
             <div className="flex items-center justify-between mb-3">
-              <p className="ui-label">Family Members</p>
+              <div>
+                <p className="ui-label">Children & Household Profiles</p>
+                <p className="text-ivory-600 text-xs mt-1 leading-relaxed">
+                  These profiles do not sign into SOLAPATH. You can use nicknames instead of real names.
+                </p>
+              </div>
               <button
                 onClick={() => setShowAddMember(true)}
                 className="btn-ghost text-xs"
@@ -392,7 +417,7 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
             {members.length === 0 ? (
               <div className="premium-card p-4 text-center">
                 <p className="text-ivory-500 text-xs">
-                  No family members added yet. Add a child's age range to receive age-appropriate questions.
+                  No household profiles yet. Add a child's age range to receive age-appropriate questions.
                 </p>
               </div>
             ) : (
