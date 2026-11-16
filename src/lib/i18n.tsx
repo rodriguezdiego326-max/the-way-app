@@ -2727,6 +2727,12 @@ const ES: Record<string, string> = {
   'Westminster Shorter Catechism': 'Catecismo Menor de Westminster',
   'A concise catechism for children and new believers, beginning with the chief end of man.': 'Un catecismo conciso para niños y nuevos creyentes, que comienza con el fin principal del ser humano.',
 
+  'Stay connected without exposing private details': 'Mantente conectado sin exponer detalles privados',
+  'SOLAPATH can notify you when new Family or Circle activity is available.': 'SOLAPATH puede avisarte cuando haya nueva actividad de Familia o Círculos.',
+  'Notifications never include prayer text, Check-In details, sermon content, private notes, or child information.': 'Las notificaciones nunca incluyen el texto de oraciones, detalles de registros, contenido de sermones, notas privadas ni información de niños.',
+  'Allow notifications': 'Permitir notificaciones',
+  'Working...': 'Procesando...',
+
 };
 
 interface LanguageContextValue {
