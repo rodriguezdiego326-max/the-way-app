@@ -3,6 +3,7 @@ import { X, Mic, ChevronRight, AudioLines } from 'lucide-react';
 import { vibrate, formatDate, formatDuration } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import { listSermonRecordings, type SermonRecordingMeta } from '@/lib/sermonRecordingStore';
+import { isSermonRecorderAvailable } from '@/lib/sermonRecorderNative';
 import type { Profile } from '@/lib/types';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function SermonAssistantScreen({ profile, onBack, onRecord, onOpenRecording }: Props) {
+  const recorderAvailable = isSermonRecorderAvailable();
   const [recordings, setRecordings] = useState<SermonRecordingMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,11 +48,17 @@ export default function SermonAssistantScreen({ profile, onBack, onRecord, onOpe
             <p className="text-ivory-400 text-sm leading-relaxed mb-5">
               Record a sermon while you listen. Your recording stays under your control.
             </p>
-            <button onClick={() => { vibrate(10); onRecord(); }} className="btn-primary w-full">
-              <Mic size={16} /> Record Sermon
+            <button
+              onClick={() => { if (recorderAvailable) { vibrate(10); onRecord(); } }}
+              disabled={!recorderAvailable}
+              className="btn-primary w-full disabled:opacity-40"
+            >
+              <Mic size={16} /> {recorderAvailable ? 'Record Sermon' : 'Recording unavailable on Android'}
             </button>
             <p className="text-ivory-600 text-xs leading-relaxed mt-4">
-              Transcription and sermon insights will be added after recording is complete.
+              {recorderAvailable
+                ? 'Transcription and sermon insights will be added after recording is complete.'
+                : 'The Android app is enabled for testing now. Native sermon recording remains iPhone-only until the Android recorder is added.'}
             </p>
           </div>
 
