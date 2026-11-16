@@ -278,6 +278,8 @@ export function isVerifiedChurchPublisher(role: string | null | undefined): role
 
 export type ChurchAdminClaimStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn' | 'revoked';
 
+export type PastorVerificationStatus = 'not_required' | 'pending' | 'verified' | 'failed';
+
 export interface ChurchAdminClaim {
   id: string;
   church_id: string;
@@ -288,6 +290,21 @@ export interface ChurchAdminClaim {
   updated_at: string;
   reviewed_at: string | null;
   reviewed_by_profile_id?: string | null;
+  evidence_staff_url?: string | null;
+  evidence_church_contact?: string | null;
+  pastor_verification_status?: PastorVerificationStatus;
+  pastor_verification_checks?: string[];
+  pastor_verification_note?: string | null;
+  pastor_verified_at?: string | null;
+  pastor_verified_by_profile_id?: string | null;
+}
+
+export interface DelegatableChurchRoleClaim {
+  claim_id: string;
+  profile_id: string;
+  claimant_name: string | null;
+  requested_role: Exclude<VerifiedChurchRole, 'PASTOR'>;
+  created_at: string;
 }
 
 export type AppAdminRole = 'APP_OWNER' | 'APP_ADMIN';
@@ -299,10 +316,17 @@ export interface ChurchAdminReviewItem {
   church_id: string;
   church_name: string;
   church_city: string | null;
+  church_website: string | null;
   requested_role: VerifiedChurchRole;
   status: ChurchAdminClaimStatus;
   created_at: string;
   reviewed_at: string | null;
+  evidence_staff_url: string | null;
+  evidence_church_contact: string | null;
+  pastor_verification_status: PastorVerificationStatus;
+  pastor_verification_checks: string[];
+  pastor_verification_note: string | null;
+  pastor_verified_at: string | null;
 }
 
 export interface ChurchAdminAccessItem {
