@@ -73,6 +73,8 @@ export interface Profile {
   current_study: string | null;
   memory_enabled: boolean;
   onboarding_completed: boolean;
+  app_language: 'en' | 'es';
+  guide_completed_at: string | null;
   ai_processing_consent: boolean;
   ai_processing_consent_at: string | null;
   ai_processing_consent_version: string | null;
