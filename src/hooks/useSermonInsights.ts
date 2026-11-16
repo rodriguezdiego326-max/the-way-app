@@ -7,10 +7,12 @@ import {
   hasSermonInsightsConsent, grantSermonInsightsConsent, requestSermonInsights, transcriptFingerprint,
   SERMON_INSIGHTS_FAILURE_MESSAGE, SermonInsightsError,
 } from '@/lib/sermonInsights';
+import { useLanguage } from '@/lib/i18n';
 
 export type InsightsStage = 'reading' | 'creating' | 'finalizing';
 
 export function useSermonInsights(meta: SermonRecordingMeta | null, transcript: SermonTranscript | null) {
+  const { language } = useLanguage();
   const [record, setRecord] = useState<SermonInsightsRecord | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [stage, setStage] = useState<InsightsStage | null>(null);
@@ -33,7 +35,7 @@ export function useSermonInsights(meta: SermonRecordingMeta | null, transcript: 
         return null;
       }
       const fingerprint = await transcriptFingerprint(transcriptText);
-      if (stored && stored.transcriptFingerprint !== fingerprint) {
+      if (stored && (stored.transcriptFingerprint !== fingerprint || stored.language !== language)) {
         await deleteSermonInsights(metaId);
         return null;
       }
@@ -43,7 +45,7 @@ export function useSermonInsights(meta: SermonRecordingMeta | null, transcript: 
       .catch(() => { if (!cancelled) setRecord(null); })
       .finally(() => { if (!cancelled) setLoaded(true); });
     return () => { cancelled = true; };
-  }, [metaId, profileId, transcriptText]);
+  }, [metaId, profileId, transcriptText, language]);
 
   const grantConsent = useCallback(() => {
     if (!profileId) return;
@@ -64,6 +66,7 @@ export function useSermonInsights(meta: SermonRecordingMeta | null, transcript: 
         title: meta.title,
         preacher: meta.preacher,
         serviceName: meta.serviceName,
+        responseLanguage: language === 'es' ? 'Spanish' : 'English',
       });
       setStage('finalizing');
       const current = await getSermonTranscript(meta.id);
@@ -75,6 +78,7 @@ export function useSermonInsights(meta: SermonRecordingMeta | null, transcript: 
         transcriptFingerprint: fingerprint,
         insights,
         createdAt: new Date().toISOString(),
+        language,
       };
       await saveSermonInsights(next);
       setRecord(next);
@@ -86,7 +90,7 @@ export function useSermonInsights(meta: SermonRecordingMeta | null, transcript: 
       inFlightRef.current = false;
       setStage(null);
     }
-  }, [meta, transcript]);
+  }, [meta, transcript, language]);
 
   return {
     record,
