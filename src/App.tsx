@@ -1,10 +1,11 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Profile, Walk } from '@/lib/types';
 import type { OnboardingData } from '@/components/Onboarding';
 import SplashScreen from '@/components/SplashScreen';
 import Onboarding from '@/components/Onboarding';
 import BottomNav, { type Tab } from '@/components/BottomNav';
+import OverlayHomeButton from '@/components/OverlayHomeButton';
 import TodayScreen from '@/screens/TodayScreen';
 import BibleScreen from '@/screens/BibleScreen';
 import BibleModeScreen from '@/screens/BibleModeScreen';
@@ -447,6 +448,22 @@ export default function App() {
     loadProfile();
   }
 
+  function handleOverlayHome() {
+    setOverlay({ type: 'none' });
+    setActiveTab('today');
+  }
+
+  function renderOverlayWithHome(content: ReactNode) {
+    return (
+      <ErrorBoundary>
+        <>
+          {content}
+          <OverlayHomeButton onHome={handleOverlayHome} />
+        </>
+      </ErrorBoundary>
+    );
+  }
+
   if (appState === 'splash') {
     return <SplashScreen onComplete={() => setAppState('app')} />;
   }
@@ -558,34 +575,32 @@ export default function App() {
 
     if (!studyDetail) return <ErrorBoundary>{bibleLayer}</ErrorBoundary>;
 
-    return (
-      <ErrorBoundary>
-        <div>
-          <div hidden={overlay.type !== 'sermon_recording_detail'}>
-            <SermonRecordingDetailScreen
-              recordingId={studyDetail.recordingId}
-              fresh={studyDetail.fresh}
-              interrupted={studyDetail.interrupted}
-              initialView={studyDetail.initialView}
-              onDone={() => setOverlay({ type: 'sermon_assistant' })}
-              onOpenBible={handleOpenBibleReference}
-              profile={profile}
-              onViewSharedDiscussion={(circle, discussion) => setOverlay({ type: 'circle_sermon_discussion', circle, discussion })}
-              onOpenFamilyDiscussion={(discussion) => setOverlay({ type: 'family_sermon_discussion', discussion })}
-              onContinueInAsk={(handoff) => {
-                setSermonAskRecordingId(studyDetail.recordingId);
-                setActiveAskConversationId(null);
-                localStorage.removeItem('solapath_active_ask_conv');
-                localStorage.removeItem('solapath_ask_return_conv');
-                setOverlay({ type: 'none' });
-                setActiveTab('ask');
-                setAskContext(handoff);
-              }}
-            />
-          </div>
-          {bibleLayer}
+    return renderOverlayWithHome(
+      <div>
+        <div hidden={overlay.type !== 'sermon_recording_detail'}>
+          <SermonRecordingDetailScreen
+            recordingId={studyDetail.recordingId}
+            fresh={studyDetail.fresh}
+            interrupted={studyDetail.interrupted}
+            initialView={studyDetail.initialView}
+            onDone={() => setOverlay({ type: 'sermon_assistant' })}
+            onOpenBible={handleOpenBibleReference}
+            profile={profile}
+            onViewSharedDiscussion={(circle, discussion) => setOverlay({ type: 'circle_sermon_discussion', circle, discussion })}
+            onOpenFamilyDiscussion={(discussion) => setOverlay({ type: 'family_sermon_discussion', discussion })}
+            onContinueInAsk={(handoff) => {
+              setSermonAskRecordingId(studyDetail.recordingId);
+              setActiveAskConversationId(null);
+              localStorage.removeItem('solapath_active_ask_conv');
+              localStorage.removeItem('solapath_ask_return_conv');
+              setOverlay({ type: 'none' });
+              setActiveTab('ask');
+              setAskContext(handoff);
+            }}
+          />
         </div>
-      </ErrorBoundary>
+        {bibleLayer}
+      </div>,
     );
   }
 
@@ -664,45 +679,39 @@ export default function App() {
   }
 
   if (overlay.type === 'together' && profile) {
-    return (
-      <ErrorBoundary>
-        <TogetherScreen
-          profile={profile}
-          onBack={() => setOverlay({ type: 'none' })}
-          onOpenCircle={(circle) => setOverlay({ type: 'circle_home', circle })}
-          onOpenCreateCircle={() => setOverlay({ type: 'create_circle' })}
-          onOpenJoinCircle={() => setOverlay({ type: 'together_join_code' })}
-          onOpenPrayer={(circle) => setOverlay({ type: 'prayer_together', circle })}
-          onOpenScripture={(circle) => setOverlay({ type: 'scripture_together', circle })}
-          onOpenCheckIn={(circle) => setOverlay({ type: 'check_in', circle })}
-          onOpenEncouragement={() => setOverlay({ type: 'encouragement' })}
-          onOpenAccountability={() => setOverlay({ type: 'accountability' })}
-        />
-      </ErrorBoundary>
+    return renderOverlayWithHome(
+      <TogetherScreen
+        profile={profile}
+        onBack={() => setOverlay({ type: 'none' })}
+        onOpenCircle={(circle) => setOverlay({ type: 'circle_home', circle })}
+        onOpenCreateCircle={() => setOverlay({ type: 'create_circle' })}
+        onOpenJoinCircle={() => setOverlay({ type: 'together_join_code' })}
+        onOpenPrayer={(circle) => setOverlay({ type: 'prayer_together', circle })}
+        onOpenScripture={(circle) => setOverlay({ type: 'scripture_together', circle })}
+        onOpenCheckIn={(circle) => setOverlay({ type: 'check_in', circle })}
+        onOpenEncouragement={() => setOverlay({ type: 'encouragement' })}
+        onOpenAccountability={() => setOverlay({ type: 'accountability' })}
+      />,
     );
   }
 
   if (overlay.type === 'together_join_code' && profile) {
-    return (
-      <ErrorBoundary>
-        <JoinCircleScreen
-          onBack={() => setOverlay({ type: 'together' })}
-          onJoined={() => setOverlay({ type: 'together' })}
-        />
-      </ErrorBoundary>
+    return renderOverlayWithHome(
+      <JoinCircleScreen
+        onBack={() => setOverlay({ type: 'together' })}
+        onJoined={() => setOverlay({ type: 'together' })}
+      />,
     );
   }
 
   if (overlay.type === 'circle_sermon_discussions' && profile) {
-    return (
-      <ErrorBoundary>
-        <CircleSermonDiscussionsScreen
-          profile={profile}
-          circle={overlay.circle}
-          onBack={() => setOverlay({ type: 'circle_home', circle: overlay.circle })}
-          onOpenDiscussion={(discussion) => setOverlay({ type: 'circle_sermon_discussion', circle: overlay.circle, discussion })}
-        />
-      </ErrorBoundary>
+    return renderOverlayWithHome(
+      <CircleSermonDiscussionsScreen
+        profile={profile}
+        circle={overlay.circle}
+        onBack={() => setOverlay({ type: 'circle_home', circle: overlay.circle })}
+        onOpenDiscussion={(discussion) => setOverlay({ type: 'circle_sermon_discussion', circle: overlay.circle, discussion })}
+      />,
     );
   }
 
@@ -731,87 +740,92 @@ export default function App() {
   }
 
   if (overlay.type === 'circle_sermon_discussion' && profile) {
-    return (
-      <ErrorBoundary>
-        <CircleSermonDiscussionDetailScreen
-          profile={profile}
-          circle={overlay.circle}
-          discussion={overlay.discussion}
-          onBack={() => setOverlay({ type: 'circle_sermon_discussions', circle: overlay.circle })}
-          onDeleted={() => setOverlay({ type: 'circle_sermon_discussions', circle: overlay.circle })}
-          onOpenScripture={(reference) => handleOpenDiscussionScripture(reference, overlay)}
-        />
-      </ErrorBoundary>
+    return renderOverlayWithHome(
+      <CircleSermonDiscussionDetailScreen
+        profile={profile}
+        circle={overlay.circle}
+        discussion={overlay.discussion}
+        onBack={() => setOverlay({ type: 'circle_sermon_discussions', circle: overlay.circle })}
+        onDeleted={() => setOverlay({ type: 'circle_sermon_discussions', circle: overlay.circle })}
+        onOpenScripture={(reference) => handleOpenDiscussionScripture(reference, overlay)}
+      />,
     );
   }
 
   if (overlay.type === 'circle_home' && profile) {
-    return (
-      <ErrorBoundary>
-        <CircleHomeScreen
-          profile={profile}
-          circle={overlay.circle}
-          onBack={() => setOverlay({ type: 'together' })}
-          onOpenPrayer={(circle) => setOverlay({ type: 'prayer_together', circle })}
-          onOpenScripture={(circle) => setOverlay({ type: 'scripture_together', circle })}
-          onOpenCheckIn={(circle) => setOverlay({ type: 'check_in', circle })}
-          onOpenEncouragement={(circle) => setOverlay({ type: 'encouragement', circle })}
-          onOpenAccountability={(circle) => setOverlay({ type: 'accountability', circle })}
-          onOpenSermonDiscussions={(circle) => setOverlay({ type: 'circle_sermon_discussions', circle })}
-        />
-      </ErrorBoundary>
+    return renderOverlayWithHome(
+      <CircleHomeScreen
+        profile={profile}
+        circle={overlay.circle}
+        onBack={() => setOverlay({ type: 'together' })}
+        onDeleted={() => setOverlay({ type: 'together' })}
+        onOpenPrayer={(circle) => setOverlay({ type: 'prayer_together', circle })}
+        onOpenScripture={(circle) => setOverlay({ type: 'scripture_together', circle })}
+        onOpenCheckIn={(circle) => setOverlay({ type: 'check_in', circle })}
+        onOpenEncouragement={(circle) => setOverlay({ type: 'encouragement', circle })}
+        onOpenAccountability={(circle) => setOverlay({ type: 'accountability', circle })}
+        onOpenSermonDiscussions={(circle) => setOverlay({ type: 'circle_sermon_discussions', circle })}
+      />,
     );
   }
 
   if (overlay.type === 'create_circle' && profile) {
-    return (
-      <ErrorBoundary>
-        <CreateCircleScreen
-          onBack={() => setOverlay({ type: 'together' })}
-          onCreated={() => setOverlay({ type: 'together' })}
-        />
-      </ErrorBoundary>
+    return renderOverlayWithHome(
+      <CreateCircleScreen
+        onBack={() => setOverlay({ type: 'together' })}
+        onCreated={() => setOverlay({ type: 'together' })}
+      />,
     );
   }
 
   if (overlay.type === 'prayer_together' && profile) {
-    return <ErrorBoundary><PrayerTogetherScreen profile={profile} circle={overlay.circle} onBack={() => setOverlay(overlay.circle ? { type: 'circle_home', circle: overlay.circle } : { type: 'together' })} /></ErrorBoundary>;
+    return renderOverlayWithHome(
+      <PrayerTogetherScreen
+        profile={profile}
+        circle={overlay.circle}
+        onBack={() => setOverlay(overlay.circle ? { type: 'circle_home', circle: overlay.circle } : { type: 'together' })}
+      />,
+    );
   }
 
   if (overlay.type === 'scripture_together' && profile) {
-    return (
-      <ErrorBoundary>
-        <ScriptureTogetherScreen
-          profile={profile}
-          circle={overlay.circle}
-          resume={overlay.resume}
-          onBack={() => setOverlay(overlay.circle ? { type: 'circle_home', circle: overlay.circle } : { type: 'together' })}
-          onReadPassage={(reference, studyCircle, study) => handleOpenDiscussionScripture(reference, { type: 'scripture_together', circle: overlay.circle, resume: { circle: studyCircle, study } })}
-        />
-      </ErrorBoundary>
+    return renderOverlayWithHome(
+      <ScriptureTogetherScreen
+        profile={profile}
+        circle={overlay.circle}
+        resume={overlay.resume}
+        onBack={() => setOverlay(overlay.circle ? { type: 'circle_home', circle: overlay.circle } : { type: 'together' })}
+        onReadPassage={(reference, studyCircle, study) => handleOpenDiscussionScripture(reference, { type: 'scripture_together', circle: overlay.circle, resume: { circle: studyCircle, study } })}
+      />,
     );
   }
 
   if (overlay.type === 'check_in' && profile) {
-    return <ErrorBoundary><CheckInScreen profile={profile} circle={overlay.circle} onBack={() => setOverlay(overlay.circle ? { type: 'circle_home', circle: overlay.circle } : { type: 'together' })} /></ErrorBoundary>;
+    return renderOverlayWithHome(
+      <CheckInScreen
+        profile={profile}
+        circle={overlay.circle}
+        onBack={() => setOverlay(overlay.circle ? { type: 'circle_home', circle: overlay.circle } : { type: 'together' })}
+      />,
+    );
   }
 
   if (overlay.type === 'encouragement' && profile) {
-    return (
-      <ErrorBoundary>
-        <EncouragementScreen
-          profile={profile}
-          circle={overlay.circle}
-          initialPickedCircle={overlay.pickedCircle}
-          onBack={() => setOverlay(overlay.circle ? { type: 'circle_home', circle: overlay.circle } : { type: 'together' })}
-          onOpenScripture={(reference, pickedCircle) => handleOpenDiscussionScripture(reference, { type: 'encouragement', circle: overlay.circle, pickedCircle })}
-        />
-      </ErrorBoundary>
+    return renderOverlayWithHome(
+      <EncouragementScreen
+        profile={profile}
+        circle={overlay.circle}
+        initialPickedCircle={overlay.pickedCircle}
+        onBack={() => setOverlay(overlay.circle ? { type: 'circle_home', circle: overlay.circle } : { type: 'together' })}
+        onOpenScripture={(reference, pickedCircle) => handleOpenDiscussionScripture(reference, { type: 'encouragement', circle: overlay.circle, pickedCircle })}
+      />,
     );
   }
 
   if (overlay.type === 'accountability' && profile) {
-    return <ErrorBoundary><AccountabilityScreen profile={profile} onBack={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
+    return renderOverlayWithHome(
+      <AccountabilityScreen profile={profile} onBack={() => setOverlay({ type: 'none' })} />,
+    );
   }
 
   if (overlay.type === 'admin_approval_center' && profile) {
@@ -826,54 +840,54 @@ export default function App() {
   }
 
   if (overlay.type === 'my_church' && profile) {
-    return (
-      <ErrorBoundary>
-        <MyChurchScreen
-          profile={profile}
-          activeChurchId={activeChurchId}
-          onActiveChurchChange={setActiveChurchId}
-          onBack={() => setOverlay({ type: 'none' })}
-          onOpenSundayMode={() => setOverlay({ type: 'sunday_mode' })}
-          onOpenSermonNotes={() => setOverlay({ type: 'sermon_notes' })}
-          onOpenSermonAssistant={() => setOverlay({ type: 'sermon_assistant' })}
-          onOpenChurchStudies={() => setOverlay({ type: 'church_studies' })}
-          onOpenManageChurchStudies={() => setOverlay({ type: 'manage_church_studies' })}
-          onOpenChurchPrayer={() => setOverlay({ type: 'church_prayer' })}
-          onOpenSmallGroups={() => setOverlay({ type: 'small_groups' })}
-        />
-      </ErrorBoundary>
+    return renderOverlayWithHome(
+      <MyChurchScreen
+        profile={profile}
+        activeChurchId={activeChurchId}
+        onActiveChurchChange={setActiveChurchId}
+        onBack={() => setOverlay({ type: 'none' })}
+        onOpenSundayMode={() => setOverlay({ type: 'sunday_mode' })}
+        onOpenSermonNotes={() => setOverlay({ type: 'sermon_notes' })}
+        onOpenSermonAssistant={() => setOverlay({ type: 'sermon_assistant' })}
+        onOpenChurchStudies={() => setOverlay({ type: 'church_studies' })}
+        onOpenManageChurchStudies={() => setOverlay({ type: 'manage_church_studies' })}
+        onOpenChurchPrayer={() => setOverlay({ type: 'church_prayer' })}
+        onOpenSmallGroups={() => setOverlay({ type: 'small_groups' })}
+      />,
     );
   }
 
   if (overlay.type === 'sunday_mode' && profile) {
-    return <ErrorBoundary><SundayModeScreen profile={profile} onBack={() => setOverlay({ type: 'my_church' })} onOpenSermonNotes={() => setOverlay({ type: 'sermon_notes' })} /></ErrorBoundary>;
+    return renderOverlayWithHome(
+      <SundayModeScreen
+        profile={profile}
+        onBack={() => setOverlay({ type: 'my_church' })}
+        onOpenSermonNotes={() => setOverlay({ type: 'sermon_notes' })}
+      />,
+    );
   }
 
   if (overlay.type === 'sermon_notes' && profile) {
-    return (
-      <ErrorBoundary>
-        <SermonNotesScreen
-          profile={profile}
-          onBack={() => setOverlay({ type: 'my_church' })}
-          onOpenSermonFollowUp={(sermon) => setOverlay({ type: 'sermon_follow_up', sermon })}
-          onOpenContinueSunday={() => setOverlay({ type: 'continue_sunday' })}
-          onOpenSermonCompanion={(sermon) => setOverlay({ type: 'sermon_companion', sermon })}
-          onOpenAskMyPastor={(sermon) => setOverlay({ type: 'ask_my_pastor', sermon })}
-        />
-      </ErrorBoundary>
+    return renderOverlayWithHome(
+      <SermonNotesScreen
+        profile={profile}
+        onBack={() => setOverlay({ type: 'my_church' })}
+        onOpenSermonFollowUp={(sermon) => setOverlay({ type: 'sermon_follow_up', sermon })}
+        onOpenContinueSunday={() => setOverlay({ type: 'continue_sunday' })}
+        onOpenSermonCompanion={(sermon) => setOverlay({ type: 'sermon_companion', sermon })}
+        onOpenAskMyPastor={(sermon) => setOverlay({ type: 'ask_my_pastor', sermon })}
+      />,
     );
   }
 
   if (overlay.type === 'sermon_assistant' && profile) {
-    return (
-      <ErrorBoundary>
-        <SermonAssistantScreen
-          profile={profile}
-          onBack={() => setOverlay({ type: 'my_church' })}
-          onRecord={() => setOverlay({ type: 'sermon_recording' })}
-          onOpenRecording={(recordingId) => setOverlay({ type: 'sermon_recording_detail', recordingId, fresh: false, interrupted: false })}
-        />
-      </ErrorBoundary>
+    return renderOverlayWithHome(
+      <SermonAssistantScreen
+        profile={profile}
+        onBack={() => setOverlay({ type: 'my_church' })}
+        onRecord={() => setOverlay({ type: 'sermon_recording' })}
+        onOpenRecording={(recordingId) => setOverlay({ type: 'sermon_recording_detail', recordingId, fresh: false, interrupted: false })}
+      />,
     );
   }
 
@@ -891,34 +905,60 @@ export default function App() {
   }
 
   if (overlay.type === 'sermon_follow_up') {
-    return <ErrorBoundary><SermonFollowUpScreen sermon={overlay.sermon} onBack={() => setOverlay({ type: 'sermon_notes' })} /></ErrorBoundary>;
+    return renderOverlayWithHome(
+      <SermonFollowUpScreen sermon={overlay.sermon} onBack={() => setOverlay({ type: 'sermon_notes' })} />,
+    );
   }
 
   if (overlay.type === 'continue_sunday' && profile) {
-    return <ErrorBoundary><ContinueSundayScreen profile={profile} onBack={() => setOverlay({ type: 'my_church' })} onStartWalk={() => setOverlay({ type: 'none' })} /></ErrorBoundary>;
+    return renderOverlayWithHome(
+      <ContinueSundayScreen
+        profile={profile}
+        onBack={() => setOverlay({ type: 'my_church' })}
+        onStartWalk={() => setOverlay({ type: 'none' })}
+      />,
+    );
   }
 
   if (overlay.type === 'sermon_companion') {
-    return <ErrorBoundary><SermonCompanionScreen sermon={overlay.sermon} onBack={() => setOverlay({ type: 'sermon_notes' })} /></ErrorBoundary>;
+    return renderOverlayWithHome(
+      <SermonCompanionScreen sermon={overlay.sermon} onBack={() => setOverlay({ type: 'sermon_notes' })} />,
+    );
   }
 
   if (overlay.type === 'ask_my_pastor') {
-    return <ErrorBoundary><AskMyPastorScreen sermon={overlay.sermon} onBack={() => setOverlay({ type: 'sermon_notes' })} /></ErrorBoundary>;
+    return renderOverlayWithHome(
+      <AskMyPastorScreen sermon={overlay.sermon} onBack={() => setOverlay({ type: 'sermon_notes' })} />,
+    );
   }
 
   if (overlay.type === 'church_studies' && profile) {
-    return <ErrorBoundary><ChurchStudiesScreen profile={profile} churchId={activeChurchId} onBack={() => setOverlay({ type: 'my_church' })} onOpenBible={handleOpenChurchStudyPassage} /></ErrorBoundary>;
+    return renderOverlayWithHome(
+      <ChurchStudiesScreen
+        profile={profile}
+        churchId={activeChurchId}
+        onBack={() => setOverlay({ type: 'my_church' })}
+        onOpenBible={handleOpenChurchStudyPassage}
+      />,
+    );
   }
+
   if (overlay.type === 'manage_church_studies' && profile) {
-    return <ErrorBoundary><ManageChurchStudiesScreen profile={profile} churchId={activeChurchId} onBack={() => setOverlay({ type: 'my_church' })} /></ErrorBoundary>;
+    return renderOverlayWithHome(
+      <ManageChurchStudiesScreen profile={profile} churchId={activeChurchId} onBack={() => setOverlay({ type: 'my_church' })} />,
+    );
   }
 
   if (overlay.type === 'small_groups' && profile) {
-    return <ErrorBoundary><SmallGroupModeScreen profile={profile} activeChurchId={activeChurchId} onBack={() => setOverlay({ type: 'my_church' })} /></ErrorBoundary>;
+    return renderOverlayWithHome(
+      <SmallGroupModeScreen profile={profile} activeChurchId={activeChurchId} onBack={() => setOverlay({ type: 'my_church' })} />,
+    );
   }
 
   if (overlay.type === 'church_prayer' && profile) {
-    return <ErrorBoundary><ChurchPrayerScreen profile={profile} activeChurchId={activeChurchId} onBack={() => setOverlay({ type: 'my_church' })} /></ErrorBoundary>;
+    return renderOverlayWithHome(
+      <ChurchPrayerScreen profile={profile} activeChurchId={activeChurchId} onBack={() => setOverlay({ type: 'my_church' })} />,
+    );
   }
 
   // Phase 9 overlays
