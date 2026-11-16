@@ -5,6 +5,7 @@ import { LoadingState, ErrorState } from '@/components/States';
 import { listSermonRecordings, type SermonRecordingMeta } from '@/lib/sermonRecordingStore';
 import { isSermonRecorderAvailable } from '@/lib/sermonRecorderNative';
 import type { Profile } from '@/lib/types';
+import { useLanguage } from '@/lib/i18n';
 
 interface Props {
   profile: Profile;
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export default function SermonAssistantScreen({ profile, onBack, onRecord, onOpenRecording }: Props) {
+  const { t } = useLanguage();
   const recorderAvailable = isSermonRecorderAvailable();
   const [recordings, setRecordings] = useState<SermonRecordingMeta[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +27,7 @@ export default function SermonAssistantScreen({ profile, onBack, onRecord, onOpe
     setError(null);
     listSermonRecordings(profile.id)
       .then((rows) => { if (!cancelled) setRecordings(rows); })
-      .catch(() => { if (!cancelled) setError('Could not load your saved recordings on this device.'); })
+      .catch(() => { if (!cancelled) setError(t('Could not load your saved recordings on this device.')); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [profile.id]);
@@ -34,7 +36,7 @@ export default function SermonAssistantScreen({ profile, onBack, onRecord, onOpe
     <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28 flex flex-col">
       <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
         <button onClick={onBack} className="btn-ghost"><X size={20} /></button>
-        <p className="ui-label">Sermon Assistant</p>
+        <p className="ui-label">{t('Sermon Assistant')}</p>
         <span className="w-8" />
       </header>
 
@@ -44,32 +46,32 @@ export default function SermonAssistantScreen({ profile, onBack, onRecord, onOpe
             <div className="w-12 h-12 rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center mb-4">
               <AudioLines size={20} className="text-gold-300" />
             </div>
-            <h2 className="font-serif text-2xl text-ivory-50 leading-tight mb-2">Sermon Assistant</h2>
+            <h2 className="font-serif text-2xl text-ivory-50 leading-tight mb-2">{t('Sermon Assistant')}</h2>
             <p className="text-ivory-400 text-sm leading-relaxed mb-5">
-              Record a sermon while you listen. Your recording stays under your control.
+              {t('Record a sermon while you listen. Your recording stays under your control.')}
             </p>
             <button
               onClick={() => { if (recorderAvailable) { vibrate(10); onRecord(); } }}
               disabled={!recorderAvailable}
               className="btn-primary w-full disabled:opacity-40"
             >
-              <Mic size={16} /> {recorderAvailable ? 'Record Sermon' : 'Recording unavailable on Android'}
+              <Mic size={16} /> {recorderAvailable ? t('Record Sermon') : t('Recording unavailable on Android')}
             </button>
             <p className="text-ivory-600 text-xs leading-relaxed mt-4">
               {recorderAvailable
-                ? 'Transcription and sermon insights will be added after recording is complete.'
-                : 'The Android app is enabled for testing now. Native sermon recording remains iPhone-only until the Android recorder is added.'}
+                ? t('Transcription and sermon insights will be added after recording is complete.')
+                : t('The Android app is enabled for testing now. Native sermon recording remains iPhone-only until the Android recorder is added.')}
             </p>
           </div>
 
-          <p className="ui-label mb-3">Saved Recordings</p>
+          <p className="ui-label mb-3">{t('Saved Recordings')}</p>
 
-          {loading && <LoadingState message="Loading recordings..." />}
+          {loading && <LoadingState message={t('Loading recordings...')} />}
           {!loading && error && <ErrorState message={error} />}
           {!loading && !error && recordings.length === 0 && (
             <div className="premium-card p-5 mb-6">
               <p className="text-ivory-400 text-sm leading-relaxed">
-                No recordings yet. Sermons you record stay on this device until you choose to delete them.
+                {t('No recordings yet. Sermons you record stay on this device until you choose to delete them.')}
               </p>
             </div>
           )}
@@ -82,7 +84,7 @@ export default function SermonAssistantScreen({ profile, onBack, onRecord, onOpe
                   className="premium-card p-4 flex items-center gap-3 text-left no-tap-highlight hover:border-gold-500/30 transition-all"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-ivory-100 text-sm font-medium truncate">{rec.title || 'Untitled Sermon'}</p>
+                    <p className="text-ivory-100 text-sm font-medium truncate">{rec.title || t('Untitled Sermon')}</p>
                     <p className="text-ivory-600 text-xs mt-1 truncate">
                       {formatDate(rec.startedAt)} · {formatDuration(rec.durationMs)}
                       {rec.preacher ? ` · ${rec.preacher}` : ''}
