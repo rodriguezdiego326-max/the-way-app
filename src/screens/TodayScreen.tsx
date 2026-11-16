@@ -146,7 +146,7 @@ function localizeReference(ref: string, translation: string): string {
     setScriptureLoading(false);
   }, [activeTranslation]);
 
-  const loadExistingReflection = useCallback(async (walkId: string, walkPassage: string) => {
+  const loadExistingReflection = useCallback(async (walkId: string, walkPassage: string, expectedLanguage: 'en' | 'es') => {
     // Skip stale fetches that would overwrite a row we just persisted for a
     // different (e.g. duplicate same-day) walk. The guard is cleared once the
     // fetch matches the most recent persisted walk id.
@@ -165,7 +165,10 @@ function localizeReference(ref: string, translation: string): string {
       // Clear it from the database and don't render it.
       if (existing?.ai_response) {
         const storedPassage = existing.ai_response.passage_reference;
-        if (storedPassage && storedPassage !== walkPassage) {
+        const storedLanguage = existing.ai_response.response_language;
+        const wrongPassage = Boolean(storedPassage && storedPassage !== walkPassage);
+        const wrongLanguage = Boolean(storedLanguage && storedLanguage !== expectedLanguage);
+        if (wrongPassage || wrongLanguage) {
           try {
             await supabase
               .from('walk_reflections')
@@ -195,7 +198,7 @@ function localizeReference(ref: string, translation: string): string {
       if (savedReflectionWalkIdRef.current && savedReflectionWalkIdRef.current !== todayWalk.id) {
         savedReflectionWalkIdRef.current = null;
       }
-      loadExistingReflection(todayWalk.id, todayWalk.passage_reference);
+      loadExistingReflection(todayWalk.id, todayWalk.passage_reference, activeTranslation === 'RV1909' ? 'es' : 'en');
     } else {
       savedReflectionWalkIdRef.current = null;
       setSavedReflection(null);
