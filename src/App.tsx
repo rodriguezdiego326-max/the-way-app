@@ -181,7 +181,7 @@ export type Overlay =
   | { type: 'mobile_build_guide' };
 
 function AppContent() {
-  const { setLanguage } = useLanguage();
+  const { language, setLanguage } = useLanguage();
   const [appState, setAppState] = useState<AppState>('splash');
   const [activeTab, setActiveTab] = useState<Tab>('today');
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -206,10 +206,28 @@ function AppContent() {
   const [activeChurchId, setActiveChurchId] = useState<string | null>(null);
   const [globalTranslation, setGlobalTranslation] = useState<BibleTranslation>(getInitialTranslation);
 
-  function handleTranslationChange(tr: BibleTranslation) {
+  async function handleTranslationChange(tr: BibleTranslation) {
+    const nextLanguage = tr === 'RV1909' ? 'es' : 'en';
+    if (profile?.id) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          app_language: nextLanguage,
+          preferred_translation: tr,
+        })
+        .eq('id', profile.id);
+      if (error) {
+        console.error('[App] language/translation sync failed', error);
+      }
+    }
+
     setGlobalTranslation(tr);
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('solapath_translation', tr);
+    }
+
+    if (nextLanguage !== language) {
+      setLanguage(nextLanguage);
     }
   }
   const authGenerationRef = useRef(0);
