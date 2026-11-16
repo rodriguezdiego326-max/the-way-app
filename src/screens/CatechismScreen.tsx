@@ -9,6 +9,8 @@ import {
   type CatechismQuestion,
 } from '@/lib/catechismData';
 import { catechismAgeWording } from '@/lib/catechismAgeWording';
+import { getBookDisplayName } from '@/lib/bibleTypes';
+import { useLanguage } from '@/lib/i18n';
 import type { AgeRange, FamilyProfile, CatechismProgress, CatechismType } from '@/lib/familyTypes';
 
 interface CatechismScreenProps {
@@ -22,6 +24,7 @@ const SOURCE_LABEL: Record<CatechismType, string> = {
 };
 
 export default function CatechismScreen({ familyProfile, onBack }: CatechismScreenProps) {
+  const { language, t } = useLanguage();
   const [selectedType, setSelectedType] = useState<CatechismType>('westminster_shorter');
   const [ageRange, setAgeRange] = useState<AgeRange>('6-8');
   const [progress, setProgress] = useState<CatechismProgress[]>([]);
@@ -49,9 +52,25 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
   }
 
   function ageWordingFor(q: CatechismQuestion) {
-    if (ageRange === '18+') return null;
+    // The age-wording file preserves the curated English teaching copy.
+    // In Spanish, use the fully translated historic question plus the
+    // translated age-appropriate explanation rather than leaking English.
+    if (language === 'es' || ageRange === '18+') return null;
     const key = `${selectedType === 'westminster_shorter' ? 'westminster' : 'heidelberg'}-${q.number}`;
     return catechismAgeWording[key]?.[ageRange] ?? null;
+  }
+
+  function localizeScriptureBasis(value: string): string {
+    if (language !== 'es') return value;
+    return value
+      .split(';')
+      .map((part) => {
+        const trimmed = part.trim();
+        const match = trimmed.match(/^(.+?)\s+(\d.*)$/);
+        if (!match) return trimmed;
+        return `${getBookDisplayName(match[1], 'RV1909')} ${match[2]}`;
+      })
+      .join('; ');
   }
 
   async function toggleComplete(q: CatechismQuestion) {
@@ -204,7 +223,9 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
                         )}
                       </div>
                       <div className="flex-1">
-                        <p className="text-ivory-100 text-sm font-medium leading-relaxed">{ageWordingFor(q)?.question ?? q.question}</p>
+                        <p className="text-ivory-100 text-sm font-medium leading-relaxed">
+                          {ageWordingFor(q)?.question ?? t(q.question)}
+                        </p>
                       </div>
                     </div>
                     <ChevronDown size={16} className={`text-ivory-500 transition-transform shrink-0 mt-1 ${isExpanded ? 'rotate-180' : ''}`} />
@@ -215,15 +236,17 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
                       <div className="gold-divider mb-3" />
 
                       <div className="mb-3 rounded-xl bg-ink-800/40 border border-ink-700/40 p-3">
-                        <p className="ui-label mb-1">Original Catechism</p>
-                        <p className="text-ivory-100 text-sm font-medium mb-1">{q.question}</p>
-                        <p className="text-ivory-200 text-sm leading-relaxed italic">{q.answer}</p>
+                        <p className="ui-label mb-1">
+                          {language === 'es' ? 'Traducción al español de SOLAPATH' : 'Original Catechism'}
+                        </p>
+                        <p className="text-ivory-100 text-sm font-medium mb-1">{t(q.question)}</p>
+                        <p className="text-ivory-200 text-sm leading-relaxed italic">{t(q.answer)}</p>
                         <p className="text-ivory-600 text-xs mt-2">{SOURCE_LABEL[selectedType]}</p>
                       </div>
 
                       <div className="flex items-center gap-2 mb-3">
                         <BookOpen size={13} className="text-gold-400/60" />
-                        <p className="text-ivory-400 text-xs">{q.scripture_basis}</p>
+                        <p className="text-ivory-400 text-xs">{localizeScriptureBasis(q.scripture_basis)}</p>
                       </div>
 
                       {ageWordingFor(q) && (
@@ -236,17 +259,17 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
 
                       <div className="mb-3">
                         <p className="ui-label mb-1">SOLAPATH Age-Appropriate Explanation ({ageLabel})</p>
-                        <p className="text-ivory-300 text-sm leading-relaxed">{q.explanations[ageRange]}</p>
+                        <p className="text-ivory-300 text-sm leading-relaxed">{t(q.explanations[ageRange])}</p>
                       </div>
 
                       <div className="mb-3">
                         <p className="ui-label mb-1">Discuss Together</p>
-                        <p className="text-ivory-300 text-sm leading-relaxed">{q.discussion_question}</p>
+                        <p className="text-ivory-300 text-sm leading-relaxed">{t(q.discussion_question)}</p>
                       </div>
 
                       <div className="mb-3">
                         <p className="ui-label mb-1">Family Application</p>
-                        <p className="text-ivory-300 text-sm leading-relaxed">{q.family_application}</p>
+                        <p className="text-ivory-300 text-sm leading-relaxed">{t(q.family_application)}</p>
                       </div>
 
                       <div className="mb-4">
@@ -254,7 +277,7 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
                           <Heart size={13} className="text-gold-400/60" />
                           <p className="ui-label">Pray</p>
                         </div>
-                        <p className="text-ivory-400 text-xs leading-relaxed italic">{q.prayer}</p>
+                        <p className="text-ivory-400 text-xs leading-relaxed italic">{t(q.prayer)}</p>
                       </div>
 
                       <button
@@ -284,7 +307,9 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
           <div className="flex items-start gap-2 mt-5 px-1">
             <Info size={13} className="text-gold-400/60 shrink-0 mt-0.5" />
             <p className="text-ivory-600 text-xs leading-relaxed">
-              The original catechism wording is shown exactly as published. SOLAPATH explanations are written to help you teach each question at your child's age and are not part of the historic text.
+              {language === 'es'
+                ? 'El texto histórico se muestra aquí en una traducción al español de SOLAPATH. Cambia a English para ver la redacción histórica original exactamente como está almacenada. Las explicaciones de SOLAPATH no forman parte del texto histórico.'
+                : "The original catechism wording is shown exactly as published. SOLAPATH explanations are written to help you teach each question at your child's age and are not part of the historic text."}
             </p>
           </div>
         </div>
