@@ -45,6 +45,7 @@ export interface SermonInsightsRecord {
   transcriptFingerprint: string;
   insights: SermonInsights;
   createdAt: string;
+  language?: 'en' | 'es';
 }
 
 export interface NewSermonRecording {
