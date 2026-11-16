@@ -4,6 +4,7 @@ import { LoadingState } from '@/components/States';
 import { vibrate } from '@/lib/utils';
 import { DEFAULT_ACTIVITY_PREFERENCES, type ActivityPreferences } from '@/lib/activityTypes';
 import { loadActivityPreferences, saveActivityPreferences } from '@/lib/activityEngine';
+import PushNotificationsSection from '@/components/PushNotificationsSection';
 
 interface Props {
   userId: string;
@@ -95,6 +96,8 @@ export default function ActivityPreferencesSheet({ userId, onClose }: Props) {
             ))}
           </ul>
         )}
+
+        {!loading && <PushNotificationsSection userId={userId} />}
 
         {error && <p className="text-red-400 text-xs mt-4">{error}</p>}
       </div>

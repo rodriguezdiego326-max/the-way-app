@@ -69,6 +69,7 @@ import type { Circle, CircleSermonDiscussion, Sermon } from '@/lib/togetherTypes
 import type { ActivityItem } from '@/lib/activityTypes';
 import { loadCircleForActivity, resolveActivityDestination } from '@/lib/activityRouter';
 import { useActivityUnread } from '@/hooks/useActivityUnread';
+import { deactivateThisDevice, subscribeToPushTaps } from '@/lib/pushNotifications';
 import type { ScriptureResume } from '@/screens/ScriptureTogetherScreen';
 import type { FamilySermonDiscussion } from '@/lib/familyTypes';
 
@@ -263,6 +264,21 @@ export default function App() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  const signedInUserId = session?.user?.id ?? null;
+  useEffect(() => {
+    if (!signedInUserId) return;
+    let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
+    void subscribeToPushTaps(() => setOverlay({ type: 'activity' })).then((off) => {
+      if (cancelled) off();
+      else unsubscribe = off;
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [signedInUserId]);
+
   async function handleOpenActivity(item: ActivityItem) {
     const destination = resolveActivityDestination(item);
     if (!destination) return;
@@ -279,6 +295,7 @@ export default function App() {
   }
 
   async function handleSignOut() {
+    await deactivateThisDevice().catch(() => undefined);
     authGenerationRef.current++;
     setProfileLoading(false);
     setAuthLoading(false);
