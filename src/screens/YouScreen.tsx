@@ -224,18 +224,26 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
   }
 
   async function setAppLanguage(next: AppLanguage) {
+    if (next === language) return;
     vibrate(8);
-    setLanguage(next);
-    if (!profile?.id) return;
-    const { error } = await supabase
-      .from('profiles')
-      .update({ app_language: next })
-      .eq('id', profile.id);
-    if (error) {
-      console.error('[You] language update failed', error);
-      return;
+
+    if (profile?.id) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          app_language: next,
+          preferred_translation: next === 'es' ? 'RV1909' : 'WEB',
+        })
+        .eq('id', profile.id);
+      if (error) {
+        console.error('[You] language update failed', error);
+        return;
+      }
     }
-    onProfileUpdate();
+
+    // This remounts the user-facing app from clean React-rendered text instead
+    // of mutating translated DOM nodes back in place (Build 159 crash fix).
+    setLanguage(next);
   }
 
   // SETTINGS VIEW
