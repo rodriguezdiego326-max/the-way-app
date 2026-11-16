@@ -1439,9 +1439,13 @@ const LanguageContext = createContext<LanguageContextValue>({
   t: (english) => english,
 });
 
-function getInitialLanguage(): AppLanguage {
+export function getStoredAppLanguage(): AppLanguage {
   if (typeof localStorage === 'undefined') return 'en';
   return localStorage.getItem(STORAGE_KEY) === 'es' ? 'es' : 'en';
+}
+
+function getInitialLanguage(): AppLanguage {
+  return getStoredAppLanguage();
 }
 
 function translateTextNode(node: Text) {
