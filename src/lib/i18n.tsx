@@ -2622,6 +2622,12 @@ const ES: Record<string, string> = {
   'Job 9:2–3; Job 15:15–16; Psalm 130:3': 'Job 9:2–3; Job 15:15–16; Salmos 130:3',
   'Ezekiel 18:4; Hebrews 2:14–17; Psalm 130:3': 'Ezequiel 18:4; Hebreos 2:14–17; Salmos 130:3',
   'Hebrews 7:26; Isaiah 9:6; Jeremiah 23:5–6': 'Hebreos 7:26; Isaías 9:6; Jeremías 23:5–6',
+  'Core Christian Doctrine': 'Doctrina cristiana central',
+  'Confessional Position': 'Posición confesional',
+  'Theological Debate': 'Debate teológico',
+  'Broader Christian Disagreement': 'Desacuerdo cristiano más amplio',
+  'Wisdom / Application': 'Sabiduría / aplicación',
+  'Not Explicitly Addressed by Scripture': 'No tratado explícitamente por la Escritura',
 };
 
 interface LanguageContextValue {
