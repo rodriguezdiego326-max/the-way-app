@@ -90,14 +90,33 @@ export async function loadActivityPreferences(userId: string): Promise<ActivityP
   return (data as ActivityPreferences | null) ?? DEFAULT_ACTIVITY_PREFERENCES;
 }
 
-export async function saveActivityPreferences(userId: string, prefs: ActivityPreferences): Promise<void> {
+const DUPLICATE_KEY_ERROR = '23505';
+
+async function updatePreferenceRow(userId: string, patch: Partial<ActivityPreferences>): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('activity_preferences')
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq('profile_id', userId)
+    .select('profile_id');
+  if (error) throw error;
+  return (data?.length ?? 0) > 0;
+}
+
+export async function saveActivityPreferences(userId: string, patch: Partial<ActivityPreferences>): Promise<void> {
+  if (await updatePreferenceRow(userId, patch)) return;
+
   const { error } = await supabase
     .from('activity_preferences')
-    .upsert(
-      { profile_id: userId, ...prefs, updated_at: new Date().toISOString() },
-      { onConflict: 'profile_id' },
-    );
-  if (error) throw error;
+    .insert({
+      ...DEFAULT_ACTIVITY_PREFERENCES,
+      ...patch,
+      profile_id: userId,
+      updated_at: new Date().toISOString(),
+    });
+  if (!error) return;
+  if (error.code !== DUPLICATE_KEY_ERROR) throw error;
+
+  if (!(await updatePreferenceRow(userId, patch))) throw error;
 }
 
 export function subscribeToActivity(userId: string, onChange: () => void): () => void {

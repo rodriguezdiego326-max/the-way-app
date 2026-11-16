@@ -22,12 +22,23 @@ export default function ActivityPreferencesSheet({ userId, onClose }: Props) {
   const [prefs, setPrefs] = useState<ActivityPreferences>(DEFAULT_ACTIVITY_PREFERENCES);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const saveSeq = useRef(0);
+  const prefsRef = useRef(prefs);
+  const keySeq = useRef<Partial<Record<keyof ActivityPreferences, number>>>({});
+  const seqCounter = useRef(0);
+
+  function applyPref(key: keyof ActivityPreferences, value: boolean) {
+    prefsRef.current = { ...prefsRef.current, [key]: value };
+    setPrefs(prefsRef.current);
+  }
 
   useEffect(() => {
     let cancelled = false;
     loadActivityPreferences(userId)
-      .then((p) => { if (!cancelled) setPrefs(p); })
+      .then((p) => {
+        if (cancelled) return;
+        prefsRef.current = p;
+        setPrefs(p);
+      })
       .catch(() => { if (!cancelled) setError('Could not load your settings.'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -35,16 +46,16 @@ export default function ActivityPreferencesSheet({ userId, onClose }: Props) {
 
   async function toggle(key: keyof ActivityPreferences) {
     vibrate(8);
-    const previous = prefs;
-    const next = { ...prefs, [key]: !prefs[key] };
-    const seq = ++saveSeq.current;
-    setPrefs(next);
+    const before = prefsRef.current[key];
+    const seq = ++seqCounter.current;
+    keySeq.current[key] = seq;
+    applyPref(key, !before);
     setError(null);
     try {
-      await saveActivityPreferences(userId, next);
+      await saveActivityPreferences(userId, { [key]: !before });
     } catch {
-      if (seq === saveSeq.current) {
-        setPrefs(previous);
+      if (keySeq.current[key] === seq) {
+        applyPref(key, before);
         setError('That change did not save. Please try again.');
       }
     }
