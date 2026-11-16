@@ -3,6 +3,7 @@
 
 export const PUSH_TITLE = "SOLAPATH";
 export const PUSH_FALLBACK_BODY = "You have new activity.";
+export const PUSH_FALLBACK_BODY_ES = "Tienes nueva actividad.";
 
 const ACTOR_FALLBACK = "A member";
 const CIRCLE_SCOPE_FALLBACK = "your Circle";
@@ -13,6 +14,7 @@ export type PushCopyInput = {
   eventType: string;
   actorLabel: unknown;
   scopeLabel: unknown;
+  language?: unknown;
 };
 
 export function sanitizeLabel(value: unknown, maxLength: number): string | null {
@@ -26,29 +28,30 @@ export function sanitizeLabel(value: unknown, maxLength: number): string | null 
 }
 
 export function buildActivityPushBody(input: PushCopyInput): string {
-  const actor = sanitizeLabel(input.actorLabel, ACTOR_MAX) ?? ACTOR_FALLBACK;
-  const circleScope = sanitizeLabel(input.scopeLabel, SCOPE_MAX) ?? CIRCLE_SCOPE_FALLBACK;
+  const spanish = input.language === "es";
+  const actor = sanitizeLabel(input.actorLabel, ACTOR_MAX) ?? (spanish ? "Un miembro" : ACTOR_FALLBACK);
+  const circleScope = sanitizeLabel(input.scopeLabel, SCOPE_MAX) ?? (spanish ? "tu Círculo" : CIRCLE_SCOPE_FALLBACK);
 
   switch (input.eventType) {
     case "family_prayer_added":
-      return `${actor} added a Family prayer.`;
+      return spanish ? `${actor} agregó una oración familiar.` : `${actor} added a Family prayer.`;
     case "family_prayer_updated":
-      return `${actor} added an update to a Family prayer.`;
+      return spanish ? `${actor} agregó una actualización a una oración familiar.` : `${actor} added an update to a Family prayer.`;
     case "family_sermon_discussion_added":
-      return `${actor} shared a sermon discussion with your Family.`;
+      return spanish ? `${actor} compartió una conversación sobre el sermón con tu Familia.` : `${actor} shared a sermon discussion with your Family.`;
     case "family_member_joined":
-      return `${actor} joined your Family.`;
+      return spanish ? `${actor} se unió a tu Familia.` : `${actor} joined your Family.`;
     case "circle_prayer_added":
-      return `${actor} shared a prayer in ${circleScope}.`;
+      return spanish ? `${actor} compartió una oración en ${circleScope}.` : `${actor} shared a prayer in ${circleScope}.`;
     case "circle_checkin_added":
-      return `${actor} posted a Check-In in ${circleScope}.`;
+      return spanish ? `${actor} hizo un registro en ${circleScope}.` : `${actor} posted a Check-In in ${circleScope}.`;
     case "circle_encouragement_received":
-      return `${actor} sent you an encouragement in ${circleScope}.`;
+      return spanish ? `${actor} te envió ánimo en ${circleScope}.` : `${actor} sent you an encouragement in ${circleScope}.`;
     case "circle_sermon_discussion_added":
-      return `${actor} shared a sermon discussion in ${circleScope}.`;
+      return spanish ? `${actor} compartió una conversación sobre el sermón en ${circleScope}.` : `${actor} shared a sermon discussion in ${circleScope}.`;
     case "circle_member_joined":
-      return `${actor} joined ${circleScope}.`;
+      return spanish ? `${actor} se unió a ${circleScope}.` : `${actor} joined ${circleScope}.`;
     default:
-      return PUSH_FALLBACK_BODY;
+      return spanish ? PUSH_FALLBACK_BODY_ES : PUSH_FALLBACK_BODY;
   }
 }
