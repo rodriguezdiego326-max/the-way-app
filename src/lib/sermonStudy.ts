@@ -5,9 +5,11 @@ const MAX_THEMES = 5;
 const MAX_STUDY_QUESTIONS = 6;
 const MAX_PASTOR_QUESTIONS = 3;
 
-export const STUDY_UNCLEAR_MESSAGE = getStoredAppLanguage() === 'es'
-  ? 'La transcripción no es lo suficientemente clara para identificar sus puntos principales.'
-  : 'The transcript is not clear enough to identify its main points.';
+export function getStudyUnclearMessage(): string {
+  return getStoredAppLanguage() === 'es'
+    ? 'La transcripción no es lo suficientemente clara para identificar sus puntos principales.'
+    : 'The transcript is not clear enough to identify its main points.';
+}
 
 export type OpenBibleHandler = (book: string, chapter: number, verseStart: number | null, verseEnd: number | null) => void;
 
