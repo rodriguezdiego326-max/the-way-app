@@ -1,10 +1,11 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Brain, Heart, Users, Church, Settings, ChevronRight, Trash2, Eye, EyeOff, X, ShieldCheck, Sparkles, Landmark, FlaskConical, Search, Shield, BarChart3, Package, Cpu, BookHeart, MessageSquare, Bell } from 'lucide-react';
+import { Brain, Heart, Users, Church, Settings, ChevronRight, Trash2, Eye, EyeOff, X, ShieldCheck, Sparkles, Landmark, FlaskConical, Search, Shield, BarChart3, Package, Cpu, BookHeart, MessageSquare, Bell, Languages, BookOpenCheck } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { getAppAdminRole } from '@/lib/appAdminEngine';
 import type { AppAdminRole } from '@/lib/togetherTypes';
 import type { UnreadCounts } from '@/lib/activityEngine';
 import { vibrate, formatDate } from '@/lib/utils';
+import { useLanguage, type AppLanguage } from '@/lib/i18n';
 import DeleteAllMemoriesDialog from '@/components/DeleteAllMemoriesDialog';
 const TestSuite = import.meta.env.DEV ? lazy(() => import('@/screens/TestSuite')) : null;
 import type { Profile, Memory, TheologicalDepth, TheologicalAuthor, ConfessionalDocument } from '@/lib/types';
@@ -27,6 +28,7 @@ interface YouScreenProps {
   onOpenActivity: () => void;
   activityCounts: UnreadCounts | null;
   onOpenMyChurch: () => void;
+  onOpenAppGuide: () => void;
   onOpenAdminApprovalCenter?: () => void;
   onOpenPhase8Tests?: () => void;
   onOpenLegacy: () => void;
@@ -47,7 +49,8 @@ const depthLabels: Record<TheologicalDepth, string> = {
   deep_study: 'Deep Study',
 };
 
-export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOpenReach, onOpenLibrarySearch, onOpenAdminSources, onOpenRetrievalDebug, onOpenRAGTests, onOpenPhase6Tests, onOpenQADashboard, onOpenSourceBatches, onOpenReleaseGate, onOpenProductionStatus, onOpenTogether, onOpenActivity, activityCounts, onOpenMyChurch, onOpenAdminApprovalCenter, onOpenPhase8Tests, onOpenLegacy, onOpenPhase9Tests, onOpenPrivacyCenter, onOpenProductionReadiness, onOpenPhase10Tests, onOpenBetaFeedback, session, onSignOut }: YouScreenProps) {
+export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOpenReach, onOpenLibrarySearch, onOpenAdminSources, onOpenRetrievalDebug, onOpenRAGTests, onOpenPhase6Tests, onOpenQADashboard, onOpenSourceBatches, onOpenReleaseGate, onOpenProductionStatus, onOpenTogether, onOpenActivity, activityCounts, onOpenMyChurch, onOpenAppGuide, onOpenAdminApprovalCenter, onOpenPhase8Tests, onOpenLegacy, onOpenPhase9Tests, onOpenPrivacyCenter, onOpenProductionReadiness, onOpenPhase10Tests, onOpenBetaFeedback, session, onSignOut }: YouScreenProps) {
+  const { language, setLanguage } = useLanguage();
   const [subView, setSubView] = useState<SubView>('main');
   const [appAdminRole, setAppAdminRole] = useState<AppAdminRole | null>(null);
   const [memories, setMemories] = useState<Memory[]>([]);
@@ -220,6 +223,21 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
     );
   }
 
+  async function setAppLanguage(next: AppLanguage) {
+    vibrate(8);
+    setLanguage(next);
+    if (!profile?.id) return;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ app_language: next })
+      .eq('id', profile.id);
+    if (error) {
+      console.error('[You] language update failed', error);
+      return;
+    }
+    onProfileUpdate();
+  }
+
   // SETTINGS VIEW
   if (subView === 'settings') {
     return (
@@ -233,6 +251,30 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
         </header>
 
         <div className="flex-1 overflow-y-auto px-6 pt-6 nav-safe-padding animate-fade-in">
+          <div className="mb-6">
+            <p className="ui-label mb-3">Language</p>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                ['en', 'English'],
+                ['es', 'Español'],
+              ] as const).map(([value, label]) => (
+                <button
+                  type="button"
+                  key={value}
+                  onClick={() => void setAppLanguage(value)}
+                  className={`flex items-center justify-between px-4 py-4 rounded-2xl border transition-all no-tap-highlight ${
+                    language === value
+                      ? 'bg-gold-500/10 border-gold-500/40 text-ivory-50'
+                      : 'bg-ink-800/40 border-ink-700/40 text-ivory-300'
+                  }`}
+                >
+                  <span className="font-medium">{label}</span>
+                  {language === value && <Languages size={16} className="text-gold-300" />}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="mb-6">
             <p className="ui-label mb-3">Theological Depth</p>
             <div className="flex flex-col gap-2">
@@ -746,6 +788,20 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
           </>)}
 
           <button
+            onClick={onOpenAppGuide}
+            className="premium-card p-4 flex items-center gap-3 text-left no-tap-highlight hover:border-gold-500/30 transition-all duration-300 group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center shrink-0">
+              <BookOpenCheck size={17} className="text-gold-300" />
+            </div>
+            <div className="flex-1">
+              <p className="text-ivory-100 font-medium text-sm">App Guide</p>
+              <p className="text-ivory-600 text-xs">How to use SOLAPATH</p>
+            </div>
+            <ChevronRight size={16} className="text-ivory-600 shrink-0" />
+          </button>
+
+          <button
             onClick={() => setSubView('settings')}
             className="premium-card p-4 flex items-center gap-3 text-left no-tap-highlight hover:border-gold-500/30 transition-all duration-300 group"
           >
@@ -754,7 +810,7 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
             </div>
             <div className="flex-1">
               <p className="text-ivory-100 font-medium text-sm">Settings</p>
-              <p className="text-ivory-600 text-xs">Depth · Translation · Memory · About</p>
+              <p className="text-ivory-600 text-xs">Language · Depth · Translation · Memory · About</p>
             </div>
             <ChevronRight size={16} className="text-ivory-600 shrink-0" />
           </button>
