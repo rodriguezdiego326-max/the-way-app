@@ -501,6 +501,24 @@ export async function createChurchGroup(
   return (data as ChurchGroup) || null;
 }
 
+export async function deleteChurchGroup(groupId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('church_groups')
+    .delete()
+    .eq('id', groupId)
+    .select('id');
+  if (error || !data?.length) {
+    console.error('[Church] delete group failed', {
+      operation: 'delete',
+      table: 'church_groups',
+      code: error?.code,
+      message: error?.message,
+    });
+    return false;
+  }
+  return true;
+}
+
 export async function getGroupDiscussions(groupId: string): Promise<GroupDiscussion[]> {
   const { data } = await supabase
     .from('group_discussions')
