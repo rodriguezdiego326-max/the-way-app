@@ -1645,6 +1645,15 @@ const ES: Record<string, string> = {
   'Why does Jesus need to be both fully human and fully God to be our Savior?': '¿Por qué Jesús necesita ser plenamente humano y plenamente Dios para ser nuestro Salvador?',
   'Read Hebrews 7:26 together and talk about why Jesus is the perfect Savior for our family.': 'Lean juntos Hebreos 7:26 y hablen de por qué Jesús es el Salvador perfecto para nuestra familia.',
   'Jesus, You are truly man and truly God, and You are perfectly righteous. Thank You for being our Mediator. Amen.': 'Jesús, eres verdaderamente hombre y verdaderamente Dios, y eres perfectamente justo. Gracias por ser nuestro Mediador. Amén.',
+  'We couldn\'t load pending invitations.': 'No pudimos cargar las invitaciones pendientes.',
+  'No pending invitations. Generate an invitation when you\'re ready to add someone to this Circle.': 'No hay invitaciones pendientes. Genera una cuando estés listo para agregar a alguien a este Círculo.',
+  'Could not copy the link. Select the code and copy it manually.': 'No se pudo copiar el enlace. Selecciona el código y cópialo manualmente.',
+  'Sharing is not available right now. Use Copy instead.': 'Compartir no está disponible ahora. Usa Copiar.',
+  'We couldn\'t revoke this invitation. Please try again.': 'No pudimos revocar esta invitación. Inténtalo de nuevo.',
+  'Created': 'Creada',
+  'No expiration': 'Sin vencimiento',
+  'Share Again': 'Compartir de nuevo',
+  'SOLAPATH — Scripture for the road ahead.': 'SOLAPATH — Escritura para el camino que tienes por delante.',
 };
 
 interface LanguageContextValue {
@@ -1679,7 +1688,7 @@ function translateTextNode(node: Text) {
 }
 
 function translateAttributes(el: Element) {
-  for (const attr of ['placeholder', 'aria-label', 'title']) {
+  for (const attr of ['placeholder', 'aria-label', 'title', 'alt']) {
     const raw = el.getAttribute(attr);
     if (!raw) continue;
     const translated = ES[raw.trim()];
