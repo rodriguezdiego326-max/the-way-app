@@ -9,6 +9,8 @@ import {
   type CatechismQuestion,
 } from '@/lib/catechismData';
 import { catechismAgeWording } from '@/lib/catechismAgeWording';
+import { westminsterShorterCatechismEs } from '@/lib/catechismWestminster.es';
+import { heidelbergCatechismEs } from '@/lib/catechismHeidelberg.es';
 import { getBookDisplayName } from '@/lib/bibleTypes';
 import { useLanguage } from '@/lib/i18n';
 import type { AgeRange, FamilyProfile, CatechismProgress, CatechismType } from '@/lib/familyTypes';
@@ -30,7 +32,15 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
   const [progress, setProgress] = useState<CatechismProgress[]>([]);
   const [expandedQ, setExpandedQ] = useState<number | null>(null);
 
-  const catechism = selectedType === 'westminster_shorter' ? westminsterShorterCatechism : heidelbergCatechism;
+  const catechism = language === 'es'
+    ? (selectedType === 'westminster_shorter' ? westminsterShorterCatechismEs : heidelbergCatechismEs)
+    : (selectedType === 'westminster_shorter' ? westminsterShorterCatechism : heidelbergCatechism);
+
+  const sourceLabel = language === 'es'
+    ? (selectedType === 'westminster_shorter'
+        ? 'Catecismo Menor de Westminster (1647) · traducción de SOLAPATH'
+        : 'Catecismo de Heidelberg (1563) · traducción de SOLAPATH')
+    : SOURCE_LABEL[selectedType];
 
   const loadProgress = useCallback(async () => {
     if (!familyProfile) return;
@@ -107,7 +117,8 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
   }
 
   const completedCount = progress.filter((p) => p.completed).length;
-  const ageLabel = CATECHISM_AGE_BANDS.find((b) => b.value === ageRange)?.label ?? ageRange;
+  const storedAgeLabel = CATECHISM_AGE_BANDS.find((b) => b.value === ageRange)?.label ?? ageRange;
+  const ageLabel = language === 'es' && storedAgeLabel === 'Adult' ? 'Adulto' : storedAgeLabel;
 
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28 flex flex-col">
@@ -115,7 +126,7 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
         <button onClick={onBack} className="btn-ghost">
           <X size={20} />
         </button>
-        <p className="ui-label">Catechism</p>
+        <p className="ui-label">{language === 'es' ? 'Catecismo' : 'Catechism'}</p>
         <span className="w-10" />
       </header>
 
@@ -126,9 +137,11 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
               <Scroll size={18} className="text-gold-300" />
             </div>
             <div>
-              <h2 className="font-serif text-2xl text-ivory-50">Catechism</h2>
+              <h2 className="font-serif text-2xl text-ivory-50">{language === 'es' ? 'Catecismo' : 'Catechism'}</h2>
               <p className="text-ivory-500 text-sm mt-1 leading-relaxed">
-                Learn the faith together through historic questions and answers.
+                {language === 'es'
+                  ? 'Aprendan juntos la fe por medio de preguntas y respuestas históricas.'
+                  : 'Learn the faith together through historic questions and answers.'}
               </p>
             </div>
           </div>
@@ -146,7 +159,7 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
                   : 'bg-ink-800/40 border-ink-700/40 text-ivory-400'
               }`}
             >
-              Westminster Shorter
+              {language === 'es' ? 'Westminster' : 'Westminster Shorter'}
             </button>
             <button
               onClick={() => {
@@ -164,7 +177,7 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
             </button>
           </div>
 
-          <p className="ui-label mb-2">Age of your child</p>
+          <p className="ui-label mb-2">{language === 'es' ? 'Edad de tu hijo' : 'Age of your child'}</p>
           <div className="flex flex-wrap gap-2 mb-5">
             {CATECHISM_AGE_BANDS.map((band) => (
               <button
@@ -196,7 +209,9 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
           </div>
 
           <p className="text-ivory-600 text-xs mb-4 italic">
-            Progress sequentially, at your family's pace. This is not a competition.
+            {language === 'es'
+              ? 'Avancen en orden y al ritmo de su familia. Esto no es una competencia.'
+              : "Progress sequentially, at your family's pace. This is not a competition."}
           </p>
 
           <div className="space-y-2">
@@ -241,7 +256,7 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
                         </p>
                         <p className="text-ivory-100 text-sm font-medium mb-1">{t(q.question)}</p>
                         <p className="text-ivory-200 text-sm leading-relaxed italic">{t(q.answer)}</p>
-                        <p className="text-ivory-600 text-xs mt-2">{SOURCE_LABEL[selectedType]}</p>
+                        <p className="text-ivory-600 text-xs mt-2">{sourceLabel}</p>
                       </div>
 
                       <div className="flex items-center gap-2 mb-3">
@@ -258,7 +273,11 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
                       )}
 
                       <div className="mb-3">
-                        <p className="ui-label mb-1">SOLAPATH Age-Appropriate Explanation ({ageLabel})</p>
+                        <p className="ui-label mb-1">
+                          {language === 'es'
+                            ? `Explicación de SOLAPATH apropiada para la edad (${ageLabel})`
+                            : `SOLAPATH Age-Appropriate Explanation (${ageLabel})`}
+                        </p>
                         <p className="text-ivory-300 text-sm leading-relaxed">{t(q.explanations[ageRange])}</p>
                       </div>
 
@@ -291,10 +310,10 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
                         {completed ? (
                           <>
                             <Check size={14} className="inline mr-1" />
-                            Completed
+                            {language === 'es' ? 'Completado' : 'Completed'}
                           </>
                         ) : (
-                          'Mark as Completed'
+                          language === 'es' ? 'Marcar como completado' : 'Mark as Completed'
                         )}
                       </button>
                     </div>
