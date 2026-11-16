@@ -12,7 +12,7 @@ workflows:
         XCODE_PROJECT: ios/App/App.xcodeproj
         XCODE_SCHEME: App
         BUNDLE_ID: com.rfgforge.solapath
-        EXPECTED_BUILD_NUMBER: "159"
+        EXPECTED_BUILD_NUMBER: "160"
         EXPECTED_MARKETING_VERSION: "0.2.0"
       node: latest
       xcode: latest
@@ -26,6 +26,15 @@ workflows:
       - name: Install dependencies
         script: |
           npm ci
+      - name: Lint
+        script: |
+          npm run lint
+      - name: Typecheck
+        script: |
+          npm run typecheck
+      - name: Language contract
+        script: |
+          npm run test:language
       - name: Build web application
         script: |
           npm run build:web
