@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Heart, Plus, Pencil, Trash2 } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';
-import { getMyChurchMembership, getChurch, getChurchPrayerItems, createChurchPrayerItem, updateChurchPrayerItem, deleteChurchPrayerItem, isChurchOwner } from '@/lib/churchEngine';
+import { getMyChurchMembership, getChurchMembershipForChurch, getChurch, getChurchPrayerItems, createChurchPrayerItem, updateChurchPrayerItem, deleteChurchPrayerItem, isChurchOwner } from '@/lib/churchEngine';
 import type { Profile } from '@/lib/types';
 import type { ChurchPrayerItem } from '@/lib/togetherTypes';
+import { isVerifiedChurchPublisher } from '@/lib/togetherTypes';
 
 interface Props {
   profile: Profile;
@@ -16,7 +17,7 @@ export default function ChurchPrayerScreen({ profile, activeChurchId, onBack }: 
   const [items, setItems] = useState<ChurchPrayerItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isOwner, setIsOwner] = useState(false);
+  const [canManage, setCanManage] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
@@ -39,7 +40,7 @@ export default function ChurchPrayerScreen({ profile, activeChurchId, onBack }: 
     setLoading(true);
     setError(null);
     setItems([]);
-    setIsOwner(false);
+    setCanManage(false);
     setChurchId(null);
     try {
       let cid = activeChurchId;
@@ -59,9 +60,12 @@ export default function ChurchPrayerScreen({ profile, activeChurchId, onBack }: 
         const prays = await getChurchPrayerItems(church.id);
         if (version !== requestVersionRef.current) return;
         setItems(prays);
-        const owner = await isChurchOwner(profile.id, church.id);
+        const [owner, membership] = await Promise.all([
+          isChurchOwner(profile.id, church.id),
+          getChurchMembershipForChurch(profile.id, church.id),
+        ]);
         if (version !== requestVersionRef.current) return;
-        setIsOwner(owner);
+        setCanManage(owner || isVerifiedChurchPublisher(membership?.verified_church_role));
       }
     } catch {
       if (version !== requestVersionRef.current) return;
@@ -174,7 +178,7 @@ export default function ChurchPrayerScreen({ profile, activeChurchId, onBack }: 
               {items.length === 0 ? (
                 <>
                   <EmptyState message="No church prayer items available yet." />
-                  {isOwner && (
+                  {canManage && (
                     <button onClick={() => { vibrate(8); setShowAdd(true); }} className="btn-primary w-full mt-4">
                       <Plus size={18} /> Add Church Prayer
                     </button>
@@ -188,7 +192,7 @@ export default function ChurchPrayerScreen({ profile, activeChurchId, onBack }: 
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-gold-500/10 text-gold-300">{item.category}</span>
                           <span className="text-ivory-600 text-xs">{formatRelative(item.created_at)}</span>
-                          {isOwner && (
+                          {canManage && (
                             <div className="flex items-center gap-1 ml-auto">
                               <button onClick={() => { vibrate(6); startEdit(item); }} className="btn-ghost text-xs" aria-label="Edit prayer item">
                                 <Pencil size={13} />
@@ -204,7 +208,7 @@ export default function ChurchPrayerScreen({ profile, activeChurchId, onBack }: 
                       </div>
                     ))}
                   </div>
-                  {isOwner && (
+                  {canManage && (
                     <button onClick={() => { vibrate(8); setShowAdd(true); }} className="btn-secondary w-full mt-4">
                       <Plus size={18} /> Add Church Prayer
                     </button>
