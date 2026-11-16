@@ -62,7 +62,7 @@ export default function Onboarding({ onComplete, saving, error }: OnboardingProp
     display_name: '',
     life_stage: '',
     season: '',
-    preferred_translation: 'ESV',
+    preferred_translation: language === 'es' ? 'RV1909' : 'WEB',
     theological_depth: 'simple',
     available_time_minutes: 7,
     bible_familiarity: '',
@@ -121,7 +121,11 @@ export default function Onboarding({ onComplete, saving, error }: OnboardingProp
                   onClick={() => {
                     vibrate(8);
                     setLanguage(value);
-                    setData({ ...data, app_language: value });
+                    setData({
+                      ...data,
+                      app_language: value,
+                      preferred_translation: value === 'es' ? 'RV1909' : 'WEB',
+                    });
                   }}
                   className={`px-5 py-5 rounded-2xl border text-base font-medium transition-all no-tap-highlight ${
                     data.app_language === value
