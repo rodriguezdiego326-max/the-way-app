@@ -2631,6 +2631,17 @@ const ES: Record<string, string> = {
   'Do you think it would be loving for God to force people into His presence if they do not want Him?': '¿Crees que sería amoroso que Dios obligara a las personas a estar en su presencia si ellas no lo quieren?',
   'Colossians 3:23 — "Whatever you do, work heartily, as for the Lord and not for men." 1 Thessalonians 4:11–12 — "Aspire to live quietly, and to mind your own affairs."': 'Colosenses 3:23 — «Todo lo que hagan, háganlo de corazón, como para el Señor y no para los hombres». 1 Tesalonicenses 4:11–12 — «Procuren vivir tranquilamente y ocuparse de sus propios asuntos».',
   'Ephesians 6:4 — "Fathers, do not provoke your children to anger, but bring them up in the discipline and instruction of the Lord." 2 Timothy 1:5 — Timothy\'s sincere faith lived first in his grandmother and mother.': 'Efesios 6:4 — «Padres, no provoquen a ira a sus hijos, sino críenlos en la disciplina e instrucción del Señor». 2 Timoteo 1:5 — la fe sincera de Timoteo había vivido primero en su abuela y en su madre.',
+  'Creeds': 'Credos',
+  'Confessions & Catechisms': 'Confesiones y catecismos',
+  'SOLAPATH Editorial': 'Editorial de SOLAPATH',
+  'Publish this study?': '¿Publicar este estudio?',
+  'Archive this study?': '¿Archivar este estudio?',
+  'Members will no longer see it. Nothing is deleted, and you can move it back to drafts later.': 'Los miembros dejarán de verlo. No se elimina nada y puedes devolverlo a borradores después.',
+  'Move back to drafts?': '¿Mover de nuevo a borradores?',
+  'Members will not see this study until you publish it again.': 'Los miembros no verán este estudio hasta que lo publiques de nuevo.',
+  '24 hours': '24 horas',
+  '7 days': '7 días',
+  'No expiry': 'Sin vencimiento',
 };
 
 interface LanguageContextValue {
