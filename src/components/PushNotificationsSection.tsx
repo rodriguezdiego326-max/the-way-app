@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { vibrate } from '@/lib/utils';
 import PushPermissionSheet from '@/components/PushPermissionSheet';
+import { useLanguage } from '@/lib/i18n';
 import {
   enablePushNotifications,
   getPushSystemStatus,
@@ -27,6 +28,7 @@ const STATUS_LABEL: Record<PushSystemStatus, string> = {
 const SETTINGS_MESSAGE = 'Notifications are off for SOLAPATH. Turn them on in iPhone Settings to receive alerts.';
 
 export default function PushNotificationsSection({ userId }: Props) {
+  const { t } = useLanguage();
   const [supported] = useState(isPushSupported);
   const [enabled, setEnabled] = useState(false);
   const [systemStatus, setSystemStatus] = useState<PushSystemStatus | null>(null);
@@ -47,7 +49,7 @@ export default function PushNotificationsSection({ userId }: Props) {
     let cancelled = false;
     let unsubscribe: (() => void) | undefined;
     refresh()
-      .catch(() => { if (!cancelled) setMessage('Could not load your notification setting.'); })
+      .catch(() => { if (!cancelled) setMessage(t('Could not load your notification setting.')); })
       .finally(() => { if (!cancelled) setLoading(false); });
     void subscribeToAppResume(() => {
       void refreshPushState().then(refresh).catch(() => undefined);
@@ -72,7 +74,7 @@ export default function PushNotificationsSection({ userId }: Props) {
         const status = await requestSystemPushPermission();
         setSystemStatus(status);
         if (status !== 'allowed') {
-          setMessage(SETTINGS_MESSAGE);
+          setMessage(t(SETTINGS_MESSAGE));
           return;
         }
       }
@@ -82,10 +84,10 @@ export default function PushNotificationsSection({ userId }: Props) {
       } else if (result === 'denied') {
         setMessage(SETTINGS_MESSAGE);
       } else {
-        setMessage('Notifications could not be turned on. Please try again.');
+        setMessage(t('Notifications could not be turned on. Please try again.'));
       }
     } catch {
-      setMessage('That change did not save. Please try again.');
+      setMessage(t('That change did not save. Please try again.'));
     } finally {
       setBusy(false);
     }
@@ -102,10 +104,10 @@ export default function PushNotificationsSection({ userId }: Props) {
         setEnabled(false);
         setNeedsDeviceRetry(result === 'device_pending');
         if (result === 'device_pending') {
-          setMessage('Alerts are off, but this iPhone has not fully unregistered yet. Try again.');
+          setMessage(t('Alerts are off, but this iPhone has not fully unregistered yet. Try again.'));
         }
       } catch {
-        setMessage('That change did not save. Please try again.');
+        setMessage(t('That change did not save. Please try again.'));
       } finally {
         setBusy(false);
       }
@@ -127,7 +129,7 @@ export default function PushNotificationsSection({ userId }: Props) {
     setBusy(true);
     const ok = await retryDeactivateThisDevice();
     setNeedsDeviceRetry(!ok);
-    setMessage(ok ? null : 'This iPhone has not fully unregistered yet. Try again.');
+    setMessage(ok ? null : t('This iPhone has not fully unregistered yet. Try again.'));
     setBusy(false);
   }
 
@@ -140,13 +142,13 @@ export default function PushNotificationsSection({ userId }: Props) {
     <div className="mt-6 pt-6 border-t border-ink-700">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-ivory-100 text-sm font-medium">Phone alerts</p>
-          <p className="text-ivory-600 text-xs mt-0.5">A short alert when there is new Activity</p>
+          <p className="text-ivory-100 text-sm font-medium">{t('Phone alerts')}</p>
+          <p className="text-ivory-600 text-xs mt-0.5">{t('A short alert when there is new Activity')}</p>
         </div>
         <button
           role="switch"
           aria-checked={enabled}
-          aria-label="Phone alerts"
+          aria-label={t('Phone alerts')}
           disabled={loading || busy}
           onClick={handleToggle}
           className={`relative w-12 h-7 rounded-full shrink-0 transition-colors duration-300 disabled:opacity-50 ${enabled ? 'bg-gold-500' : 'bg-ink-700'}`}
@@ -158,7 +160,7 @@ export default function PushNotificationsSection({ userId }: Props) {
       </div>
       {systemStatus && (
         <p className="text-ivory-600 text-xs mt-3">
-          System status: <span className="text-ivory-300">{STATUS_LABEL[systemStatus]}</span>
+          {t('System status')}: <span className="text-ivory-300">{t(STATUS_LABEL[systemStatus])}</span>
         </p>
       )}
       {message && <p className="text-ivory-500 text-xs mt-3 leading-relaxed">{message}</p>}
