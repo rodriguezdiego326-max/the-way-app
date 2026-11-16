@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 export type AppLanguage = 'en' | 'es';
 
 const STORAGE_KEY = 'solapath_ui_language';
+const SCRIPTURE_STORAGE_KEY = 'solapath_translation';
 
 const ES: Record<string, string> = {
   'Today': 'Hoy',
@@ -267,92 +268,79 @@ function getInitialLanguage(): AppLanguage {
   return localStorage.getItem(STORAGE_KEY) === 'es' ? 'es' : 'en';
 }
 
-function translateTextNode(node: Text, originals: Map<Text, string>) {
+function translateTextNode(node: Text) {
+  const parent = node.parentElement;
+  if (parent && ['SCRIPT', 'STYLE', 'TEXTAREA'].includes(parent.tagName)) return;
   const raw = node.nodeValue ?? '';
   const trimmed = raw.trim();
   const translated = ES[trimmed];
-  if (!translated) return;
-  if (!originals.has(node)) originals.set(node, raw);
+  if (!translated || translated === trimmed) return;
   node.nodeValue = raw.replace(trimmed, translated);
 }
 
-function translateAttributes(el: Element, originals: Map<Element, Map<string, string>>) {
+function translateAttributes(el: Element) {
   for (const attr of ['placeholder', 'aria-label', 'title']) {
     const raw = el.getAttribute(attr);
     if (!raw) continue;
     const translated = ES[raw.trim()];
-    if (!translated) continue;
-    let stored = originals.get(el);
-    if (!stored) {
-      stored = new Map();
-      originals.set(el, stored);
-    }
-    if (!stored.has(attr)) stored.set(attr, raw);
-    el.setAttribute(attr, translated);
+    if (translated && translated !== raw) el.setAttribute(attr, translated);
   }
 }
 
-function translateTree(root: Node, textOriginals: Map<Text, string>, attrOriginals: Map<Element, Map<string, string>>) {
+function translateTree(root: Node) {
   if (root.nodeType === Node.TEXT_NODE) {
-    translateTextNode(root as Text, textOriginals);
+    translateTextNode(root as Text);
     return;
   }
   if (root.nodeType !== Node.ELEMENT_NODE && root.nodeType !== Node.DOCUMENT_NODE) return;
 
-  if (root.nodeType === Node.ELEMENT_NODE) translateAttributes(root as Element, attrOriginals);
-
+  if (root.nodeType === Node.ELEMENT_NODE) translateAttributes(root as Element);
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
   let current = walker.nextNode();
   while (current) {
-    if (current.nodeType === Node.TEXT_NODE) translateTextNode(current as Text, textOriginals);
-    else translateAttributes(current as Element, attrOriginals);
+    if (current.nodeType === Node.TEXT_NODE) translateTextNode(current as Text);
+    else translateAttributes(current as Element);
     current = walker.nextNode();
   }
 }
 
+function LanguageBoundary({ children }: { children: ReactNode }) {
+  return <>{children}</>;
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<AppLanguage>(getInitialLanguage);
-  const textOriginals = useMemo(() => new Map<Text, string>(), []);
-  const attrOriginals = useMemo(() => new Map<Element, Map<string, string>>(), []);
 
   const setLanguage = useCallback((next: AppLanguage) => {
-    setLanguageState(next);
-    if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, next);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, next);
+      // The app language owns the bundled Scripture language for now:
+      // English -> WEB, Spanish -> Reina-Valera 1909.
+      localStorage.setItem(SCRIPTURE_STORAGE_KEY, next === 'es' ? 'RV1909' : 'WEB');
+    }
+    setLanguageState((current) => current === next ? current : next);
   }, []);
 
   useEffect(() => {
     document.documentElement.lang = language;
-
-    if (language === 'en') {
-      for (const [node, original] of textOriginals) {
-        if (node.isConnected) node.nodeValue = original;
-      }
-      for (const [el, attrs] of attrOriginals) {
-        if (!el.isConnected) continue;
-        for (const [attr, original] of attrs) el.setAttribute(attr, original);
-      }
-      textOriginals.clear();
-      attrOriginals.clear();
-      return;
-    }
+    if (language !== 'es') return;
 
     const apply = (root: Node = document.body) => {
-      if (!root) return;
-      translateTree(root, textOriginals, attrOriginals);
+      if (root) translateTree(root);
     };
 
     apply();
     const observer = new MutationObserver((records) => {
       for (const record of records) {
         if (record.type === 'characterData' && record.target.nodeType === Node.TEXT_NODE) {
-          translateTextNode(record.target as Text, textOriginals);
+          translateTextNode(record.target as Text);
         }
         for (const node of record.addedNodes) apply(node);
       }
     });
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
     return () => observer.disconnect();
-  }, [language, textOriginals, attrOriginals]);
+  }, [language]);
 
   const value = useMemo<LanguageContextValue>(() => ({
     language,
@@ -360,7 +348,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     t: (english) => language === 'es' ? ES[english] ?? english : english,
   }), [language, setLanguage]);
 
-  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+  return (
+    <LanguageContext.Provider value={value}>
+      <LanguageBoundary key={language}>{children}</LanguageBoundary>
+    </LanguageContext.Provider>
+  );
 }
 
 export function useLanguage() {
