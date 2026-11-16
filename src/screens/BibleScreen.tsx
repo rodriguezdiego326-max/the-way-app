@@ -37,6 +37,7 @@ import ScriptureVerseText from '@/components/ScriptureVerseText';
 import SymbolPicker from '@/components/SymbolPicker';
 import { tokenizeVerse, getSelectedText, rangesOverlap } from '@/lib/scriptureTokenizer';
 import { getCrossReferences, parseReference, CROSS_REF_ATTRIBUTION } from '@/lib/crossRefEngine';
+import { useLanguage } from '@/lib/i18n';
 
 type TextScale = 'small' | 'default' | 'large' | 'extra_large';
 const TEXT_SIZES: Record<TextScale, string> = {
@@ -58,6 +59,7 @@ interface BibleScreenProps {
 }
 
 export default function BibleScreen({ onStartWalk, onAskScripture, initialReference, onBack, translation: propTranslation, onTranslationChange }: BibleScreenProps) {
+  const { t } = useLanguage();
   const [view, setView] = useState<View>('reader');
   const [localTranslation, setLocalTranslation] = useState<BibleTranslation>(() => {
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('solapath_translation') : null;
@@ -566,7 +568,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
             <button
               onClick={() => { setShowTextSize(!showTextSize); }}
               className="w-9 h-9 rounded-full bg-ink-800/50 border border-ink-600/30 flex items-center justify-center text-ivory-400 hover:text-ivory-100 transition-colors no-tap-highlight"
-              aria-label="Text size"
+              aria-label={t('Text size')}
             >
               <Type size={16} />
             </button>
@@ -583,7 +585,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                   textScale === s ? 'bg-gold-500/20 border-gold-500/40 text-gold-300' : 'bg-ink-800/40 border-ink-600/30 text-ivory-400'
                 }`}
               >
-                {s === 'extra_large' ? 'XL' : s.charAt(0).toUpperCase() + s.slice(1)}
+                {s === 'extra_large' ? 'XL' : t(s === 'small' ? 'Small' : s === 'default' ? 'Default' : 'Large')}
               </button>
             ))}
           </div>
@@ -660,13 +662,13 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
               onClick={() => { vibrate(5); setShowStudyMenu(false); setShowTextSize(!showTextSize); }}
               className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-ivory-300 text-sm hover:bg-ink-700/40 no-tap-highlight transition-colors"
             >
-              <Type size={15} /> Text Size
+              <Type size={15} /> {t('Text Size')}
             </button>
             <button
               onClick={() => { vibrate(5); setShowStudyMenu(false); setShowVersionSheet(true); }}
               className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-ivory-300 text-sm hover:bg-ink-700/40 no-tap-highlight transition-colors"
             >
-              <Info size={15} /> Translation Info
+              <Info size={15} /> {t('Translation Info')}
             </button>
             <button
               onClick={() => {
@@ -692,7 +694,7 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
               }}
               className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-ivory-300 text-sm hover:bg-ink-700/40 no-tap-highlight transition-colors"
             >
-              <Tag size={15} /> Chapter Marking
+              <Tag size={15} /> {t('Chapter Marking')}
             </button>
           </div>
         )}
