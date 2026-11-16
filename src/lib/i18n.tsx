@@ -379,7 +379,6 @@ const ES: Record<string, string> = {
   'Could not load groups.': 'No se pudieron cargar los grupos.',
   'Could not load church studies.': 'No se pudieron cargar los estudios de la iglesia.',
   'Choose a church in My Church to manage its studies.': 'Elige una iglesia en Mi Iglesia para administrar sus estudios.',
-  'Only a Verified Pastor can manage this church\'s studies.': 'Solo un Pastor verificado puede administrar los estudios de esta iglesia.',
   'Could not create this study. Please try again.': 'No se pudo crear este estudio. Inténtalo de nuevo.',
   'Creating...': 'Creando...',
   'AI Summary of Shared Discussion': 'Resumen de IA de la conversación compartida',
