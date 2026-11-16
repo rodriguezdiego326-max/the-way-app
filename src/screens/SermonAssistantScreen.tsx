@@ -30,7 +30,7 @@ export default function SermonAssistantScreen({ profile, onBack, onRecord, onOpe
       .catch(() => { if (!cancelled) setError(t('Could not load your saved recordings on this device.')); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [profile.id]);
+  }, [profile.id, t]);
 
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28 flex flex-col">
