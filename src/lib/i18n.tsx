@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 export type AppLanguage = 'en' | 'es';
 
@@ -198,6 +198,21 @@ const ES: Record<string, string> = {
   'Delete note': 'Eliminar nota',
   'Title (optional)': 'Título (opcional)',
   'Write your observation, interpretation, or application...': 'Escribe tu observación, interpretación o aplicación...',
+  'Choose your language': 'Elige tu idioma',
+  'You haven\'t joined any small groups yet.': 'Aún no te has unido a ningún grupo pequeño.',
+  'Verified church leadership can see every small group for this church.': 'El liderazgo verificado puede ver todos los grupos pequeños de esta iglesia.',
+  'You only see small groups you have joined with an invite code.': 'Solo ves los grupos pequeños a los que te uniste con un código de invitación.',
+  'Enter the private invite code given to you by your church group leader.': 'Ingresa el código privado que te dio el líder de tu grupo de iglesia.',
+  'Invite code not found, or this group belongs to a different church.': 'No se encontró el código, o este grupo pertenece a otra iglesia.',
+  'Copy': 'Copiar',
+  'New Code': 'Nuevo código',
+  'Joining...': 'Uniéndote...',
+  'Leaving...': 'Saliendo...',
+  'Posting...': 'Publicando...',
+  'No discussion yet. Be the first to share.': 'Aún no hay conversación. Sé el primero en compartir.',
+  'Meets:': 'Se reúne:',
+  'Only a Verified Pastor can manage this church\'s studies.': 'Solo un Pastor verificado puede administrar los estudios de esta iglesia.',
+  'Only a verified Pastor can create or manage Church Studies.': 'Solo un Pastor verificado puede crear o administrar Estudios de la Iglesia.',
 };
 
 interface LanguageContextValue {
@@ -265,10 +280,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const textOriginals = useMemo(() => new Map<Text, string>(), []);
   const attrOriginals = useMemo(() => new Map<Element, Map<string, string>>(), []);
 
-  const setLanguage = (next: AppLanguage) => {
+  const setLanguage = useCallback((next: AppLanguage) => {
     setLanguageState(next);
     if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, next);
-  };
+  }, []);
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -308,7 +323,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     language,
     setLanguage,
     t: (english) => language === 'es' ? ES[english] ?? english : english,
-  }), [language]);
+  }), [language, setLanguage]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
