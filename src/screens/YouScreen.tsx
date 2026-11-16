@@ -50,7 +50,7 @@ const depthLabels: Record<TheologicalDepth, string> = {
 };
 
 export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOpenReach, onOpenLibrarySearch, onOpenAdminSources, onOpenRetrievalDebug, onOpenRAGTests, onOpenPhase6Tests, onOpenQADashboard, onOpenSourceBatches, onOpenReleaseGate, onOpenProductionStatus, onOpenTogether, onOpenActivity, activityCounts, onOpenMyChurch, onOpenAppGuide, onOpenAdminApprovalCenter, onOpenPhase8Tests, onOpenLegacy, onOpenPhase9Tests, onOpenPrivacyCenter, onOpenProductionReadiness, onOpenPhase10Tests, onOpenBetaFeedback, session, onSignOut }: YouScreenProps) {
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const [subView, setSubView] = useState<SubView>('main');
   const [appAdminRole, setAppAdminRole] = useState<AppAdminRole | null>(null);
   const [memories, setMemories] = useState<Memory[]>([]);
@@ -382,7 +382,7 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
               <Landmark size={18} className="text-gold-300" />
             </div>
             <div>
-              <h2 className="font-serif text-2xl text-ivory-50">Theological Library</h2>
+              <h2 className="font-serif text-2xl text-ivory-50">{t('Theological Library')}</h2>
               <p className="text-ivory-500 text-sm mt-1 leading-relaxed">
                 Metadata for historic theologians, selected teachers, and confessional documents. No quotations or source text — verified content connects later.
               </p>
@@ -391,7 +391,7 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
 
           {/* Confessional Documents */}
           <div className="mb-8">
-            <p className="ui-label mb-3">Confessional Documents</p>
+            <p className="ui-label mb-3">{t('Confessional Documents')}</p>
             <div className="flex flex-col gap-2">
               {confessions.map((doc) => (
                 <div key={doc.id} className="premium-card p-4">
@@ -400,12 +400,12 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
                       <ShieldCheck size={16} className="text-sage-400" />
                     </div>
                     <div>
-                      <h3 className="font-serif text-lg text-ivory-50">{doc.title}</h3>
+                      <h3 className="font-serif text-lg text-ivory-50">{t(doc.title)}</h3>
                       <p className="text-ivory-500 text-xs mt-0.5">
-                        {doc.tradition} · {doc.year} · {doc.document_type}
+                        {t(doc.tradition)} · {doc.year} · {t(doc.document_type)}
                       </p>
                       {doc.summary && (
-                        <p className="text-ivory-400 text-xs mt-2 leading-relaxed">{doc.summary}</p>
+                        <p className="text-ivory-400 text-xs mt-2 leading-relaxed">{t(doc.summary)}</p>
                       )}
                     </div>
                   </div>
