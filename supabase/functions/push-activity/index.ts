@@ -56,6 +56,7 @@ type ClaimResult = {
   event_type?: string;
   actor_label?: unknown;
   scope_label?: unknown;
+  app_language?: unknown;
   devices?: ClaimedDevice[];
 };
 
@@ -114,6 +115,7 @@ Deno.serve(async (req) => {
           eventType: claim.event_type ?? "",
           actorLabel: claim.actor_label,
           scopeLabel: claim.scope_label,
+          language: claim.app_language,
         }),
       },
       sound: "default",
