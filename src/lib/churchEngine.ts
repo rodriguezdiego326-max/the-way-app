@@ -502,21 +502,19 @@ export async function createChurchGroup(
 }
 
 export async function deleteChurchGroup(groupId: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('church_groups')
-    .delete()
-    .eq('id', groupId)
-    .select('id');
-  if (error || !data?.length) {
+  const { data, error } = await supabase.rpc('delete_owned_church_group', {
+    p_group_id: groupId,
+  });
+  if (error) {
     console.error('[Church] delete group failed', {
-      operation: 'delete',
-      table: 'church_groups',
-      code: error?.code,
-      message: error?.message,
+      operation: 'rpc:delete_owned_church_group',
+      code: error.code,
+      message: error.message,
     });
     return false;
   }
-  return true;
+  const result = data as { deleted?: unknown } | null;
+  return result?.deleted === true;
 }
 
 export async function getGroupDiscussions(groupId: string): Promise<GroupDiscussion[]> {
