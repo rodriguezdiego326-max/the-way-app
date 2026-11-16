@@ -2353,6 +2353,22 @@ const ES: Record<string, string> = {
   'What about the books that were left out?': '¿Qué pasa con los libros que quedaron fuera?',
   'Scripture is God\'s own Word, and its authority does not depend on the church, human reason, or historical evidence, though these can support it. Its ultimate ground is God speaking, and the Holy Spirit confirms this to the believer (2 Timothy 3:16; 2 Peter 1:20–21).': 'La Escritura es la propia Palabra de Dios y su autoridad no depende de la iglesia, de la razón humana ni de la evidencia histórica, aunque estas pueden apoyarla. Su fundamento último es Dios hablando, y el Espíritu Santo confirma esto al creyente (2 Timoteo 3:16; 2 Pedro 1:20–21).',
   'Roman Catholic theology emphasizes the church\'s role in recognizing Scripture, while many Protestants emphasize Scripture\'s own authority as God\'s Word. Both agree that Scripture is God\'s Word.': 'La teología católica romana enfatiza el papel de la iglesia en reconocer la Escritura, mientras muchos protestantes enfatizan la autoridad propia de la Escritura como Palabra de Dios. Ambos coinciden en que la Escritura es Palabra de Dios.',
+  'This Year': 'Este año',
+  'Prayers': 'Oraciones',
+  'Seasons': 'Temporadas',
+  'All': 'Todo',
+  'Walk': 'Caminata',
+  'REACH': 'Alcance',
+  'User Created': 'Creado por el usuario',
+  'Terms of Use': 'Términos de uso',
+  'AI Disclosure': 'Divulgación sobre IA',
+  'Community Guidelines': 'Normas de la comunidad',
+  'Child / Family Privacy': 'Privacidad de niños / familia',
+  'All Sources': 'Todas las fuentes',
+  'Confession': 'Confesión',
+  'Historic Theology': 'Teología histórica',
+  'Continuing': 'Continuando',
+  'your circles': 'tus círculos',
 };
 
 interface LanguageContextValue {
