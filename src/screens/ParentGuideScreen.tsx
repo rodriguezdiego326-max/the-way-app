@@ -2,12 +2,16 @@ import { useState, type ReactNode } from 'react';
 import { X, BookOpen, ChevronDown, Users } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import { parentGuides, type ParentGuide } from '@/lib/parentGuideContent';
+import { parentGuidesEs } from '@/lib/parentGuideContent.es';
+import { useLanguage } from '@/lib/i18n';
 
 interface ParentGuideScreenProps {
   onBack: () => void;
 }
 
 export default function ParentGuideScreen({ onBack }: ParentGuideScreenProps) {
+  const { language } = useLanguage();
+  const guides = language === 'es' ? parentGuidesEs : parentGuides;
   const [expandedGuide, setExpandedGuide] = useState<string | null>(null);
 
   return (
@@ -35,7 +39,7 @@ export default function ParentGuideScreen({ onBack }: ParentGuideScreenProps) {
           </div>
 
           <div className="space-y-2">
-            {parentGuides.map((guide) => {
+            {guides.map((guide) => {
               const isExpanded = expandedGuide === guide.id;
               return (
                 <div key={guide.id} className="premium-card overflow-hidden">
