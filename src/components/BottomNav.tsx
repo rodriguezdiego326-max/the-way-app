@@ -1,5 +1,6 @@
 import { Home, BookOpen, MessageSquare, Heart, Compass } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n';
 
 export type Tab = 'today' | 'bible' | 'ask' | 'prayer' | 'explore';
 
@@ -18,6 +19,7 @@ const tabs: { id: Tab; label: string; icon: typeof Home }[] = [
 ];
 
 export default function BottomNav({ active, onChange, badges }: BottomNavProps) {
+  const { t } = useLanguage();
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-50 safe-bottom">
       <div className="mx-2 mb-2 rounded-3xl bg-ink-850/90 backdrop-blur-2xl border border-ink-700/50 shadow-2xl shadow-stone-900/15">
@@ -33,7 +35,7 @@ export default function BottomNav({ active, onChange, badges }: BottomNavProps) 
                   onChange(id);
                 }}
                 className="nav-item no-tap-highlight group"
-                aria-label={label}
+                aria-label={t(label)}
                 aria-current={isActive ? 'page' : undefined}
               >
                 <div
@@ -65,7 +67,7 @@ export default function BottomNav({ active, onChange, badges }: BottomNavProps) 
                     isActive ? 'text-gold-200' : 'text-ivory-600'
                   }`}
                 >
-                  {label}
+                  {t(label)}
                 </span>
               </button>
             );
