@@ -2446,6 +2446,22 @@ const ES: Record<string, string> = {
   'Do not use manipulative techniques or fear-based pressure.': 'No uses técnicas manipuladoras ni presión basada en el miedo.',
   'Do not argue about secondary issues when the main issue is Christ.': 'No discutas asuntos secundarios cuando el tema principal es Cristo.',
   'After the conversation, pray. If they are open, offer to read a Gospel together. If they are not, continue to love them, pray for them, and be available. Faithfulness belongs to you. The outcome belongs to God.': 'Después de la conversación, ora. Si están dispuestos, ofréceles leer juntos un Evangelio. Si no, continúa amándolos, orando por ellos y estando disponible. A ti te corresponde la fidelidad; el resultado le pertenece a Dios.',
+  'AI Provider': 'Proveedor de IA',
+  'Model': 'Modelo',
+  'Environment': 'Entorno',
+  'Server-Side AI': 'IA del servidor',
+  'RAG': 'RAG',
+  'Verified Library': 'Biblioteca verificada',
+  'Structured Output': 'Salida estructurada',
+  'Citation Validator': 'Validador de citas',
+  'Attribution Validator': 'Validador de atribución',
+  'Quote Validator': 'Validador de citas textuales',
+  'Safety Validator': 'Validador de seguridad',
+  'My Walks': 'Mis Caminatas',
+  'My Prayers': 'Mis Oraciones',
+  'My Reflections': 'Mis Reflexiones',
+  'Walks': 'Caminatas',
+  'Reflections': 'Reflexiones',
 };
 
 interface LanguageContextValue {
