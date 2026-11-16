@@ -2300,6 +2300,17 @@ const ES: Record<string, string> = {
   'Default': 'Predeterminado',
   'Large': 'Grande',
   'Extra Large': 'Extra grande',
+  'Praying': 'Orando',
+  'Waiting': 'Esperando',
+  'Answered': 'Contestada',
+  'Closed': 'Cerrada',
+  'Open': 'Abierta',
+  'Unexpected Provision': 'Provisión inesperada',
+  'Meaningful Scripture': 'Escritura significativa',
+  'Restored Relationship': 'Relación restaurada',
+  'Endurance Through Hardship': 'Perseverancia en la dificultad',
+  'Church / Community Support': 'Apoyo de iglesia / comunidad',
+  'Testimony': 'Testimonio',
 };
 
 interface LanguageContextValue {
