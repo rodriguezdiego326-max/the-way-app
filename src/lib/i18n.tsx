@@ -244,7 +244,6 @@ const ES: Record<string, string> = {
   'Deacon': 'Diácono',
   'Ministry Leader': 'Líder de ministerio',
   'Elige tu idioma · You can change this anytime.': 'Elige tu idioma · Puedes cambiarlo en cualquier momento.',
-  "You haven't joined any small groups yet.": 'Aún no te has unido a ningún grupo pequeño.',
   'Share this code only with people who belong to this church. They will see this group after joining.': 'Comparte este código solo con personas que pertenezcan a esta iglesia. Verán el grupo después de unirse.',
   'We couldn\'t load your Family. Please try again.': 'No pudimos cargar tu Familia. Inténtalo de nuevo.',
   'Create a Family Profile to begin': 'Crea un perfil familiar para comenzar',
