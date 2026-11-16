@@ -26,6 +26,8 @@ import type { AskHandoffContext, ChildAskedHandoff, SermonAskHandoff } from '@/l
 import { OPEN_SERMON_RECORDER_EVENT } from '@/hooks/sermonRecordingContext';
 import InviteRoutePreview from '@/components/invite/InviteRoutePreview';
 import { clearPendingInvite, loadInviteRoute, startInviteLinkListener, type InviteRoute } from '@/lib/inviteRouter';
+import { LanguageProvider, useLanguage } from '@/lib/i18n';
+import AppGuideScreen from '@/screens/AppGuideScreen';
 
 const DevOverlayRenderer = import.meta.env.DEV
   ? lazy(() => import('@/components/DevOverlayRenderer'))
@@ -147,6 +149,7 @@ export type Overlay =
   | { type: 'manage_church_studies' }
   | { type: 'small_groups' }
   | { type: 'church_prayer' }
+  | { type: 'app_guide' }
   | { type: 'phase8_tests' }
   // Phase 9 overlays
   | { type: 'legacy_home' }
@@ -177,7 +180,8 @@ export type Overlay =
   | { type: 'phase11_tests' }
   | { type: 'mobile_build_guide' };
 
-export default function App() {
+function AppContent() {
+  const { setLanguage } = useLanguage();
   const [appState, setAppState] = useState<AppState>('splash');
   const [activeTab, setActiveTab] = useState<Tab>('today');
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -231,15 +235,22 @@ export default function App() {
     }
 
     if (data) {
-      setProfile(data as Profile);
-      if (!(data as Profile).onboarding_completed) {
+      const loadedProfile = data as Profile;
+      setProfile(loadedProfile);
+      setLanguage(loadedProfile.app_language || 'en');
+      if (!loadedProfile.onboarding_completed) {
         setAppState('onboarding');
+      } else {
+        setAppState('app');
+        if (!loadedProfile.guide_completed_at) {
+          setOverlay({ type: 'app_guide' });
+        }
       }
     } else {
       setAppState('onboarding');
     }
     setProfileLoading(false);
-  }, [profileLoading, session]);
+  }, [profileLoading, session, setLanguage]);
 
   useEffect(() => {
     if (appState !== 'app' || profile || profileLoading || !session) return;
@@ -366,6 +377,8 @@ export default function App() {
         available_time_minutes: data.available_time_minutes,
         bible_familiarity: data.bible_familiarity || null,
         memory_enabled: data.memory_enabled,
+        app_language: data.app_language,
+        guide_completed_at: null,
         onboarding_completed: true,
       })
       .select('*')
@@ -395,9 +408,29 @@ export default function App() {
       }
     }
 
+    setLanguage(data.app_language);
     setProfile(created as Profile);
     setAppState('app');
+    setOverlay({ type: 'app_guide' });
     setOnboardingSaving(false);
+  }
+
+  async function handleGuideComplete() {
+    if (profile?.id) {
+      const completedAt = new Date().toISOString();
+      const { data: updated, error } = await supabase
+        .from('profiles')
+        .update({ guide_completed_at: completedAt })
+        .eq('id', profile.id)
+        .select('*')
+        .maybeSingle();
+      if (error) {
+        console.error('[App] guide completion save failed', error);
+      } else if (updated) {
+        setProfile(updated as Profile);
+      }
+    }
+    setOverlay({ type: 'none' });
   }
 
   function handleStartWalk(walk: Walk) {
@@ -488,6 +521,17 @@ export default function App() {
 
   if (appState === 'onboarding') {
     return <Onboarding onComplete={handleOnboardingComplete} saving={onboardingSaving} error={onboardingError} />;
+  }
+
+  if (overlay.type === 'app_guide' && profile) {
+    return (
+      <ErrorBoundary>
+        <AppGuideScreen
+          onFinish={() => void handleGuideComplete()}
+          onClose={() => void handleGuideComplete()}
+        />
+      </ErrorBoundary>
+    );
   }
 
   if (inviteRoute && profile) {
@@ -1068,10 +1112,18 @@ export default function App() {
       {activeTab === 'ask' && <AskScreen theologicalDepth={profile?.theological_depth || 'simple'} profile={profile} onProfileUpdate={handleProfileUpdate} onOpenBibleReference={handleOpenBibleReference} initialContext={askContext} onContextConsumed={() => setAskContext(null)} onKeyboardVisibilityChange={setAskKeyboardOpen} activeConversationId={activeAskConversationId} onConversationChange={setActiveAskConversationId} translation={globalTranslation} onTranslationChange={handleTranslationChange} onBackToFamily={() => setOverlay({ type: 'family' })} onBackToSermon={sermonAskRecordingId ? () => setOverlay({ type: 'sermon_recording_detail', recordingId: sermonAskRecordingId, fresh: false, interrupted: false, initialView: 'insights' }) : undefined} />}
 
       {activeTab === 'prayer' && <PrayerScreen profile={profile} />}
-      {activeTab === 'explore' && <YouScreen profile={profile} onProfileUpdate={handleProfileUpdate} session={session} onSignOut={handleSignOut} onOpenFamily={() => setOverlay({ type: 'family' })} onOpenReach={() => setOverlay({ type: 'reach' })} onOpenLibrarySearch={() => setOverlay({ type: 'library_search' })} onOpenTogether={() => setOverlay({ type: 'together' })} onOpenActivity={() => setOverlay({ type: 'activity' })} activityCounts={activityCounts} onOpenMyChurch={() => setOverlay({ type: 'my_church' })} onOpenAdminApprovalCenter={() => setOverlay({ type: 'admin_approval_center' })} onOpenLegacy={() => setOverlay({ type: 'legacy_home' })} onOpenPrivacyCenter={() => setOverlay({ type: 'privacy_center' })} onOpenBetaFeedback={() => setOverlay({ type: 'beta_feedback' })} {...(import.meta.env.DEV ? { onOpenAdminSources: () => setOverlay({ type: 'admin_sources' }), onOpenRetrievalDebug: () => setOverlay({ type: 'retrieval_debug' }), onOpenRAGTests: () => setOverlay({ type: 'rag_tests' }), onOpenPhase6Tests: () => setOverlay({ type: 'phase6_tests' }), onOpenQADashboard: () => setOverlay({ type: 'qa_dashboard' }), onOpenSourceBatches: () => setOverlay({ type: 'source_batches' }), onOpenReleaseGate: () => setOverlay({ type: 'release_gate' }), onOpenProductionStatus: () => setOverlay({ type: 'production_status' }), onOpenPhase8Tests: () => setOverlay({ type: 'phase8_tests' }), onOpenPhase9Tests: () => setOverlay({ type: 'phase9_tests' }), onOpenProductionReadiness: () => setOverlay({ type: 'production_readiness' }), onOpenPhase10Tests: () => setOverlay({ type: 'phase10_tests' }) } : {})} />}
+      {activeTab === 'explore' && <YouScreen profile={profile} onProfileUpdate={handleProfileUpdate} session={session} onSignOut={handleSignOut} onOpenFamily={() => setOverlay({ type: 'family' })} onOpenReach={() => setOverlay({ type: 'reach' })} onOpenLibrarySearch={() => setOverlay({ type: 'library_search' })} onOpenTogether={() => setOverlay({ type: 'together' })} onOpenActivity={() => setOverlay({ type: 'activity' })} activityCounts={activityCounts} onOpenMyChurch={() => setOverlay({ type: 'my_church' })} onOpenAppGuide={() => setOverlay({ type: 'app_guide' })} onOpenAdminApprovalCenter={() => setOverlay({ type: 'admin_approval_center' })} onOpenLegacy={() => setOverlay({ type: 'legacy_home' })} onOpenPrivacyCenter={() => setOverlay({ type: 'privacy_center' })} onOpenBetaFeedback={() => setOverlay({ type: 'beta_feedback' })} {...(import.meta.env.DEV ? { onOpenAdminSources: () => setOverlay({ type: 'admin_sources' }), onOpenRetrievalDebug: () => setOverlay({ type: 'retrieval_debug' }), onOpenRAGTests: () => setOverlay({ type: 'rag_tests' }), onOpenPhase6Tests: () => setOverlay({ type: 'phase6_tests' }), onOpenQADashboard: () => setOverlay({ type: 'qa_dashboard' }), onOpenSourceBatches: () => setOverlay({ type: 'source_batches' }), onOpenReleaseGate: () => setOverlay({ type: 'release_gate' }), onOpenProductionStatus: () => setOverlay({ type: 'production_status' }), onOpenPhase8Tests: () => setOverlay({ type: 'phase8_tests' }), onOpenPhase9Tests: () => setOverlay({ type: 'phase9_tests' }), onOpenProductionReadiness: () => setOverlay({ type: 'production_readiness' }), onOpenPhase10Tests: () => setOverlay({ type: 'phase10_tests' }) } : {})} />}
 
       {!(activeTab === 'ask' && askKeyboardOpen) && <BottomNav active={activeTab} onChange={setActiveTab} badges={{ explore: activityCounts?.total ?? 0 }} />}
     </>
     </ErrorBoundary>
+  );
+}
+
+export default function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 }
