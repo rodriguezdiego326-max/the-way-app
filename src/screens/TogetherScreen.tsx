@@ -45,7 +45,7 @@ export default function TogetherScreen({
     } finally {
       setLoading(false);
     }
-  }, [fetchCircles]);
+  }, [fetchCircles, t]);
 
   useEffect(() => { load(); }, [load]);
 
