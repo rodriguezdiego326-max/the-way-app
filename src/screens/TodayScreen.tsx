@@ -25,7 +25,7 @@ import {
 import type { StructuredTheologicalResponse } from '@/lib/intelligenceTypes';
 import type { AskHandoffContext } from '@/lib/askHandoff';
 import { getTodayCopy } from '@/lib/todayCopy';
-import { localizeReadingObjective } from '@/lib/readingObjectiveLocale';
+import { localizeObservationPrompt, localizeReadingObjective, localizeWalkReason } from '@/lib/readingObjectiveLocale';
 import PullToRefresh from '@/components/PullToRefresh';
 
 interface TodayScreenProps {
@@ -479,8 +479,8 @@ function localizeReference(ref: string, translation: string): string {
     const ctx: ReflectionContext = {
       passageReference: todayWalk.passage_reference,
       passageText: scriptureText,
-      readingObjective: todayWalk.reading_objective,
-      observationPrompt: todayWalk.observation_prompt,
+      readingObjective: localizeReadingObjective(todayWalk.reading_objective ?? '', reflLang),
+      observationPrompt: localizeObservationPrompt(todayWalk.observation_prompt, reflLang),
       reflectionQuestion: null,
     };
 
@@ -799,7 +799,7 @@ function localizeReference(ref: string, translation: string): string {
               {walkReason && (
                 <div className="flex items-start gap-2 mb-4 px-3 py-2 rounded-xl bg-ink-800/40 border border-ink-700/30">
                   <Info size={12} className="text-gold-400/60 shrink-0 mt-0.5" />
-                  <p className="text-ivory-500 text-xs leading-relaxed">{walkReason}</p>
+                  <p className="text-ivory-500 text-xs leading-relaxed">{localizeWalkReason(walkReason, reflLang)}</p>
                 </div>
               )}
 
