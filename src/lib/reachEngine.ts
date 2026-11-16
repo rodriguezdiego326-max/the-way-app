@@ -417,17 +417,191 @@ const theyAskedMeResponses: Record<string, Omit<TheyAskedMeResponse, 'is_demo'>>
   },
 };
 
-export async function getTheyAskedMeResponse(question: string): Promise<TheyAskedMeResponse> {
+
+const theyAskedMeResponsesEs: Record<string, Omit<TheyAskedMeResponse, 'is_demo'>> = {
+  'why would a loving god send anyone to hell': {
+    understand_the_question: 'Esta pregunta suele surgir de un verdadero sentido de justicia: ¿cómo podría ser justo un castigo eterno? También puede venir de una idea equivocada de lo que es el infierno. La pregunta de fondo suele ser: «¿Es Dios justo y toma el mal en serio?»',
+    understand_it_yourself: 'La Biblia presenta a Dios como perfectamente santo, justo y misericordioso. El pecado es real y el juicio también, pero la cruz muestra que Dios mismo proveyó en Cristo el camino de perdón. No debemos hablar del infierno con ligereza ni como si nosotros fuéramos moralmente superiores; nuestra esperanza descansa únicamente en la gracia de Dios en Cristo.',
+    open_your_bible: [
+      { reference: 'Romanos 2:4–11', reason: 'Muestra la justicia e imparcialidad del juicio de Dios.' },
+      { reference: '2 Tesalonicenses 1:5–10', reason: 'Habla del juicio y de estar apartado de la presencia del Señor.' },
+      { reference: 'Mateo 23:37', reason: 'Muestra el corazón de Jesús al llamar a personas que no quisieron venir.' },
+    ],
+    how_you_could_respond: 'Podrías decir: «Esa es una pregunta muy importante. La Biblia no presenta a Dios como cruel, sino como santo y justo. También muestra algo asombroso: Dios no se mantuvo distante de nuestro problema, sino que en Cristo cargó con el juicio que merecemos para ofrecer perdón a todo el que confía en Él. Por eso hablar del infierno también debe llevarnos a hablar de la gracia y de la cruz».',
+    questions_to_ask_them: [
+      '¿Qué parte de la idea del infierno te resulta más difícil?',
+      '¿Cómo crees que un Dios perfectamente justo debería responder al mal?',
+      '¿Has pensado en lo que la cruz dice acerca de la justicia y la misericordia de Dios?',
+    ],
+    they_may_ask_next: [
+      '¿Qué pasa con las personas que nunca han oído de Jesús?',
+      '¿No es desproporcionado un castigo eterno por una vida finita?',
+      'Si Dios es soberano, ¿cómo encaja eso con la responsabilidad humana?',
+    ],
+    biblical_foundation: 'La Escritura enseña que Dios es perfectamente justo, que el pecado merece juicio y que la salvación es un regalo de gracia en Cristo. La cruz muestra que Dios no ignora el mal: lo enfrenta plenamente mientras salva a pecadores que no pueden salvarse a sí mismos.',
+    other_christian_views: 'Los cristianos difieren en cómo explican la relación entre la soberanía de Dios y la responsabilidad humana. Sin embargo, el cristianismo histórico afirma la realidad del juicio, la necesidad de la gracia y que la salvación se encuentra en Cristo.',
+    sources: [],
+  },
+  'why does god allow suffering': {
+    understand_the_question: 'Esta pregunta suele venir del dolor real, no de una curiosidad abstracta. Antes de responder, conviene escuchar qué ha vivido la persona y reconocer el peso de su sufrimiento. Convertir demasiado rápido el dolor en un debate puede herir a alguien que ya está herido.',
+    understand_it_yourself: 'La Biblia enseña que el sufrimiento forma parte de un mundo caído y, al mismo tiempo, que Dios sigue siendo soberano y bueno. No siempre sabemos por qué permite un sufrimiento específico. Sí sabemos que Dios entró en nuestro sufrimiento en Cristo, que puede obrar aun en medio del mal y que promete hacer nuevas todas las cosas.',
+    open_your_bible: [
+      { reference: 'Romanos 8:18–28', reason: 'Sitúa el sufrimiento presente a la luz de la gloria futura y de la providencia de Dios.' },
+      { reference: 'Génesis 50:20', reason: 'Muestra que Dios puede obrar para bien aun a través del mal que otros intentan.' },
+      { reference: '2 Corintios 4:16–18', reason: 'Pablo mira la aflicción presente a la luz de la gloria eterna.' },
+    ],
+    how_you_could_respond: 'Podrías decir: «No tengo una explicación completa de por qué Dios permite cada sufrimiento particular. Pero sé que Dios no permaneció lejos del sufrimiento: Jesús entró en él. La cruz me muestra su amor, y la resurrección me da esperanza de que el sufrimiento no tendrá la última palabra».',
+    questions_to_ask_them: [
+      '¿Quieres contarme un poco más de lo que estás viviendo?',
+      '¿Qué parte de esto ha sido la más difícil para ti?',
+      '¿Cómo ha afectado esto tu manera de ver a Dios?',
+    ],
+    they_may_ask_next: [
+      '¿Por qué creó Dios un mundo donde el sufrimiento era posible?',
+      '¿Por qué Dios no lo detiene ahora mismo?',
+      '¿Cómo se puede confiar en Dios cuando sufren los niños?',
+    ],
+    biblical_foundation: 'La Escritura afirma la bondad y soberanía de Dios sin presentar a Dios como autor del pecado. La cruz es el ejemplo supremo de cómo el mayor mal cometido por seres humanos fue usado por Dios para realizar el mayor bien.',
+    other_christian_views: 'Los cristianos expresan de distintas maneras cómo encajan la soberanía divina y las decisiones humanas. Todos deben evitar respuestas simplistas al sufrimiento y mantener juntos la bondad de Dios, la realidad del mal y la esperanza final de la resurrección.',
+    sources: [],
+  },
+  'how do we know the bible is true': {
+    understand_the_question: 'La persona puede estar preguntando si el texto bíblico fue transmitido de manera confiable, si sus autores son dignos de confianza o si realmente procede de Dios. Es útil distinguir esas preguntas en vez de responderlas como si fueran una sola.',
+    understand_it_yourself: 'Los cristianos reciben la Escritura como Palabra de Dios dada por medio de autores humanos. Jesús trató la Escritura como autoritativa. La evidencia histórica y textual puede responder preguntas importantes sobre transmisión y confiabilidad, pero la autoridad última de la Escritura descansa en Dios que habla por medio de ella.',
+    open_your_bible: [
+      { reference: '2 Timoteo 3:16–17', reason: 'Afirma que toda la Escritura es inspirada por Dios.' },
+      { reference: '2 Pedro 1:20–21', reason: 'Describe a hombres hablando de parte de Dios guiados por el Espíritu Santo.' },
+      { reference: 'Juan 10:35', reason: 'Muestra cómo Jesús trató la Escritura como palabra autoritativa.' },
+    ],
+    how_you_could_respond: 'Podrías decir: «Es una pregunta justa. Podemos examinar históricamente cómo se transmitió la Biblia y si tenemos buenas razones para confiar en su texto. Pero para mí la pregunta central también es Jesús: Él recibió la Escritura como Palabra de Dios, y su muerte y resurrección son centrales para saber por qué tomo en serio su autoridad».',
+    questions_to_ask_them: [
+      '¿Qué has oído acerca de la Biblia que te hace dudar de ella?',
+      '¿Tu pregunta principal es sobre cómo se transmitió el texto o sobre si viene de Dios?',
+      '¿Qué tipo de evidencia considerarías suficiente para tomarla en serio?',
+    ],
+    they_may_ask_next: [
+      '¿Qué pasa con las supuestas contradicciones de la Biblia?',
+      '¿No decidió un concilio qué libros incluir?',
+      '¿Qué pasa con los libros que no quedaron en el canon?',
+    ],
+    biblical_foundation: 'La Escritura se presenta como Palabra de Dios y como producto de autores humanos guiados por el Espíritu Santo. Su autoridad no nace de que la iglesia se la conceda, aunque la iglesia reconoce y recibe los libros que Dios dio.',
+    other_christian_views: 'Las tradiciones cristianas describen de distintas maneras el papel de la iglesia al reconocer el canon. Comparten, sin embargo, la convicción de que la Escritura ocupa un lugar normativo en la fe cristiana.',
+    sources: [],
+  },
+  'why did jesus have to die': {
+    understand_the_question: 'La pregunta puede ser por qué Dios no podía simplemente perdonar, o puede expresar incomodidad con la idea del Padre y el Hijo en la cruz. Conviene aclarar que la cruz no presenta a un tercero inocente obligado contra su voluntad, sino al Dios trino obrando para salvar.',
+    understand_it_yourself: 'El pecado tiene una culpa real ante un Dios santo. En la cruz, la justicia y el amor de Dios no compiten: Cristo, voluntariamente, lleva el juicio que merece su pueblo para reconciliarnos con Dios. El Padre envía al Hijo en amor y el Hijo entrega su vida voluntariamente.',
+    open_your_bible: [
+      { reference: 'Romanos 3:21–26', reason: 'Muestra a Dios como justo y como quien justifica por medio de Cristo.' },
+      { reference: 'Isaías 53:4–6', reason: 'Describe al Siervo sufriente llevando nuestras iniquidades.' },
+      { reference: '2 Corintios 5:21', reason: 'Muestra la obra sustitutiva de Cristo a favor de pecadores.' },
+    ],
+    how_you_could_respond: 'Podrías decir: «Dios no simplemente ignora el mal. En Jesús, Dios mismo asumió el costo de nuestra reconciliación. La cruz no es el Padre castigando a un tercero indefenso; es el Hijo entregándose voluntariamente, en unidad con el Padre, para que pecadores puedan ser perdonados sin que la justicia de Dios sea descartada».',
+    questions_to_ask_them: [
+      '¿Qué piensas que debería hacer un Dios perfectamente justo con el mal?',
+      '¿Qué te resulta más difícil de entender acerca de la cruz?',
+      '¿Cómo cambia la pregunta si Jesús entrega su vida voluntariamente?',
+    ],
+    they_may_ask_next: [
+      '¿No es esto abuso del Padre contra el Hijo?',
+      '¿No podía Dios salvar de otra manera?',
+      '¿Qué pasó con quienes vivieron antes de Jesús?',
+    ],
+    biblical_foundation: 'La Escritura presenta a Cristo llevando nuestro juicio y reconciliándonos con Dios. Su muerte no es un accidente ni la acción de un Padre contra un Hijo reacio, sino la obra salvadora del Dios trino.',
+    other_christian_views: 'Los cristianos también hablan de la cruz como victoria sobre el pecado y los poderes del mal, como demostración del amor de Dios y como ejemplo de obediencia. Estas dimensiones no tienen que excluir la obra sustitutiva de Cristo.',
+    sources: [],
+  },
+  'all religions teach basically the same thing': {
+    understand_the_question: 'Esta afirmación puede surgir del deseo de ser tolerante o de una comparación muy general entre religiones. Es útil mostrar con respeto que las religiones hacen afirmaciones distintas —y a veces incompatibles— sobre Dios, la humanidad, la salvación y la realidad.',
+    understand_it_yourself: 'Las religiones no enseñan exactamente lo mismo. Por ejemplo, el cristianismo confiesa al Dios trino y que Jesucristo es verdaderamente Dios y hombre; otras religiones niegan esas afirmaciones. La pregunta importante no es cuál tradición parece más agradable, sino cuáles afirmaciones son verdaderas.',
+    open_your_bible: [
+      { reference: 'Juan 14:6', reason: 'Jesús se identifica como el camino, la verdad y la vida.' },
+      { reference: 'Hechos 4:10–12', reason: 'Pedro proclama la salvación en Jesucristo.' },
+      { reference: '1 Corintios 15:1–8', reason: 'Pablo fundamenta el evangelio en acontecimientos históricos concretos.' },
+    ],
+    how_you_could_respond: 'Podrías decir: «Entiendo por qué esa idea parece respetuosa. Pero cuando miramos lo que las religiones realmente enseñan, encontramos afirmaciones muy diferentes acerca de Dios, Jesús y la salvación. No pueden ser verdaderas en el mismo sentido cuando se contradicen. Entonces la pregunta pasa a ser: ¿qué es verdadero y qué razones tenemos para creerlo?»',
+    questions_to_ask_them: [
+      '¿Qué enseñanzas crees que tienen en común las religiones?',
+      '¿Has comparado lo que realmente afirman acerca de Dios y la salvación?',
+      'Si dos religiones hacen afirmaciones contradictorias, ¿pueden ambas ser verdaderas en el mismo sentido?',
+    ],
+    they_may_ask_next: [
+      '¿Qué pasa con alguien que es sincero en otra religión?',
+      '¿No es arrogante decir que Cristo es el único camino?',
+      '¿Qué pasa con quienes nunca han oído de Jesús?',
+    ],
+    biblical_foundation: 'La Escritura presenta la salvación como obra de Dios en Cristo. La exclusividad de Cristo no es una afirmación de superioridad personal del cristiano, sino una afirmación acerca de quién es Jesús y lo que Dios ha hecho por medio de Él.',
+    other_christian_views: 'Algunas corrientes modernas proponen inclusivismo o pluralismo religioso. El cristianismo histórico, sin embargo, ha confesado de manera central que la salvación está unida a Jesucristo.',
+    sources: [],
+  },
+};
+
+const spanishTheyAskedAliases: Record<string, string> = {
+  'dios amoroso': 'why would a loving god send anyone to hell',
+  'mandaría al infierno': 'why would a loving god send anyone to hell',
+  'enviar al infierno': 'why would a loving god send anyone to hell',
+  'permite el sufrimiento': 'why does god allow suffering',
+  'por qué sufrimos': 'why does god allow suffering',
+  'biblia es verdadera': 'how do we know the bible is true',
+  'confiar en la biblia': 'how do we know the bible is true',
+  'jesús tuvo que morir': 'why did jesus have to die',
+  'jesus tuvo que morir': 'why did jesus have to die',
+  'religiones enseñan lo mismo': 'all religions teach basically the same thing',
+  'todas las religiones': 'all religions teach basically the same thing',
+};
+
+export async function getTheyAskedMeResponse(question: string, language: 'en' | 'es' = 'en'): Promise<TheyAskedMeResponse> {
   const lower = question.toLowerCase().trim();
 
   // Retrieve verified sources from the shared RAG engine
   const retrieval = await retrieveSources(question);
   const ragCitations: Citation[] = retrieval.citations;
 
-  for (const [key, response] of Object.entries(theyAskedMeResponses)) {
+  let matchedKey: string | null = null;
+  for (const key of Object.keys(theyAskedMeResponses)) {
     if (lower.includes(key)) {
-      return { ...response, sources: ragCitations, is_demo: true };
+      matchedKey = key;
+      break;
     }
+  }
+  if (!matchedKey && language === 'es') {
+    for (const [alias, key] of Object.entries(spanishTheyAskedAliases)) {
+      if (lower.includes(alias)) {
+        matchedKey = key;
+        break;
+      }
+    }
+  }
+  if (matchedKey) {
+    const response = language === 'es'
+      ? theyAskedMeResponsesEs[matchedKey] ?? theyAskedMeResponses[matchedKey]
+      : theyAskedMeResponses[matchedKey];
+    return { ...response, sources: ragCitations, is_demo: true };
+  }
+
+  if (language === 'es') {
+    return {
+      understand_the_question: 'Escucha con cuidado lo que la persona realmente está preguntando. Puede haber una pregunta intelectual, emocional o relacional detrás de sus palabras. Entender eso cambia la manera de responder.',
+      understand_it_yourself: 'Lee los pasajes relevantes y piensa primero en lo que la Escritura realmente enseña antes de intentar responder.',
+      open_your_bible: [
+        { reference: '1 Pedro 3:15', reason: 'Llama a estar preparados para responder con mansedumbre y reverencia acerca de nuestra esperanza.' },
+        { reference: 'Colosenses 4:5–6', reason: 'Llama a andar con sabiduría y a hablar con gracia.' },
+      ],
+      how_you_could_respond: 'Escucha primero, reconoce con respeto lo que la persona está diciendo y dirige la conversación hacia Cristo sin convertirla en una competencia.',
+      questions_to_ask_them: [
+        '¿Puedes contarme un poco más de lo que te lleva a preguntar eso?',
+        '¿Qué piensas tú acerca de este tema?',
+        '¿Hubo alguna experiencia que influyó en tu manera de verlo?',
+      ],
+      they_may_ask_next: [
+        '¿Cómo sabes que tu punto de vista es correcto?',
+        '¿Qué pasa con las personas que no están de acuerdo?',
+      ],
+      biblical_foundation: 'La Escritura debe gobernar nuestra respuesta. Lee los pasajes relevantes en su contexto y observa lo que Dios revela acerca de sí mismo, del ser humano y de lo que llama a creer y hacer.',
+      other_christian_views: null,
+      sources: ragCitations,
+      is_demo: true,
+    };
   }
 
   return {
