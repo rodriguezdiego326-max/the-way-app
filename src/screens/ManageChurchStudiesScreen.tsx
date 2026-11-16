@@ -110,7 +110,7 @@ export default function ManageChurchStudiesScreen({ profile, churchId, onBack }:
             <h2 className="font-serif text-2xl text-ivory-50">Manage Church Studies</h2>
             {roleLabel && (
               <p className="text-ivory-500 text-sm mt-1 leading-relaxed">
-                Signed in as Verified Church Publisher ({roleLabel}). Studies you publish appear to your church as CHURCH CONTENT.
+                Signed in as Verified Pastor ({roleLabel}). Only verified Pastors can create, edit, assign, publish, or archive Church Studies.
               </p>
             )}
           </div>
@@ -119,7 +119,7 @@ export default function ManageChurchStudiesScreen({ profile, churchId, onBack }:
           {screenState === 'error' && <ErrorState message="Could not load church studies." onRetry={load} />}
           {screenState === 'no_church' && <EmptyState message="Choose a church in My Church to manage its studies." />}
           {screenState === 'denied' && (
-            <EmptyState message="Only Verified Church Publishers can manage this church's studies." />
+            <EmptyState message="Only a Verified Pastor can manage this church's studies." />
           )}
 
           {screenState === 'ready' && (
