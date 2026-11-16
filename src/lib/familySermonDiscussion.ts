@@ -1,5 +1,6 @@
 import type { FamilySermonDiscussionDraft } from '@/lib/familySermonDiscussions';
 import { DISCUSSION_BODY_MAX } from '@/lib/sermonDiscussion';
+import { getStoredAppLanguage } from '@/lib/i18n';
 
 export const FAMILY_SCRIPTURE_MAX = 3;
 export const FAMILY_TITLE_MAX = 120;
@@ -33,24 +34,33 @@ export function resolveFamilyQuestion(selection: FamilySelection): string | null
 }
 
 export function buildFamilyStarter(mainPoint: string | null, question: string | null): string {
+  const es = getStoredAppLanguage() === 'es';
   const parts: string[] = [];
-  if (mainPoint) parts.push(`Main point: ${mainPoint}`);
-  if (question) parts.push(`Question: ${question}`);
+  if (mainPoint) parts.push(`${es ? 'Punto principal' : 'Main point'}: ${mainPoint}`);
+  if (question) parts.push(`${es ? 'Pregunta' : 'Question'}: ${question}`);
   return parts.join('\n\n');
 }
 
 export function validateFamilyQuestion(selection: FamilySelection): string | null {
   if (selection.questionMode !== 'custom') return null;
   const trimmed = selection.customQuestion.trim();
-  if (trimmed.length === 0) return 'Write your question or choose another option.';
-  if (trimmed.length > FAMILY_QUESTION_MAX) return `Keep your question to ${FAMILY_QUESTION_MAX} characters or fewer.`;
+  if (trimmed.length === 0) return getStoredAppLanguage() === 'es'
+    ? 'Escribe tu pregunta o elige otra opción.'
+    : 'Write your question or choose another option.';
+  if (trimmed.length > FAMILY_QUESTION_MAX) return getStoredAppLanguage() === 'es'
+    ? `Mantén tu pregunta en ${FAMILY_QUESTION_MAX} caracteres o menos.`
+    : `Keep your question to ${FAMILY_QUESTION_MAX} characters or fewer.`;
   return null;
 }
 
 export function validateFamilyBody(body: string): string | null {
   const trimmed = body.trim();
-  if (trimmed.length === 0) return 'Write a short starter for your family before saving.';
-  if (trimmed.length > DISCUSSION_BODY_MAX) return `Keep your starter to ${DISCUSSION_BODY_MAX} characters or fewer.`;
+  if (trimmed.length === 0) return getStoredAppLanguage() === 'es'
+    ? 'Escribe un inicio breve para tu familia antes de guardar.'
+    : 'Write a short starter for your family before saving.';
+  if (trimmed.length > DISCUSSION_BODY_MAX) return getStoredAppLanguage() === 'es'
+    ? `Mantén tu inicio en ${DISCUSSION_BODY_MAX} caracteres o menos.`
+    : `Keep your starter to ${DISCUSSION_BODY_MAX} characters or fewer.`;
   return null;
 }
 
