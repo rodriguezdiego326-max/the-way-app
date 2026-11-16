@@ -193,7 +193,7 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
                     : 'bg-ink-800/40 border-ink-700/40 text-ivory-400'
                 }`}
               >
-                {band.label}
+                {language === 'es' && band.label === 'Adult' ? 'Adulto' : band.label}
               </button>
             ))}
           </div>
@@ -234,7 +234,7 @@ export default function CatechismScreen({ familyProfile, onBack }: CatechismScre
                         {completed ? (
                           <Check size={14} className="text-sage-400" />
                         ) : (
-                          <span className="text-ivory-500 text-xs font-medium">Q{q.number}</span>
+                          <span className="text-ivory-500 text-xs font-medium">{language === 'es' ? 'P' : 'Q'}{q.number}</span>
                         )}
                       </div>
                       <div className="flex-1">
