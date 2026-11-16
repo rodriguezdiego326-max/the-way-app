@@ -39,6 +39,19 @@ export async function fetchActivityPage(before?: string): Promise<ActivityPage> 
   };
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function fetchActivityById(activityId: string): Promise<ActivityItem | null> {
+  if (!UUID_PATTERN.test(activityId)) return null;
+  const { data, error } = await supabase
+    .from('activity_notifications')
+    .select(ACTIVITY_COLUMNS)
+    .eq('id', activityId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as ActivityItem | null) ?? null;
+}
+
 export async function fetchUnreadCounts(): Promise<UnreadCounts> {
   const { data, error } = await supabase
     .from('activity_notifications')

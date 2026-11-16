@@ -100,6 +100,7 @@ export async function sendApnsAlert(
   if (response.status === 410 || reason === "BadDeviceToken" || reason === "Unregistered") {
     return { kind: "invalid_token", code: reason || "Unregistered" };
   }
+  if (reason === "ExpiredProviderToken" || reason === "InvalidProviderToken") cachedJwt = null;
   const code = reason || `http_${response.status}`;
   const retryable = response.status === 429 || response.status >= 500;
   return { kind: "failed", code, retryable };

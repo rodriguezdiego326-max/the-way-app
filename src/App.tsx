@@ -69,7 +69,8 @@ import type { Circle, CircleSermonDiscussion, Sermon } from '@/lib/togetherTypes
 import type { ActivityItem } from '@/lib/activityTypes';
 import { loadCircleForActivity, resolveActivityDestination } from '@/lib/activityRouter';
 import { useActivityUnread } from '@/hooks/useActivityUnread';
-import { deactivateThisDevice, subscribeToPushTaps } from '@/lib/pushNotifications';
+import { refreshPushState, releasePushForSignOut, startPushRuntime } from '@/lib/pushNotifications';
+import { fetchActivityById, markActivityRead } from '@/lib/activityEngine';
 import type { ScriptureResume } from '@/screens/ScriptureTogetherScreen';
 import type { FamilySermonDiscussion } from '@/lib/familyTypes';
 
@@ -257,6 +258,7 @@ export default function App() {
         setOverlay({ type: 'none' });
         setActiveTab('today');
         setInviteRoute(loadInviteRoute());
+        setPendingPushActivityId(null);
         return;
       }
       setSession(s as typeof session);
@@ -265,19 +267,45 @@ export default function App() {
   }, []);
 
   const signedInUserId = session?.user?.id ?? null;
+  const [pendingPushActivityId, setPendingPushActivityId] = useState<string | null>(null);
+  const refreshActivityRef = useRef(refreshActivity);
+  refreshActivityRef.current = refreshActivity;
+
   useEffect(() => {
-    if (!signedInUserId) return;
     let cancelled = false;
-    let unsubscribe: (() => void) | undefined;
-    void subscribeToPushTaps(() => setOverlay({ type: 'activity' })).then((off) => {
+    let stop: (() => void) | undefined;
+    void startPushRuntime({
+      onTap: (activityId) => setPendingPushActivityId(activityId),
+      onForeground: () => void refreshActivityRef.current(),
+    }).then((off) => {
       if (cancelled) off();
-      else unsubscribe = off;
+      else stop = off;
     });
     return () => {
       cancelled = true;
-      unsubscribe?.();
+      stop?.();
     };
+  }, []);
+
+  useEffect(() => {
+    if (signedInUserId) void refreshPushState().catch(() => undefined);
   }, [signedInUserId]);
+
+  useEffect(() => {
+    if (!pendingPushActivityId || !signedInUserId || !profile || inviteRoute) return;
+    const activityId = pendingPushActivityId;
+    const generation = authGenerationRef.current;
+    setPendingPushActivityId(null);
+    void (async () => {
+      const item = await fetchActivityById(activityId).catch(() => null);
+      if (generation !== authGenerationRef.current) return;
+      setOverlay({ type: 'activity' });
+      if (!item) return;
+      await markActivityRead([item.id]).catch(() => undefined);
+      void refreshActivityRef.current();
+      await handleOpenActivity(item);
+    })();
+  }, [pendingPushActivityId, signedInUserId, profile, inviteRoute]);
 
   async function handleOpenActivity(item: ActivityItem) {
     const destination = resolveActivityDestination(item);
@@ -295,7 +323,8 @@ export default function App() {
   }
 
   async function handleSignOut() {
-    await deactivateThisDevice().catch(() => undefined);
+    setPendingPushActivityId(null);
+    await releasePushForSignOut();
     authGenerationRef.current++;
     setProfileLoading(false);
     setAuthLoading(false);

@@ -1,12 +1,14 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendApnsAlert, type ApnsEnvironment } from "../_shared/apns.ts";
+import { buildActivityPushBody, PUSH_TITLE } from "../_shared/pushCopy.ts";
 
 // ============================================================
 // SOLAPATH push-activity. Delivers a standard APNs alert for an
 // existing Activity row. Activity stays the source of truth: the
-// row is loaded here, and the push preference and Family/Circle
-// membership are re-checked in the database before any send.
+// database re-checks push preference and Family/Circle membership
+// before returning any device. The payload carries only the Activity
+// ID and metadata-only copy.
 // ============================================================
 
 const corsHeaders = {
@@ -17,6 +19,13 @@ const corsHeaders = {
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_ATTEMPTS = 2;
+const REQUIRED_SECRETS = [
+  "PUSH_WEBHOOK_SECRET",
+  "APNS_KEY_ID",
+  "APNS_TEAM_ID",
+  "APNS_PRIVATE_KEY",
+  "APNS_TOPIC",
+] as const;
 
 function json(body: Record<string, unknown>, status: number) {
   return new Response(JSON.stringify(body), {
@@ -36,7 +45,19 @@ function isApnsEnvironment(value: unknown): value is ApnsEnvironment {
   return value === "production" || value === "sandbox";
 }
 
+function missingSecrets(): string[] {
+  return REQUIRED_SECRETS.filter((name) => !(Deno.env.get(name) ?? "").trim());
+}
+
 type ClaimedDevice = { delivery_id: string; token: string; environment: string };
+type ClaimResult = {
+  status: "ready" | "suppressed";
+  activity_id?: string;
+  event_type?: string;
+  actor_label?: unknown;
+  scope_label?: unknown;
+  devices?: ClaimedDevice[];
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
@@ -46,6 +67,12 @@ Deno.serve(async (req) => {
   const providedSecret = req.headers.get("x-push-secret") ?? "";
   if (!expectedSecret || !constantTimeEqual(providedSecret, expectedSecret)) {
     return json({ ok: false, error: "unauthorized" }, 401);
+  }
+
+  const missing = missingSecrets();
+  if (missing.length > 0) {
+    console.error("push-activity configuration incomplete", missing.join(","));
+    return json({ ok: false, error: "not_configured" }, 503);
   }
 
   let activityId: unknown;
@@ -64,22 +91,36 @@ Deno.serve(async (req) => {
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
 
-  const { data: claim, error: claimError } = await admin.rpc("push_claim_activity", {
+  const { data: claimData, error: claimError } = await admin.rpc("push_claim_activity", {
     p_activity_id: activityId,
   });
   if (claimError) {
     console.error("push_claim_activity failed", claimError.code);
     return json({ ok: false, error: "claim_failed" }, 500);
   }
-  if (!claim) return json({ ok: true, status: "not_found", sent: 0 }, 200);
-  if (claim.status === "suppressed") return json({ ok: true, status: "suppressed", sent: 0 }, 200);
+  if (!claimData) return json({ ok: true, status: "not_found", sent: 0 }, 200);
 
-  const devices = (claim.devices ?? []) as ClaimedDevice[];
+  const claim = claimData as ClaimResult;
+  if (claim.status !== "ready") return json({ ok: true, status: "suppressed", sent: 0 }, 200);
+
+  const devices = claim.devices ?? [];
+  if (devices.length === 0) return json({ ok: true, status: "dispatched", attempted: 0, sent: 0 }, 200);
+
   const payload = {
     aps: {
-      alert: { title: "SOLAPATH", body: "You have new activity." },
+      alert: {
+        title: PUSH_TITLE,
+        body: buildActivityPushBody({
+          eventType: claim.event_type ?? "",
+          actorLabel: claim.actor_label,
+          scopeLabel: claim.scope_label,
+        }),
+      },
       sound: "default",
     },
+    solapath_type: "activity",
+    activity_id: claim.activity_id,
+    schema_version: 1,
   };
 
   let sent = 0;

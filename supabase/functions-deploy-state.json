@@ -17,6 +17,10 @@
       "hasChanged": false,
       "hash": "9b6b425a800962c6b184c2fd1cdcc7a3beca7c904ef4fe782ace3a6a8dfd4a87"
     },
+    "push-activity": {
+      "hasChanged": false,
+      "hash": "ae1391645f9b6ccc8f450ce90f71eff11e8d9c9a8ceeba2f63e9f2462570578081eb0b3175212b87da95a4d5582ce6e4d479403b27cda2e341da7159111059b5"
+    },
     "the-way-intelligence": {
       "hasChanged": false,
       "hash": "d802d4175ba202edf12fb643d7254d6440364f9200816571d3cbdea4cffc5a3a"
@@ -24,10 +28,6 @@
     "transcribe-sermon-part": {
       "hasChanged": false,
       "hash": "91b243c8282b59739caf9d54d597f82d911ab460f72c4a0db88bcfd2529237a0"
-    },
-    "push-activity": {
-      "hasChanged": false,
-      "hash": "01f3dbae0df7c9510f3def095e8c77b6aaaf9daf74257705f971c6469848f48992b0fd227074e5bd2cf1c3fc8a59a21ef72e7f6784faf679f74ff0721515b31e"
     }
   }
 }
