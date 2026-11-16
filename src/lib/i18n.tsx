@@ -2628,6 +2628,9 @@ const ES: Record<string, string> = {
   'Broader Christian Disagreement': 'Desacuerdo cristiano más amplio',
   'Wisdom / Application': 'Sabiduría / aplicación',
   'Not Explicitly Addressed by Scripture': 'No tratado explícitamente por la Escritura',
+  'Do you think it would be loving for God to force people into His presence if they do not want Him?': '¿Crees que sería amoroso que Dios obligara a las personas a estar en su presencia si ellas no lo quieren?',
+  'Colossians 3:23 — "Whatever you do, work heartily, as for the Lord and not for men." 1 Thessalonians 4:11–12 — "Aspire to live quietly, and to mind your own affairs."': 'Colosenses 3:23 — «Todo lo que hagan, háganlo de corazón, como para el Señor y no para los hombres». 1 Tesalonicenses 4:11–12 — «Procuren vivir tranquilamente y ocuparse de sus propios asuntos».',
+  'Ephesians 6:4 — "Fathers, do not provoke your children to anger, but bring them up in the discipline and instruction of the Lord." 2 Timothy 1:5 — Timothy\'s sincere faith lived first in his grandmother and mother.': 'Efesios 6:4 — «Padres, no provoquen a ira a sus hijos, sino críenlos en la disciplina e instrucción del Señor». 2 Timoteo 1:5 — la fe sincera de Timoteo había vivido primero en su abuela y en su madre.',
 };
 
 interface LanguageContextValue {
