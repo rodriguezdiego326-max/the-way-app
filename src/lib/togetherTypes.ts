@@ -272,8 +272,12 @@ export const VERIFIED_CHURCH_ROLE_LABELS: Record<VerifiedChurchRole, string> = {
   LEADER: 'Leader',
 };
 
-export function isVerifiedChurchPublisher(role: string | null | undefined): role is VerifiedChurchRole {
+export function isVerifiedChurchLeadership(role: string | null | undefined): role is VerifiedChurchRole {
   return !!role && (VERIFIED_CHURCH_ROLES as readonly string[]).includes(role);
+}
+
+export function isVerifiedChurchPublisher(role: string | null | undefined): role is 'PASTOR' {
+  return role === 'PASTOR';
 }
 
 export type ChurchAdminClaimStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn' | 'revoked';
@@ -382,6 +386,14 @@ export interface ChurchGroup {
   meeting_day: string | null;
   leader_profile_id: string | null;
   created_at: string;
+}
+
+export interface ChurchGroupMembership {
+  id: string;
+  group_id: string;
+  profile_id: string;
+  status: 'joined';
+  joined_at: string;
 }
 
 export interface GroupDiscussion {
