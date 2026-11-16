@@ -55,6 +55,17 @@ export async function getCircle(circleId: string): Promise<Circle | null> {
   return (data as Circle) || null;
 }
 
+export async function deleteOwnedCircle(circleId: string, profileId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('circles')
+    .delete()
+    .eq('id', circleId)
+    .eq('owner_profile_id', profileId)
+    .select('id');
+  if (error) throw error;
+  if (!data?.length) throw new Error('Circle was not deleted');
+}
+
 export async function getCircleMembers(circleId: string): Promise<CircleMember[]> {
   const { data } = await supabase
     .from('circle_members')
