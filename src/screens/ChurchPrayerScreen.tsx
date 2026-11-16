@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Heart, Plus, Pencil, Trash2 } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';
-import { getMyChurchMembership, getChurchMembershipForChurch, getChurch, getChurchPrayerItems, createChurchPrayerItem, updateChurchPrayerItem, deleteChurchPrayerItem, isChurchOwner } from '@/lib/churchEngine';
+import { getMyChurchMembership, getChurchMembershipForChurch, getChurch, getChurchPrayerItems, createChurchPrayerItem, updateChurchPrayerItem, deleteChurchPrayerItem } from '@/lib/churchEngine';
 import type { Profile } from '@/lib/types';
 import type { ChurchPrayerItem } from '@/lib/togetherTypes';
-import { isVerifiedChurchPublisher } from '@/lib/togetherTypes';
+import { isVerifiedChurchLeadership } from '@/lib/togetherTypes';
 
 interface Props {
   profile: Profile;
@@ -60,12 +60,9 @@ export default function ChurchPrayerScreen({ profile, activeChurchId, onBack }: 
         const prays = await getChurchPrayerItems(church.id);
         if (version !== requestVersionRef.current) return;
         setItems(prays);
-        const [owner, membership] = await Promise.all([
-          isChurchOwner(profile.id, church.id),
-          getChurchMembershipForChurch(profile.id, church.id),
-        ]);
+        const membership = await getChurchMembershipForChurch(profile.id, church.id);
         if (version !== requestVersionRef.current) return;
-        setCanManage(owner || isVerifiedChurchPublisher(membership?.verified_church_role));
+        setCanManage(isVerifiedChurchLeadership(membership?.verified_church_role));
       }
     } catch {
       if (version !== requestVersionRef.current) return;
