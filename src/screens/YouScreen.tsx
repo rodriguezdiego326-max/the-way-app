@@ -328,7 +328,9 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
 
           <div className="mb-6">
             <p className="ui-label mb-3">Preferred Translation</p>
-            <p className="text-ivory-200 font-medium">{profile?.preferred_translation || 'ESV'}</p>
+            <p className="text-ivory-200 font-medium">
+              {language === 'es' ? 'RV1909 — Reina-Valera 1909' : 'WEB — World English Bible'}
+            </p>
             <p className="text-ivory-600 text-xs mt-1">
               SOLAPATH does not store copyrighted Bible text.
             </p>
