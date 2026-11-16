@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ExternalLink, Languages } from 'lucide-react';
 import AuthForm from '@/components/AuthForm';
 import { openPrivacyPolicy } from '@/lib/privacyConfig';
+import { useLanguage } from '@/lib/i18n';
 
 interface WelcomeScreenProps {
   onAuthed: () => void;
@@ -24,10 +25,34 @@ type AuthMode = 'signin' | 'signup';
 
 export default function WelcomeScreen({ onAuthed }: WelcomeScreenProps) {
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
+  const { language, setLanguage } = useLanguage();
+
+  const languageToggle = (
+    <div className="fixed top-4 right-4 z-[80] safe-top">
+      <div className="flex items-center gap-1 rounded-full border border-gold-500/30 bg-ink-850/90 p-1 shadow-lg backdrop-blur-xl">
+        <Languages size={14} className="text-gold-300 ml-2" />
+        <button
+          type="button"
+          onClick={() => setLanguage('en')}
+          className={`px-2.5 py-1.5 rounded-full text-xs ${language === 'en' ? 'bg-gold-500/15 text-gold-200' : 'text-ivory-500'}`}
+        >
+          English
+        </button>
+        <button
+          type="button"
+          onClick={() => setLanguage('es')}
+          className={`px-2.5 py-1.5 rounded-full text-xs ${language === 'es' ? 'bg-gold-500/15 text-gold-200' : 'text-ivory-500'}`}
+        >
+          Español
+        </button>
+      </div>
+    </div>
+  );
 
   if (authMode) {
     return (
       <div className="app-container bg-parchment min-h-screen overflow-y-auto safe-top">
+        {languageToggle}
         <div className="min-h-screen flex flex-col justify-center px-6 py-16">
           <div className="w-full max-w-sm mx-auto animate-fade-in">
             <button
@@ -61,6 +86,7 @@ export default function WelcomeScreen({ onAuthed }: WelcomeScreenProps) {
 
   return (
     <div className="app-container bg-parchment min-h-screen overflow-y-auto safe-top relative">
+      {languageToggle}
       <div className="absolute inset-x-0 bottom-0 h-72 overflow-hidden pointer-events-none opacity-35">
         <img
           src="/assets/solapath-scenic-emblem.png"
