@@ -17,6 +17,7 @@ import type {
 import {
   VERIFIED_CHURCH_ROLES,
   VERIFIED_CHURCH_ROLE_LABELS,
+  isVerifiedChurchLeadership,
   isVerifiedChurchPublisher,
 } from '@/lib/togetherTypes';
 
@@ -38,6 +39,7 @@ export default function ChurchAdministrationCard({ churchId, membership, onManag
   const [error, setError] = useState<string | null>(null);
 
   const verifiedRole = membership.verified_church_role;
+  const isLeadership = isVerifiedChurchLeadership(verifiedRole);
   const isPublisher = isVerifiedChurchPublisher(verifiedRole);
   const canDelegate = verifiedRole === 'PASTOR' || verifiedRole === 'CHURCH_ADMIN';
 
@@ -121,7 +123,7 @@ export default function ChurchAdministrationCard({ churchId, membership, onManag
     <div className="premium-card p-5 mb-4">
       <p className="ui-label mb-3">Church Administration</p>
 
-      {isPublisher && verifiedRole ? (
+      {isLeadership && verifiedRole ? (
         <>
           <div className="flex items-center gap-2 mb-2">
             <ShieldCheck size={16} className="text-gold-300 shrink-0" />
@@ -131,11 +133,13 @@ export default function ChurchAdministrationCard({ churchId, membership, onManag
           </div>
           <p className="text-ivory-200 text-sm">Role: {VERIFIED_CHURCH_ROLE_LABELS[verifiedRole as VerifiedChurchRole]}</p>
           <p className="text-ivory-600 text-xs mt-2 leading-relaxed">
-            Verified leadership can manage church prayer, small groups, and church studies for this church.
+            Verified leadership can manage church prayer and small groups for this church. Only a verified Pastor can create or manage Church Studies.
           </p>
-          <button type="button" onClick={() => { vibrate(8); onManageStudies(); }} className="btn-secondary w-full text-sm mt-4">
-            Manage Church Studies
-          </button>
+          {isPublisher && (
+            <button type="button" onClick={() => { vibrate(8); onManageStudies(); }} className="btn-secondary w-full text-sm mt-4">
+              Manage Church Studies
+            </button>
+          )}
 
           {canDelegate && (
             <div className="mt-5 pt-5 border-t border-ink-700/40">
