@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronRight, Check } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import type { TheologicalDepth } from '@/lib/types';
+import { useLanguage, type AppLanguage } from '@/lib/i18n';
 
 interface OnboardingProps {
   onComplete: (data: OnboardingData) => void;
@@ -10,6 +11,7 @@ interface OnboardingProps {
 }
 
 export interface OnboardingData {
+  app_language: AppLanguage;
   display_name: string;
   life_stage: string;
   season: string;
@@ -53,8 +55,10 @@ const depthOptions: { value: TheologicalDepth; label: string; desc: string }[] =
 const timeOptions = [5, 7, 10, 15, 20];
 
 export default function Onboarding({ onComplete, saving, error }: OnboardingProps) {
+  const { language, setLanguage } = useLanguage();
   const [step, setStep] = useState(0);
   const [data, setData] = useState<OnboardingData>({
+    app_language: language,
     display_name: '',
     life_stage: '',
     season: '',
@@ -65,7 +69,7 @@ export default function Onboarding({ onComplete, saving, error }: OnboardingProp
     memory_enabled: true,
   });
 
-  const totalSteps = 6;
+  const totalSteps = 7;
   const isLast = step === totalSteps - 1;
 
   const next = () => {
@@ -100,6 +104,41 @@ export default function Onboarding({ onComplete, saving, error }: OnboardingProp
         {step === 0 && (
           <div className="animate-fade-in-up flex flex-col gap-6">
             <div>
+              <p className="ui-label mb-3">Language</p>
+              <h2 className="font-serif text-4xl text-ivory-50 leading-tight">
+                Choose your language
+              </h2>
+              <p className="text-ivory-500 mt-2 text-sm">Elige tu idioma · You can change this anytime.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {([
+                ['en', 'English'],
+                ['es', 'Español'],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => {
+                    vibrate(8);
+                    setLanguage(value);
+                    setData({ ...data, app_language: value });
+                  }}
+                  className={`px-5 py-5 rounded-2xl border text-base font-medium transition-all no-tap-highlight ${
+                    data.app_language === value
+                      ? 'bg-gold-500/10 border-gold-500/40 text-ivory-50'
+                      : 'bg-ink-800/40 border-ink-700/40 text-ivory-300'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {step === 1 && (
+          <div className="animate-fade-in-up flex flex-col gap-6">
+            <div>
               <p className="ui-label mb-3">Welcome</p>
               <h2 className="font-serif text-4xl text-ivory-50 leading-tight">
                 What may we call you?
@@ -117,7 +156,7 @@ export default function Onboarding({ onComplete, saving, error }: OnboardingProp
           </div>
         )}
 
-        {step === 1 && (
+        {step === 2 && (
           <div className="animate-fade-in-up flex flex-col gap-6">
             <div>
               <p className="ui-label mb-3">Life Context</p>
@@ -147,7 +186,7 @@ export default function Onboarding({ onComplete, saving, error }: OnboardingProp
           </div>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <div className="animate-fade-in-up flex flex-col gap-6">
             <div>
               <p className="ui-label mb-3">Current Season</p>
@@ -178,7 +217,7 @@ export default function Onboarding({ onComplete, saving, error }: OnboardingProp
           </div>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <div className="animate-fade-in-up flex flex-col gap-6">
             <div>
               <p className="ui-label mb-3">Translation</p>
@@ -208,7 +247,7 @@ export default function Onboarding({ onComplete, saving, error }: OnboardingProp
           </div>
         )}
 
-        {step === 4 && (
+        {step === 5 && (
           <div className="animate-fade-in-up flex flex-col gap-6">
             <div>
               <p className="ui-label mb-3">Theological Depth</p>
@@ -240,7 +279,7 @@ export default function Onboarding({ onComplete, saving, error }: OnboardingProp
           </div>
         )}
 
-        {step === 5 && (
+        {step === 6 && (
           <div className="animate-fade-in-up flex flex-col gap-6">
             <div>
               <p className="ui-label mb-3">Almost There</p>
@@ -340,7 +379,7 @@ export default function Onboarding({ onComplete, saving, error }: OnboardingProp
           <button
             onClick={next}
             className="btn-primary"
-            disabled={(step === 0 && !data.display_name.trim()) || saving}
+            disabled={(step === 1 && !data.display_name.trim()) || saving}
           >
             {saving ? 'Starting...' : isLast ? 'Begin' : 'Continue'}
             {!saving && <ChevronRight size={18} />}
