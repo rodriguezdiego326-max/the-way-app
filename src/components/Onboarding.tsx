@@ -22,8 +22,6 @@ export interface OnboardingData {
   memory_enabled: boolean;
 }
 
-const translations = ['ESV', 'NASB', 'NKJV', 'NIV', 'CSB', 'KJV'];
-
 const lifeStages = [
   'Student',
   'Young adult',
@@ -230,23 +228,15 @@ export default function Onboarding({ onComplete, saving, error }: OnboardingProp
               </h2>
               <p className="text-ivory-500 mt-2 text-sm">You can change this anytime.</p>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              {translations.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => {
-                    vibrate(8);
-                    setData({ ...data, preferred_translation: t });
-                  }}
-                  className={`px-3 py-4 rounded-2xl border font-medium transition-all duration-200 no-tap-highlight ${
-                    data.preferred_translation === t
-                      ? 'bg-gold-500/10 border-gold-500/40 text-ivory-50'
-                      : 'bg-ink-800/40 border-ink-700/40 text-ivory-300 hover:border-ink-600'
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
+            <div className="premium-card p-5">
+              <p className="text-ivory-100 font-medium">
+                {data.app_language === 'es' ? 'Reina-Valera 1909 (RV1909)' : 'World English Bible (WEB)'}
+              </p>
+              <p className="text-ivory-500 text-xs mt-2 leading-relaxed">
+                {data.app_language === 'es'
+                  ? 'La Escritura se mostrará en español. Cambiar el idioma de la aplicación también cambia la versión bíblica.'
+                  : 'Scripture will display in English. Changing the app language also changes the Bible version.'}
+              </p>
             </div>
           </div>
         )}
