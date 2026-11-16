@@ -6,6 +6,7 @@ import PullToRefresh from '@/components/PullToRefresh';
 import { getMyCircles } from '@/lib/togetherEngine';
 import type { Profile } from '@/lib/types';
 import type { Circle } from '@/lib/togetherTypes';
+import { useLanguage } from '@/lib/i18n';
 
 interface Props {
   profile: Profile;
@@ -25,6 +26,7 @@ export default function TogetherScreen({
   onOpenPrayer, onOpenScripture, onOpenCheckIn, onOpenEncouragement,
   onOpenAccountability,
 }: Props) {
+  const { t } = useLanguage();
   const [circles, setCircles] = useState<Circle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +41,7 @@ export default function TogetherScreen({
     try {
       await fetchCircles();
     } catch {
-      setError('Could not load your Together data.');
+      setError(t('Could not load your Together data.'));
     } finally {
       setLoading(false);
     }
@@ -48,18 +50,18 @@ export default function TogetherScreen({
   useEffect(() => { load(); }, [load]);
 
   const primaryCards = [
-    { icon: Heart, label: 'Prayer Together', desc: 'Shared prayer requests', onClick: () => onOpenPrayer() },
-    { icon: BookOpen, label: 'Scripture Together', desc: 'Read and reflect as a group', onClick: () => onOpenScripture() },
-    { icon: CheckCircle, label: 'Check In', desc: 'How are you arriving?', onClick: () => onOpenCheckIn() },
-    { icon: HandHeart, label: 'Encouragement', desc: 'Intentional, not social', onClick: onOpenEncouragement },
-    { icon: Shield, label: 'Accountability', desc: 'Private · Opt-in', onClick: onOpenAccountability },
+    { icon: Heart, label: t('Prayer Together'), desc: t('Shared prayer requests'), onClick: () => onOpenPrayer() },
+    { icon: BookOpen, label: t('Scripture Together'), desc: t('Read and reflect as a group'), onClick: () => onOpenScripture() },
+    { icon: CheckCircle, label: t('Check In'), desc: t('How are you arriving?'), onClick: () => onOpenCheckIn() },
+    { icon: HandHeart, label: t('Encouragement'), desc: t('Intentional, not social'), onClick: onOpenEncouragement },
+    { icon: Shield, label: t('Accountability'), desc: t('Private · Opt-in'), onClick: onOpenAccountability },
   ];
 
   return (
     <div className="app-container bg-ink-950 bg-parchment h-[100dvh] flex flex-col overflow-hidden">
       <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
         <button onClick={onBack} className="btn-ghost"><X size={20} /></button>
-        <p className="ui-label">Together</p><span className="w-10" />
+        <p className="ui-label">{t('Together')}</p><span className="w-10" />
       </header>
 
       <PullToRefresh onRefresh={fetchCircles} className="flex-1 min-h-0 nav-safe-padding px-6 mt-4">
@@ -69,26 +71,26 @@ export default function TogetherScreen({
               <Users size={18} className="text-gold-300" />
             </div>
             <div>
-              <h2 className="font-serif text-2xl text-ivory-50">TOGETHER</h2>
-              <p className="text-ivory-500 text-sm mt-1 leading-relaxed">You were never meant to walk alone.</p>
+              <h2 className="font-serif text-2xl text-ivory-50">{t('TOGETHER')}</h2>
+              <p className="text-ivory-500 text-sm mt-1 leading-relaxed">{t('You were never meant to walk alone.')}</p>
             </div>
           </div>
 
-          {loading && <LoadingState message="Loading your circles..." />}
+          {loading && <LoadingState message={t('Loading your circles...')} />}
           {error && <ErrorState message={error} onRetry={load} />}
 
           {!loading && !error && (
             <>
-              <p className="ui-label mb-3">My Circles</p>
+              <p className="ui-label mb-3">{t('My Circles')}</p>
               {circles.length === 0 ? (
                 <div className="premium-card p-6 text-center mb-4">
-                  <p className="text-ivory-400 text-sm">You haven't joined any Circles yet.</p>
-                  <p className="text-ivory-600 text-xs mt-2 leading-relaxed">Create a private Circle for your marriage, small group, Bible study, or prayer group.</p>
+                  <p className="text-ivory-400 text-sm">{t("You haven't joined any Circles yet.")}</p>
+                  <p className="text-ivory-600 text-xs mt-2 leading-relaxed">{t('Create a private Circle for your marriage, small group, Bible study, or prayer group.')}</p>
                   <button onClick={() => { vibrate(10); onOpenCreateCircle(); }} className="btn-primary mt-4">
-                    <Plus size={16} /> Create a Circle
+                    <Plus size={16} /> {t('Create a Circle')}
                   </button>
                   <button onClick={() => { vibrate(8); onOpenJoinCircle(); }} className="btn-secondary mt-2 w-full">
-                    <KeyRound size={16} /> Join a Circle
+                    <KeyRound size={16} /> {t('Join a Circle')}
                   </button>
                 </div>
               ) : (
@@ -104,21 +106,21 @@ export default function TogetherScreen({
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-ivory-100 font-medium text-sm">{c.name}</p>
-                        <p className="text-ivory-600 text-xs">{c.circle_type} · Created {formatRelative(c.created_at)}</p>
+                        <p className="text-ivory-600 text-xs">{c.circle_type} · {t('Created')} {formatRelative(c.created_at)}</p>
                       </div>
                       <ChevronRight size={16} className="text-ivory-600 shrink-0" />
                     </button>
                   ))}
                   <button onClick={() => { vibrate(10); onOpenCreateCircle(); }} className="btn-secondary mt-2">
-                    <Plus size={16} /> Create Another Circle
+                    <Plus size={16} /> {t('Create Another Circle')}
                   </button>
                   <button onClick={() => { vibrate(8); onOpenJoinCircle(); }} className="btn-secondary">
-                    <KeyRound size={16} /> Join a Circle
+                    <KeyRound size={16} /> {t('Join a Circle')}
                   </button>
                 </div>
               )}
 
-              <p className="ui-label mb-3 mt-6">Together</p>
+              <p className="ui-label mb-3 mt-6">{t('Together')}</p>
               <div className="grid grid-cols-2 gap-3 mb-4">
                 {primaryCards.map((card) => (
                   <button
@@ -138,7 +140,7 @@ export default function TogetherScreen({
               <div className="flex items-start gap-2 mt-5 px-1">
                 <Sparkles size={13} className="text-gold-400/60 shrink-0 mt-0.5" />
                 <p className="text-ivory-600 text-xs leading-relaxed font-medium">
-                  AI should strengthen human Christian relationships, not replace them. SOLAPATH strengthens the local church, not becomes it.
+                  {t('AI should strengthen human Christian relationships, not replace them. SOLAPATH strengthens the local church, not becomes it.')}
                 </p>
               </div>
             </>
