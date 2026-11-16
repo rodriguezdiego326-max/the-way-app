@@ -45,7 +45,7 @@ export default function ActivityPreferencesSheet({ userId, onClose }: Props) {
       .catch(() => { if (!cancelled) setError(t('Could not load your settings.')); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [userId]);
+  }, [userId, t]);
 
   async function toggle(key: keyof ActivityPreferences) {
     vibrate(8);
