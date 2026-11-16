@@ -3,6 +3,7 @@
 
 import { supabase } from '@/lib/supabase';
 import type {
+  AdminChurchStudyItem,
   AppAdminRole,
   ChurchAdminAccessItem,
   ChurchAdminAuditItem,
@@ -65,4 +66,23 @@ export async function revokeChurchAdminAccess(membershipId: string): Promise<boo
     return false;
   }
   return true;
+}
+
+
+export async function listChurchStudiesForAdmin(): Promise<AdminChurchStudyItem[]> {
+  const { data, error } = await supabase.rpc('list_church_studies_for_admin');
+  if (error) throw error;
+  return (data as AdminChurchStudyItem[]) || [];
+}
+
+export async function adminDeleteChurchStudy(studyId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('admin_delete_church_study', {
+    p_study_id: studyId,
+  });
+  if (error) {
+    console.error('[Admin] church study delete failed', { code: error.code, message: error.message });
+    return false;
+  }
+  const result = data as { deleted?: unknown } | null;
+  return result?.deleted === true;
 }

@@ -329,6 +329,18 @@ export interface ChurchAdminAuditItem {
   created_at: string;
 }
 
+export interface AdminChurchStudyItem {
+  study_id: string;
+  church_id: string;
+  church_name: string;
+  church_city: string | null;
+  title: string;
+  description: string | null;
+  status: ChurchStudyStatus;
+  updated_at: string;
+  assignment_count: number;
+}
+
 export interface ChurchPrayerItem {
   id: string;
   church_id: string;

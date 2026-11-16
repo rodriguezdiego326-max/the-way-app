@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Ban, Check, History, RefreshCw, ShieldCheck, UserCheck, X, XCircle } from 'lucide-react';
+import { Ban, BookOpen, Check, History, RefreshCw, ShieldCheck, Trash2, UserCheck, X, XCircle } from 'lucide-react';
 import { EmptyState, ErrorState, LoadingState } from '@/components/States';
 import {
+  adminDeleteChurchStudy,
   getAppAdminRole,
   listChurchAdminAccessForReview,
   listChurchAdminAudit,
   listChurchAdminClaimsForReview,
+  listChurchStudiesForAdmin,
   reviewChurchAdminClaim,
   revokeChurchAdminAccess,
 } from '@/lib/appAdminEngine';
 import { formatRelative, vibrate } from '@/lib/utils';
 import type {
+  AdminChurchStudyItem,
   AppAdminRole,
   ChurchAdminAccessItem,
   ChurchAdminAuditItem,
@@ -24,12 +27,13 @@ interface Props {
   onBack: () => void;
 }
 
-type Tab = 'pending' | 'access' | 'audit';
+type Tab = 'pending' | 'access' | 'studies' | 'audit';
 
 type PendingAction =
   | { kind: 'approve'; id: string; title: string; body: string }
   | { kind: 'reject'; id: string; title: string; body: string }
-  | { kind: 'revoke'; id: string; title: string; body: string };
+  | { kind: 'revoke'; id: string; title: string; body: string }
+  | { kind: 'delete_study'; id: string; title: string; body: string };
 
 function roleLabel(role: VerifiedChurchRole | null | undefined): string {
   return role ? VERIFIED_CHURCH_ROLE_LABELS[role] || role : 'Church access';
@@ -39,6 +43,7 @@ export default function AdminApprovalCenterScreen({ currentProfileId, onBack }: 
   const [adminRole, setAdminRole] = useState<AppAdminRole | null>(null);
   const [claims, setClaims] = useState<ChurchAdminReviewItem[]>([]);
   const [access, setAccess] = useState<ChurchAdminAccessItem[]>([]);
+  const [studies, setStudies] = useState<AdminChurchStudyItem[]>([]);
   const [audit, setAudit] = useState<ChurchAdminAuditItem[]>([]);
   const [tab, setTab] = useState<Tab>('pending');
   const [loading, setLoading] = useState(true);
@@ -57,17 +62,20 @@ export default function AdminApprovalCenterScreen({ currentProfileId, onBack }: 
       if (!role) {
         setClaims([]);
         setAccess([]);
+        setStudies([]);
         setAudit([]);
         setError('This account does not have SOLAPATH app-owner administration access.');
         return;
       }
-      const [claimRows, accessRows, auditRows] = await Promise.all([
+      const [claimRows, accessRows, studyRows, auditRows] = await Promise.all([
         listChurchAdminClaimsForReview('pending'),
         listChurchAdminAccessForReview(),
+        listChurchStudiesForAdmin(),
         listChurchAdminAudit(),
       ]);
       setClaims(claimRows);
       setAccess(accessRows);
+      setStudies(studyRows);
       setAudit(auditRows);
     } catch (err) {
       console.error('[Admin] approval center load failed', err);
@@ -90,10 +98,12 @@ export default function AdminApprovalCenterScreen({ currentProfileId, onBack }: 
 
     const ok = pendingAction.kind === 'revoke'
       ? await revokeChurchAdminAccess(pendingAction.id)
-      : await reviewChurchAdminClaim(
-        pendingAction.id,
-        pendingAction.kind === 'approve' ? 'approved' : 'rejected',
-      );
+      : pendingAction.kind === 'delete_study'
+        ? await adminDeleteChurchStudy(pendingAction.id)
+        : await reviewChurchAdminClaim(
+          pendingAction.id,
+          pendingAction.kind === 'approve' ? 'approved' : 'rejected',
+        );
 
     setActionBusy(false);
     if (!ok) {
@@ -135,16 +145,17 @@ export default function AdminApprovalCenterScreen({ currentProfileId, onBack }: 
             <div className="min-w-0">
               <p className="font-serif text-xl text-ivory-50">{ownerLabel}</p>
               <p className="text-ivory-500 text-xs mt-1 leading-relaxed">
-                Approve, reject, or revoke verified church administration access. Personal church titles never grant these permissions by themselves.
+                Approve, reject, or revoke verified church administration access, and remove church studies when development or moderation cleanup requires it.
               </p>
             </div>
           </div>
         </section>
 
-        <div className="grid grid-cols-3 gap-2 mb-5">
+        <div className="grid grid-cols-4 gap-2 mb-5">
           {([
             ['pending', 'Requests', claims.length],
             ['access', 'Access', access.length],
+            ['studies', 'Studies', studies.length],
             ['audit', 'Audit', audit.length],
           ] as const).map(([id, label, count]) => (
             <button
@@ -284,6 +295,63 @@ export default function AdminApprovalCenterScreen({ currentProfileId, onBack }: 
               </section>
             )}
 
+            {tab === 'studies' && (
+              <section>
+                <p className="ui-label mb-3">Church Studies</p>
+                <div className="premium-card p-4 mb-4 border-clay-500/20">
+                  <p className="text-ivory-200 text-xs font-medium">App Admin Cleanup</p>
+                  <p className="text-ivory-500 text-xs mt-1 leading-relaxed">
+                    Delete is permanent. Removing a study also removes its study assignments. Church profiles and member accounts are not deleted.
+                  </p>
+                </div>
+                {studies.length === 0 ? (
+                  <EmptyState message="No church studies exist." />
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {studies.map((study) => (
+                      <div key={study.study_id} className="premium-card p-5">
+                        <div className="flex items-start gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-ink-700/50 flex items-center justify-center shrink-0">
+                            <BookOpen size={16} className="text-gold-300" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-ivory-100 text-sm font-medium">{study.title}</p>
+                              <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-ink-700/60 text-ivory-400">
+                                {study.status}
+                              </span>
+                            </div>
+                            <p className="text-ivory-400 text-xs mt-1">
+                              {study.church_name}{study.church_city ? ` · ${study.church_city}` : ''}
+                            </p>
+                            <p className="text-ivory-600 text-[11px] mt-2">
+                              {study.assignment_count} {study.assignment_count === 1 ? 'assignment' : 'assignments'} · Updated {formatRelative(study.updated_at)}
+                            </p>
+                            {study.description && (
+                              <p className="text-ivory-500 text-xs mt-2 line-clamp-2">{study.description}</p>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            className="btn-ghost text-error shrink-0"
+                            aria-label={`Delete ${study.title}`}
+                            onClick={() => setPendingAction({
+                              kind: 'delete_study',
+                              id: study.study_id,
+                              title: 'Permanently delete study?',
+                              body: `"${study.title}" from ${study.church_name} will be permanently deleted along with ${study.assignment_count} ${study.assignment_count === 1 ? 'assignment' : 'assignments'}. This cannot be undone.`,
+                            })}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
             {tab === 'audit' && (
               <section>
                 <p className="ui-label mb-3">Approval Audit</p>
@@ -328,7 +396,15 @@ export default function AdminApprovalCenterScreen({ currentProfileId, onBack }: 
                 disabled={actionBusy}
                 onClick={() => void confirmAction()}
               >
-                {actionBusy ? 'Working...' : pendingAction.kind === 'approve' ? 'Approve' : pendingAction.kind === 'reject' ? 'Reject' : 'Revoke'}
+                {actionBusy
+                  ? 'Working...'
+                  : pendingAction.kind === 'approve'
+                    ? 'Approve'
+                    : pendingAction.kind === 'reject'
+                      ? 'Reject'
+                      : pendingAction.kind === 'delete_study'
+                        ? 'Delete'
+                        : 'Revoke'}
               </button>
             </div>
           </div>
