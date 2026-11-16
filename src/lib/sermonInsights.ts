@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { SermonInsights } from '@/lib/sermonRecordingStore';
+import { getStoredAppLanguage } from '@/lib/i18n';
 
 const SUPABASE_URL: string = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY: string = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -37,6 +38,7 @@ export interface SermonInsightsInput {
   title: string | null;
   preacher: string | null;
   serviceName: string | null;
+  responseLanguage: 'English' | 'Spanish';
 }
 
 function isInsightsShape(value: unknown): value is SermonInsights {
@@ -82,32 +84,35 @@ export async function requestSermonInsights(input: SermonInsightsInput): Promise
 }
 
 export function formatSermonInsightsText(insights: SermonInsights, title: string): string {
-  const lines: string[] = [title, '', 'Summary', insights.summary, ''];
+  const es = getStoredAppLanguage() === 'es';
+  const lines: string[] = [title, '', es ? 'Resumen' : 'Summary', insights.summary, ''];
   if (insights.mainPoints.length) {
-    lines.push('Main Points');
+    lines.push(es ? 'Puntos principales' : 'Main Points');
     insights.mainPoints.forEach((point, index) => lines.push(`${index + 1}. ${point.title}: ${point.summary}`));
     lines.push('');
   }
   if (insights.scriptureReferences.length) {
-    lines.push('Scriptures Mentioned');
+    lines.push(es ? 'Escrituras mencionadas' : 'Scriptures Mentioned');
     insights.scriptureReferences.forEach((ref) => {
-      const label = ref.confidence === 'explicit' ? 'Mentioned in sermon' : 'Likely reference';
+      const label = ref.confidence === 'explicit'
+        ? (es ? 'Mencionada en el sermón' : 'Mentioned in sermon')
+        : (es ? 'Referencia probable' : 'Likely reference');
       lines.push(`- ${ref.reference} (${label}): ${ref.context}`);
     });
     lines.push('');
   }
   if (insights.applicationTakeaways.length) {
-    lines.push('Application');
+    lines.push(es ? 'Aplicación' : 'Application');
     insights.applicationTakeaways.forEach((item) => lines.push(`- ${item}`));
     lines.push('');
   }
   if (insights.reflectionQuestions.length) {
-    lines.push('Reflect');
+    lines.push(es ? 'Reflexiona' : 'Reflect');
     insights.reflectionQuestions.forEach((question) => lines.push(`- ${question}`));
     lines.push('');
   }
   if (insights.limitations.length) {
-    lines.push('Limitations');
+    lines.push(es ? 'Limitaciones' : 'Limitations');
     insights.limitations.forEach((item) => lines.push(`- ${item}`));
   }
   return lines.join('\n').trim();
