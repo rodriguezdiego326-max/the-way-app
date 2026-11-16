@@ -1,14 +1,17 @@
+import { getStoredAppLanguage } from './i18n';
+
 export function getGreeting(date = new Date()): string {
   const hour = date.getHours();
-  if (hour < 5) return 'Still awake';
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  if (hour < 21) return 'Good evening';
-  return 'Good night';
+  const es = getStoredAppLanguage() === 'es';
+  if (hour < 5) return es ? 'Aún despierto' : 'Still awake';
+  if (hour < 12) return es ? 'Buenos días' : 'Good morning';
+  if (hour < 17) return es ? 'Buenas tardes' : 'Good afternoon';
+  if (hour < 21) return es ? 'Buenas tardes' : 'Good evening';
+  return es ? 'Buenas noches' : 'Good night';
 }
 
 export function getMoodLabel(mood: string): string {
-  const labels: Record<string, string> = {
+  const en: Record<string, string> = {
     ready: 'Ready',
     heavy: 'Heavy',
     worried: 'Worried',
@@ -17,12 +20,23 @@ export function getMoodLabel(mood: string): string {
     questioning: 'Questioning',
     motivated: 'Motivated',
   };
+  const es: Record<string, string> = {
+    ready: 'Listo',
+    heavy: 'Cargado',
+    worried: 'Preocupado',
+    discouraged: 'Desanimado',
+    grateful: 'Agradecido',
+    questioning: 'Con preguntas',
+    motivated: 'Motivado',
+  };
+  const labels = getStoredAppLanguage() === 'es' ? es : en;
   return labels[mood] ?? mood;
 }
 
 export function formatDate(dateStr: string): string {
   const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const locale = getStoredAppLanguage() === 'es' ? 'es-US' : 'en-US';
+  return d.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export function formatRelative(dateStr: string): string {
@@ -33,10 +47,11 @@ export function formatRelative(dateStr: string): string {
   const diffHr = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHr / 24);
 
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHr < 24) return `${diffHr}h ago`;
-  if (diffDay < 7) return `${diffDay}d ago`;
+  const es = getStoredAppLanguage() === 'es';
+  if (diffMin < 1) return es ? 'ahora mismo' : 'just now';
+  if (diffMin < 60) return es ? `hace ${diffMin} min` : `${diffMin}m ago`;
+  if (diffHr < 24) return es ? `hace ${diffHr} h` : `${diffHr}h ago`;
+  if (diffDay < 7) return es ? `hace ${diffDay} d` : `${diffDay}d ago`;
   return formatDate(dateStr);
 }
 
