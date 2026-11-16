@@ -40,27 +40,28 @@ export const DEFAULT_ACTIVITY_PREFERENCES: ActivityPreferences = {
 
 export const ACTIVITY_PAGE_SIZE = 30;
 
-export function describeActivity(item: ActivityItem): string {
-  const actor = item.actor_label ?? 'A member';
-  const scope = item.scope_label ?? 'your group';
+export function describeActivity(item: ActivityItem, language: 'en' | 'es' = 'en'): string {
+  const es = language === 'es';
+  const actor = item.actor_label ?? (es ? 'Un miembro' : 'A member');
+  const scope = item.scope_label ?? (es ? 'tu grupo' : 'your group');
   switch (item.event_type) {
     case 'family_prayer_added':
-      return `${actor} shared a family prayer`;
+      return es ? `${actor} compartió una oración familiar` : `${actor} shared a family prayer`;
     case 'family_prayer_updated':
-      return `${actor} added an update to a family prayer`;
+      return es ? `${actor} agregó una actualización a una oración familiar` : `${actor} added an update to a family prayer`;
     case 'family_sermon_discussion_added':
-      return `${actor} shared a family discussion`;
+      return es ? `${actor} compartió una conversación familiar` : `${actor} shared a family discussion`;
     case 'family_member_joined':
-      return `${actor} joined ${scope}`;
+      return es ? `${actor} se unió a ${scope}` : `${actor} joined ${scope}`;
     case 'circle_prayer_added':
-      return `${actor} shared a prayer request in ${scope}`;
+      return es ? `${actor} compartió una petición de oración en ${scope}` : `${actor} shared a prayer request in ${scope}`;
     case 'circle_checkin_added':
-      return `${actor} checked in with ${scope}`;
+      return es ? `${actor} hizo un check-in en ${scope}` : `${actor} checked in with ${scope}`;
     case 'circle_encouragement_received':
-      return `${actor} sent you encouragement in ${scope}`;
+      return es ? `${actor} te envió ánimo en ${scope}` : `${actor} sent you encouragement in ${scope}`;
     case 'circle_sermon_discussion_added':
-      return `${actor} shared a sermon discussion in ${scope}`;
+      return es ? `${actor} compartió una conversación sobre el sermón en ${scope}` : `${actor} shared a sermon discussion in ${scope}`;
     case 'circle_member_joined':
-      return `${actor} joined ${scope}`;
+      return es ? `${actor} se unió a ${scope}` : `${actor} joined ${scope}`;
   }
 }
