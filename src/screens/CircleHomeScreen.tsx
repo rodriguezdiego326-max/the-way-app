@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Users, Heart, BookOpen, CheckCircle, HandHeart, Shield, ChevronRight, UserPlus, LogOut, MessageSquare } from 'lucide-react';
+import { X, Users, Heart, BookOpen, CheckCircle, HandHeart, Shield, ChevronRight, UserPlus, LogOut, MessageSquare, Trash2 } from 'lucide-react';
 
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import {
-  getMyRole, leaveCircle, removeCircleMember, getCircleMemberSummaries,
+  deleteOwnedCircle, getMyRole, leaveCircle, removeCircleMember, getCircleMemberSummaries,
   getScriptureStudies, getSharedPrayers, getCheckIns, getCircleSermonDiscussions,
 } from '@/lib/togetherEngine';
 import type { Profile } from '@/lib/types';
@@ -18,6 +18,7 @@ interface Props {
   profile: Profile;
   circle: Circle;
   onBack: () => void;
+  onDeleted: () => void;
   onOpenPrayer: (circle: Circle) => void;
   onOpenScripture: (circle: Circle) => void;
   onOpenCheckIn: (circle: Circle) => void;
@@ -33,7 +34,7 @@ function discussionSummary(discussions: CircleSermonDiscussion[] | null): string
 }
 
 export default function CircleHomeScreen({
-  profile, circle, onBack, onOpenPrayer, onOpenScripture, onOpenCheckIn, onOpenEncouragement, onOpenAccountability, onOpenSermonDiscussions,
+  profile, circle, onBack, onDeleted, onOpenPrayer, onOpenScripture, onOpenCheckIn, onOpenEncouragement, onOpenAccountability, onOpenSermonDiscussions,
 }: Props) {
   const [members, setMembers] = useState<CircleMemberSummary[] | null>(null);
   const [membersFailed, setMembersFailed] = useState(false);
@@ -49,7 +50,9 @@ export default function CircleHomeScreen({
   const [memberToRemove, setMemberToRemove] = useState<CircleMemberSummary | null>(null);
   const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
-  const [showOwnerLeaveNotice, setShowOwnerLeaveNotice] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deletingCircle, setDeletingCircle] = useState(false);
+  const [deleteCircleError, setDeleteCircleError] = useState<string | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [leaveError, setLeaveError] = useState<string | null>(null);
@@ -117,10 +120,25 @@ export default function CircleHomeScreen({
     }
   }
 
+  async function handleDeleteCircle() {
+    if (deletingCircle) return;
+    vibrate(20);
+    setDeletingCircle(true);
+    setDeleteCircleError(null);
+    try {
+      await deleteOwnedCircle(circle.id, profile.id);
+      onDeleted();
+    } catch {
+      setDeleteCircleError("We couldn't delete this Circle. Please try again.");
+      setDeletingCircle(false);
+    }
+  }
+
   function handleLeaveTap() {
     vibrate(8);
     if (myRole === 'OWNER') {
-      setShowOwnerLeaveNotice(true);
+      setDeleteCircleError(null);
+      setConfirmDelete(true);
       return;
     }
     setLeaveError(null);
@@ -138,8 +156,13 @@ export default function CircleHomeScreen({
       <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
         <button onClick={onBack} className="btn-ghost" aria-label="Close"><X size={20} /></button>
         <p className="ui-label">{circle.circle_type}</p>
-        <button onClick={handleLeaveTap} disabled={leaving} className="btn-ghost" aria-label="Leave Circle">
-          <LogOut size={16} />
+        <button
+          onClick={handleLeaveTap}
+          disabled={leaving || deletingCircle}
+          className={`btn-ghost ${isOwner ? 'text-clay-400' : ''}`}
+          aria-label={isOwner ? 'Delete Circle' : 'Leave Circle'}
+        >
+          {isOwner ? <Trash2 size={16} /> : <LogOut size={16} />}
         </button>
       </header>
 
@@ -223,12 +246,17 @@ export default function CircleHomeScreen({
         />
       )}
 
-      {showOwnerLeaveNotice && (
+      {confirmDelete && (
         <CircleConfirmDialog
-          title="Circle owners can't leave yet"
-          body="To keep the Circle from becoming ownerless, the owner must remain in the Circle. Ownership transfer can be added in a future update."
-          confirmLabel="OK"
-          onConfirm={() => setShowOwnerLeaveNotice(false)}
+          title={`Delete ${circle.name}?`}
+          body="This permanently deletes this Circle and its shared prayers, Scripture studies, check-ins, invitations, sermon discussions, encouragements, and member access. You can create a new Circle afterward."
+          confirmLabel="Delete Circle"
+          cancelLabel="Cancel"
+          destructive
+          busy={deletingCircle}
+          error={deleteCircleError}
+          onConfirm={() => void handleDeleteCircle()}
+          onCancel={() => setConfirmDelete(false)}
         />
       )}
 
