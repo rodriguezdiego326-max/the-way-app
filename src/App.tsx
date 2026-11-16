@@ -254,8 +254,11 @@ function AppContent() {
 
     if (data) {
       const loadedProfile = data as Profile;
+      const loadedLanguage = loadedProfile.app_language === 'es' ? 'es' : 'en';
+      const loadedTranslation: BibleTranslation = loadedLanguage === 'es' ? 'RV1909' : 'WEB';
       setProfile(loadedProfile);
-      setLanguage(loadedProfile.app_language || 'en');
+      setGlobalTranslation(loadedTranslation);
+      setLanguage(loadedLanguage);
       if (!loadedProfile.onboarding_completed) {
         setAppState('onboarding');
       } else {
@@ -426,6 +429,7 @@ function AppContent() {
       }
     }
 
+    setGlobalTranslation(data.app_language === 'es' ? 'RV1909' : 'WEB');
     setLanguage(data.app_language);
     setProfile(created as Profile);
     setAppState('app');
