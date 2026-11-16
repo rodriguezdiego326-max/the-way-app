@@ -2462,6 +2462,9 @@ const ES: Record<string, string> = {
   'My Reflections': 'Mis Reflexiones',
   'Walks': 'Caminatas',
   'Reflections': 'Reflexiones',
+  'Theological Learning': 'Aprendizaje teológico',
+  'Family Discipleship': 'Discipulado familiar',
+  'Reach & Evangelism': 'Alcance y evangelismo',
 };
 
 interface LanguageContextValue {
