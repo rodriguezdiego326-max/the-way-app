@@ -7,7 +7,7 @@ import type { Profile } from '@/lib/types';
 import type {
   ChurchProfile, ChurchMembership, Sermon, SermonNote,
   ChurchStudy, ChurchPrayerItem,
-  ChurchGroup, GroupDiscussion, NotificationPreferences,
+  ChurchGroup, ChurchGroupMembership, GroupDiscussion, NotificationPreferences,
 } from '@/lib/togetherTypes';
 import { CHURCH_ROLES } from '@/lib/togetherTypes';
 
@@ -499,6 +499,83 @@ export async function createChurchGroup(
     return null;
   }
   return (data as ChurchGroup) || null;
+}
+
+export async function joinChurchGroupByCode(inviteCode: string): Promise<ChurchGroup | null> {
+  const { data, error } = await supabase.rpc('join_church_group_by_code', {
+    p_invite_code: inviteCode.trim().toUpperCase(),
+  });
+  const joined = (data as Array<{ group_id: string }> | null)?.[0];
+  if (error || !joined?.group_id) {
+    console.error('[Church] join group by code failed', {
+      operation: 'rpc:join_church_group_by_code',
+      code: error?.code,
+      message: error?.message,
+    });
+    return null;
+  }
+
+  const { data: group, error: groupError } = await supabase
+    .from('church_groups')
+    .select('*')
+    .eq('id', joined.group_id)
+    .maybeSingle();
+
+  if (groupError) {
+    console.error('[Church] load joined group failed', { code: groupError.code, message: groupError.message });
+    return null;
+  }
+  return (group as ChurchGroup) || null;
+}
+
+export async function getChurchGroupInviteCode(groupId: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('get_church_group_invite_code', {
+    p_group_id: groupId,
+  });
+  if (error || typeof data !== 'string') {
+    console.error('[Church] get group invite code failed', { code: error?.code, message: error?.message });
+    return null;
+  }
+  return data;
+}
+
+export async function rotateChurchGroupInviteCode(groupId: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('rotate_church_group_invite_code', {
+    p_group_id: groupId,
+  });
+  if (error || typeof data !== 'string') {
+    console.error('[Church] rotate group invite code failed', { code: error?.code, message: error?.message });
+    return null;
+  }
+  return data;
+}
+
+export async function getMyChurchGroupMembership(groupId: string, profileId: string): Promise<ChurchGroupMembership | null> {
+  const { data, error } = await supabase
+    .from('church_group_memberships')
+    .select('*')
+    .eq('group_id', groupId)
+    .eq('profile_id', profileId)
+    .maybeSingle();
+  if (error) {
+    console.error('[Church] load group membership failed', { code: error.code, message: error.message });
+    return null;
+  }
+  return (data as ChurchGroupMembership) || null;
+}
+
+export async function leaveChurchGroup(groupId: string, profileId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('church_group_memberships')
+    .delete()
+    .eq('group_id', groupId)
+    .eq('profile_id', profileId)
+    .select('id');
+  if (error || !data?.length) {
+    console.error('[Church] leave group failed', { code: error?.code, message: error?.message });
+    return false;
+  }
+  return true;
 }
 
 export async function deleteChurchGroup(groupId: string): Promise<boolean> {
