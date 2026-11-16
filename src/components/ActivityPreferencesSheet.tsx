@@ -5,6 +5,7 @@ import { vibrate } from '@/lib/utils';
 import { DEFAULT_ACTIVITY_PREFERENCES, type ActivityPreferences } from '@/lib/activityTypes';
 import { loadActivityPreferences, saveActivityPreferences } from '@/lib/activityEngine';
 import PushNotificationsSection from '@/components/PushNotificationsSection';
+import { useLanguage } from '@/lib/i18n';
 
 interface Props {
   userId: string;
@@ -20,6 +21,7 @@ const OPTIONS: { key: keyof ActivityPreferences; label: string; hint: string }[]
 ];
 
 export default function ActivityPreferencesSheet({ userId, onClose }: Props) {
+  const { t } = useLanguage();
   const [prefs, setPrefs] = useState<ActivityPreferences>(DEFAULT_ACTIVITY_PREFERENCES);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +42,7 @@ export default function ActivityPreferencesSheet({ userId, onClose }: Props) {
         prefsRef.current = p;
         setPrefs(p);
       })
-      .catch(() => { if (!cancelled) setError('Could not load your settings.'); })
+      .catch(() => { if (!cancelled) setError(t('Could not load your settings.')); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [userId]);
@@ -57,7 +59,7 @@ export default function ActivityPreferencesSheet({ userId, onClose }: Props) {
     } catch {
       if (keySeq.current[key] === seq) {
         applyPref(key, before);
-        setError('That change did not save. Please try again.');
+        setError(t('That change did not save. Please try again.'));
       }
     }
   }
@@ -66,25 +68,25 @@ export default function ActivityPreferencesSheet({ userId, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
       <div className="w-full max-w-md bg-ink-900 border border-ink-700 rounded-t-3xl sm:rounded-3xl p-6 pb-10 animate-fade-in-up">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-serif text-xl text-ivory-50">Activity settings</h3>
-          <button onClick={onClose} className="btn-ghost" aria-label="Close settings"><X size={18} /></button>
+          <h3 className="font-serif text-xl text-ivory-50">{t('Activity settings')}</h3>
+          <button onClick={onClose} className="btn-ghost" aria-label={t('Close settings')}><X size={18} /></button>
         </div>
-        <p className="text-ivory-500 text-sm mb-6 leading-relaxed">Choose what appears in your Activity feed.</p>
+        <p className="text-ivory-500 text-sm mb-6 leading-relaxed">{t('Choose what appears in your Activity feed.')}</p>
 
-        {loading && <LoadingState message="Loading settings..." />}
+        {loading && <LoadingState message={t('Loading settings...')} />}
 
         {!loading && (
           <ul className="flex flex-col divide-y divide-ink-700">
             {OPTIONS.map((opt) => (
               <li key={opt.key} className="flex items-center justify-between py-4 gap-4">
                 <div>
-                  <p className="text-ivory-100 text-sm font-medium">{opt.label}</p>
-                  <p className="text-ivory-600 text-xs mt-0.5">{opt.hint}</p>
+                  <p className="text-ivory-100 text-sm font-medium">{t(opt.label)}</p>
+                  <p className="text-ivory-600 text-xs mt-0.5">{t(opt.hint)}</p>
                 </div>
                 <button
                   role="switch"
                   aria-checked={prefs[opt.key]}
-                  aria-label={opt.label}
+                  aria-label={t(opt.label)}
                   onClick={() => toggle(opt.key)}
                   className={`relative w-12 h-7 rounded-full shrink-0 transition-colors duration-300 ${prefs[opt.key] ? 'bg-gold-500' : 'bg-ink-700'}`}
                 >
