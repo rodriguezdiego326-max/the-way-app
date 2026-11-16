@@ -39,7 +39,7 @@ function toChurchResult(raw: unknown): AppleChurchResult | null {
 }
 
 export function isAppleChurchSearchAvailable(): boolean {
-  return Capacitor.isNativePlatform();
+  return Capacitor.getPlatform() === 'ios';
 }
 
 export async function searchChurches({ query }: { query: string }): Promise<AppleChurchResult[]> {
