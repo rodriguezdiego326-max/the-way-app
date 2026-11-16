@@ -276,7 +276,7 @@ export function isVerifiedChurchPublisher(role: string | null | undefined): role
   return !!role && (VERIFIED_CHURCH_ROLES as readonly string[]).includes(role);
 }
 
-export type ChurchAdminClaimStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
+export type ChurchAdminClaimStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn' | 'revoked';
 
 export interface ChurchAdminClaim {
   id: string;
@@ -287,6 +287,46 @@ export interface ChurchAdminClaim {
   created_at: string;
   updated_at: string;
   reviewed_at: string | null;
+  reviewed_by_profile_id?: string | null;
+}
+
+export type AppAdminRole = 'APP_OWNER' | 'APP_ADMIN';
+
+export interface ChurchAdminReviewItem {
+  claim_id: string;
+  profile_id: string;
+  claimant_name: string | null;
+  church_id: string;
+  church_name: string;
+  church_city: string | null;
+  requested_role: VerifiedChurchRole;
+  status: ChurchAdminClaimStatus;
+  created_at: string;
+  reviewed_at: string | null;
+}
+
+export interface ChurchAdminAccessItem {
+  membership_id: string;
+  profile_id: string;
+  member_name: string | null;
+  church_id: string;
+  church_name: string;
+  church_city: string | null;
+  verified_role: VerifiedChurchRole;
+  granted_at: string | null;
+}
+
+export interface ChurchAdminAuditItem {
+  audit_id: string;
+  action: 'approved' | 'rejected' | 'revoked';
+  actor_profile_id: string | null;
+  actor_name: string | null;
+  target_profile_id: string | null;
+  target_name: string | null;
+  church_id: string | null;
+  church_name: string | null;
+  verified_role: VerifiedChurchRole | null;
+  created_at: string;
 }
 
 export interface ChurchPrayerItem {

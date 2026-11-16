@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Brain, Heart, Users, Church, Settings, ChevronRight, Trash2, Eye, EyeOff, X, ShieldCheck, Sparkles, Landmark, FlaskConical, Search, Shield, BarChart3, Package, Cpu, BookHeart, MessageSquare, Bell } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { getAppAdminRole } from '@/lib/appAdminEngine';
+import type { AppAdminRole } from '@/lib/togetherTypes';
 import type { UnreadCounts } from '@/lib/activityEngine';
 import { vibrate, formatDate } from '@/lib/utils';
 import DeleteAllMemoriesDialog from '@/components/DeleteAllMemoriesDialog';
@@ -25,6 +27,7 @@ interface YouScreenProps {
   onOpenActivity: () => void;
   activityCounts: UnreadCounts | null;
   onOpenMyChurch: () => void;
+  onOpenAdminApprovalCenter?: () => void;
   onOpenPhase8Tests?: () => void;
   onOpenLegacy: () => void;
   onOpenPhase9Tests?: () => void;
@@ -44,8 +47,9 @@ const depthLabels: Record<TheologicalDepth, string> = {
   deep_study: 'Deep Study',
 };
 
-export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOpenReach, onOpenLibrarySearch, onOpenAdminSources, onOpenRetrievalDebug, onOpenRAGTests, onOpenPhase6Tests, onOpenQADashboard, onOpenSourceBatches, onOpenReleaseGate, onOpenProductionStatus, onOpenTogether, onOpenActivity, activityCounts, onOpenMyChurch, onOpenPhase8Tests, onOpenLegacy, onOpenPhase9Tests, onOpenPrivacyCenter, onOpenProductionReadiness, onOpenPhase10Tests, onOpenBetaFeedback, session, onSignOut }: YouScreenProps) {
+export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOpenReach, onOpenLibrarySearch, onOpenAdminSources, onOpenRetrievalDebug, onOpenRAGTests, onOpenPhase6Tests, onOpenQADashboard, onOpenSourceBatches, onOpenReleaseGate, onOpenProductionStatus, onOpenTogether, onOpenActivity, activityCounts, onOpenMyChurch, onOpenAdminApprovalCenter, onOpenPhase8Tests, onOpenLegacy, onOpenPhase9Tests, onOpenPrivacyCenter, onOpenProductionReadiness, onOpenPhase10Tests, onOpenBetaFeedback, session, onSignOut }: YouScreenProps) {
   const [subView, setSubView] = useState<SubView>('main');
+  const [appAdminRole, setAppAdminRole] = useState<AppAdminRole | null>(null);
   const [memories, setMemories] = useState<Memory[]>([]);
   const [confirmDeleteAllOpen, setConfirmDeleteAllOpen] = useState(false);
   const [authors, setAuthors] = useState<TheologicalAuthor[]>([]);
@@ -55,6 +59,20 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
     if (subView === 'memories') loadMemories();
     if (subView === 'library') loadLibrary();
   }, [subView]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!session?.user?.id) {
+      setAppAdminRole(null);
+      return;
+    }
+    void getAppAdminRole().then((role) => {
+      if (!cancelled) setAppAdminRole(role);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id]);
 
   async function loadMemories() {
     const { data } = await supabase.from('memories').select('*').order('created_at', { ascending: false });
@@ -637,6 +655,22 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
             <ChevronRight size={16} className="text-ivory-600 shrink-0" />
           </button>
           </>)}
+
+          {appAdminRole && onOpenAdminApprovalCenter && (
+          <button
+            onClick={onOpenAdminApprovalCenter}
+            className="premium-card p-4 flex items-center gap-3 text-left no-tap-highlight border-gold-500/20 hover:border-gold-500/40 transition-all duration-300 group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-gold-500/10 border border-gold-500/20 flex items-center justify-center shrink-0">
+              <ShieldCheck size={17} className="text-gold-300" />
+            </div>
+            <div className="flex-1">
+              <p className="text-ivory-100 font-medium text-sm">Admin Approval Center</p>
+              <p className="text-ivory-600 text-xs">{appAdminRole === 'APP_OWNER' ? 'App Owner' : 'App Admin'} · Church & pastor access</p>
+            </div>
+            <ChevronRight size={16} className="text-ivory-600 shrink-0" />
+          </button>
+          )}
 
           <button
             onClick={onOpenPrivacyCenter}

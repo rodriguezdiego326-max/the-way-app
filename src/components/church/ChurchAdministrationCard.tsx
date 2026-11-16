@@ -101,6 +101,11 @@ export default function ChurchAdministrationCard({ churchId, membership, onManag
               Your last request was not approved. You can ask again.
             </p>
           )}
+          {latest?.status === 'revoked' && (
+            <p className="text-clay-400 text-xs mb-3 leading-relaxed">
+              Your previous verified access was revoked. You can submit a new request.
+            </p>
+          )}
           <p className="text-ivory-500 text-xs leading-relaxed mb-3">
             Church administration access is reviewed before it is granted. Membership, church ownership, and choosing a title such as Pastor do not grant it.
           </p>
