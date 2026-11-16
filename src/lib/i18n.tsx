@@ -2493,6 +2493,21 @@ const ES: Record<string, string> = {
   '2 Timothy 1:13; Ecclesiastes 12:13': '2 Timoteo 1:13; Eclesiastés 12:13',
   '1 John 3:4; Romans 3:23': '1 Juan 3:4; Romanos 3:23',
   '1 Peter 3:1–2 — "They may be won without a word by the conduct of their wives" — conduct, not pressure, is sometimes the witness God uses.': '1 Pedro 3:1–2 — «Pueden ser ganados sin palabra por la conducta de sus esposas» — a veces Dios usa la conducta, no la presión, como testimonio.',
+  'Family updates': 'Actualizaciones de Familia',
+  'Circle updates': 'Actualizaciones de Círculos',
+  'Prayer requests': 'Peticiones de oración',
+  'Sermon discussions': 'Conversaciones de sermones',
+  'SCRIPTURE': 'ESCRITURA',
+  'CONFESSION': 'CONFESIÓN',
+  'HISTORIC THEOLOGY': 'TEOLOGÍA HISTÓRICA',
+  'TEACHER': 'MAESTRO',
+  'SOLAPATH EXPLANATION': 'EXPLICACIÓN DE SOLAPATH',
+  'APPLICATION': 'APLICACIÓN',
+  'SOLAPATH avoids proof-texting. Where possible, read the surrounding chapter to understand each passage in context.': 'SOLAPATH evita usar textos fuera de contexto. Cuando sea posible, lee el capítulo completo para entender cada pasaje en su contexto.',
+  '18+ / Adult': '18+ / Adulto',
+  'Normal': 'Normal',
+  'Personal': 'Personal',
+  'Highly Sensitive': 'Altamente sensible',
 };
 
 interface LanguageContextValue {
