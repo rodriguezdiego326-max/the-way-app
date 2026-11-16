@@ -21,6 +21,11 @@ const bibleEngine = read('src/lib/bibleEngine.ts');
 const sermonClient = read('src/lib/sermonInsights.ts');
 const sermonHook = read('src/hooks/useSermonInsights.ts');
 const sermonFn = read('supabase/functions/generate-sermon-insights/index.ts');
+const parentGuideScreen = read('src/screens/ParentGuideScreen.tsx');
+const parentGuideEs = read('src/lib/parentGuideContent.es.ts');
+const catechismScreen = read('src/screens/CatechismScreen.tsx');
+const westminsterEs = read('src/lib/catechismWestminster.es.ts');
+const heidelbergEs = read('src/lib/catechismHeidelberg.es.ts');
 
 const dictionarySection = i18n.slice(0, i18n.indexOf('interface LanguageContextValue'));
 const keyMatches = [...dictionarySection.matchAll(/^\s*(['"])(.*?)\1\s*:/gm)]
@@ -67,6 +72,19 @@ assert(sermonFn.includes('responseLanguage: "English" | "Spanish"'),
   'sermon insights Edge Function must validate response language');
 assert(sermonFn.includes('All summary, point titles'),
   'sermon insights prompt must pin all generated prose to requested language');
+
+assert(parentGuideScreen.includes("language === 'es' ? parentGuidesEs : parentGuides"),
+  'Parent Guide must switch its built-in teaching content with app language');
+assert((parentGuideEs.match(/id:\s*["']/g) || []).length === 11,
+  'Spanish Parent Guide must contain all 11 curated topics');
+
+assert(catechismScreen.includes('westminsterShorterCatechismEs')
+  && catechismScreen.includes('heidelbergCatechismEs'),
+  'Catechism screen must switch both historic catechism sets with app language');
+assert((westminsterEs.match(/number:\s*\d+/g) || []).length === 25,
+  'Spanish Westminster content must contain questions 1–25');
+assert((heidelbergEs.match(/number:\s*\d+/g) || []).length === 15,
+  'Spanish Heidelberg content must contain questions 1–15');
 
 if (!process.exitCode) {
   console.log('Language contract: PASS');
