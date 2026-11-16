@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { X, BookOpen, Sparkles } from 'lucide-react';
 import { vibrate, formatDate } from '@/lib/utils';
 import { parsePassageReference } from '@/lib/passageParser';
-import { buildSermonStudy, STUDY_UNCLEAR_MESSAGE, type OpenBibleHandler, type SermonStudy } from '@/lib/sermonStudy';
+import { buildSermonStudy, getStudyUnclearMessage, type OpenBibleHandler, type SermonStudy } from '@/lib/sermonStudy';
 import type { SermonInsights, SermonRecordingMeta } from '@/lib/sermonRecordingStore';
 
 interface Props {
@@ -50,7 +50,7 @@ export default function SermonStudyScreen({ meta, insights, onBack, onOpenBible 
                 <SourceLabel label="From the sermon" />
                 <p className="ui-label mt-5 mb-2">Sermon Focus</p>
                 {study.themes.length === 0 ? (
-                  <p className="text-ivory-400 text-sm leading-relaxed">{STUDY_UNCLEAR_MESSAGE}</p>
+                  <p className="text-ivory-400 text-sm leading-relaxed">{getStudyUnclearMessage()}</p>
                 ) : (
                   <ul className="flex flex-col gap-2">
                     {study.themes.map((theme, index) => (
