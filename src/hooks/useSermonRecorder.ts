@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  isSermonRecorderAvailable,
   sermonRecorderNative,
   type FinishedSermonRecording,
   type SermonRecorderSnapshot,
@@ -18,17 +19,23 @@ function errorCode(err: unknown): string | undefined {
 }
 
 export function useSermonRecorder() {
+  const supported = isSermonRecorderAvailable();
   const [snapshot, setSnapshot] = useState<SermonRecorderSnapshot>(IDLE);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<SermonRecorderError | null>(null);
 
   const refresh = useCallback(async () => {
+    if (!supported) {
+      setSnapshot(IDLE);
+      setError(null);
+      return;
+    }
     try {
       setSnapshot(await sermonRecorderNative.status());
     } catch {
       setError('failed');
     }
-  }, []);
+  }, [supported]);
 
   useEffect(() => {
     void refresh();
@@ -49,6 +56,10 @@ export function useSermonRecorder() {
   }, [isLive, refresh]);
 
   const runControl = useCallback(async (action: () => Promise<SermonRecorderSnapshot>) => {
+    if (!supported) {
+      setError('failed');
+      return false;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -61,13 +72,17 @@ export function useSermonRecorder() {
     } finally {
       setBusy(false);
     }
-  }, [refresh]);
+  }, [refresh, supported]);
 
   const start = useCallback(() => runControl(() => sermonRecorderNative.start()), [runControl]);
   const pause = useCallback(() => runControl(() => sermonRecorderNative.pause()), [runControl]);
   const resume = useCallback(() => runControl(() => sermonRecorderNative.resume()), [runControl]);
 
   const finish = useCallback(async (): Promise<FinishedSermonRecording | null> => {
+    if (!supported) {
+      setError('failed');
+      return null;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -81,9 +96,13 @@ export function useSermonRecorder() {
     } finally {
       setBusy(false);
     }
-  }, [refresh]);
+  }, [refresh, supported]);
 
   const discard = useCallback(async (): Promise<boolean> => {
+    if (!supported) {
+      setError('failed');
+      return false;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -97,7 +116,7 @@ export function useSermonRecorder() {
     } finally {
       setBusy(false);
     }
-  }, [refresh]);
+  }, [refresh, supported]);
 
-  return { snapshot, busy, error, start, pause, resume, finish, discard };
+  return { supported, snapshot, busy, error, start, pause, resume, finish, discard };
 }
