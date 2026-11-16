@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { X, Heart, Plus, ChevronRight, Trash2 } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';
-import { getMyChurchMembership, getChurch, getChurchGroups, getGroupDiscussions, addGroupDiscussion, createChurchGroup, deleteChurchGroup, isChurchOwner } from '@/lib/churchEngine';
+import { getMyChurchMembership, getChurchMembershipForChurch, getChurch, getChurchGroups, getGroupDiscussions, addGroupDiscussion, createChurchGroup, deleteChurchGroup, isChurchOwner } from '@/lib/churchEngine';
 import type { Profile } from '@/lib/types';
 import type { ChurchGroup, GroupDiscussion } from '@/lib/togetherTypes';
+import { isVerifiedChurchPublisher } from '@/lib/togetherTypes';
 import CircleConfirmDialog from '@/components/circle/CircleConfirmDialog';
 
 interface Props {
@@ -23,6 +24,7 @@ export default function SmallGroupModeScreen({ profile, activeChurchId, onBack }
   const [body, setBody] = useState('');
   const [posting, setPosting] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  const [canManage, setCanManage] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
@@ -47,10 +49,14 @@ export default function SmallGroupModeScreen({ profile, activeChurchId, onBack }
       }
       const church = await getChurch(cid);
       if (church) {
-        const grps = await getChurchGroups(church.id);
+        const [grps, owner, membership] = await Promise.all([
+          getChurchGroups(church.id),
+          isChurchOwner(profile.id, church.id),
+          getChurchMembershipForChurch(profile.id, church.id),
+        ]);
         setGroups(grps);
-        const owner = await isChurchOwner(profile.id, church.id);
         setIsOwner(owner);
+        setCanManage(owner || isVerifiedChurchPublisher(membership?.verified_church_role));
       }
     } catch {
       setError('Could not load groups.');
@@ -195,7 +201,7 @@ export default function SmallGroupModeScreen({ profile, activeChurchId, onBack }
           {!loading && !error && groups.length === 0 && (
             <div className="premium-card p-6 text-center">
               <p className="text-ivory-400 text-sm">No small groups yet.</p>
-              {isOwner ? (
+              {canManage ? (
                 <>
                   <p className="text-ivory-600 text-xs mt-2 leading-relaxed">Create a small group for your church.</p>
                   <button onClick={() => { vibrate(8); setShowCreate(true); }} className="btn-primary mt-4">
@@ -224,7 +230,7 @@ export default function SmallGroupModeScreen({ profile, activeChurchId, onBack }
                   </button>
                 ))}
               </div>
-              {isOwner && (
+              {canManage && (
                 <button onClick={() => { vibrate(8); setShowCreate(true); }} className="btn-secondary w-full mt-4 text-sm">
                   <Plus size={16} /> Create Small Group
                 </button>
