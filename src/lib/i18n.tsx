@@ -1,0 +1,318 @@
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+
+export type AppLanguage = 'en' | 'es';
+
+const STORAGE_KEY = 'solapath_ui_language';
+
+const ES: Record<string, string> = {
+  'Today': 'Hoy',
+  'Bible': 'Biblia',
+  'Ask': 'Preguntar',
+  'Prayer': 'Oración',
+  'Explore': 'Explorar',
+  'Home': 'Inicio',
+  'Back': 'Atrás',
+  'Cancel': 'Cancelar',
+  'Save': 'Guardar',
+  'Edit': 'Editar',
+  'Delete': 'Eliminar',
+  'Close': 'Cerrar',
+  'Continue': 'Continuar',
+  'Begin': 'Comenzar',
+  'Loading...': 'Cargando...',
+  'Loading': 'Cargando',
+  'Retry': 'Reintentar',
+  'Search': 'Buscar',
+  'Settings': 'Configuración',
+  'Account': 'Cuenta',
+  'Sign Out': 'Cerrar sesión',
+  'Email': 'Correo electrónico',
+  'Password': 'Contraseña',
+  'Sign In': 'Iniciar sesión',
+  'Create Account': 'Crear cuenta',
+  'Get Started': 'Comenzar',
+  'I Already Have an Account': 'Ya tengo una cuenta',
+  'Privacy Policy': 'Política de privacidad',
+  'Scripture for the road ahead.': 'Escritura para el camino que tienes por delante.',
+  'Welcome': 'Bienvenido',
+  'Language': 'Idioma',
+  'English': 'English',
+  'Spanish': 'Español',
+  'Life Context': 'Contexto de vida',
+  'Current Season': 'Temporada actual',
+  'Translation': 'Traducción',
+  'Preferred Translation': 'Traducción preferida',
+  'Theological Depth': 'Profundidad teológica',
+  'Almost There': 'Casi terminamos',
+  'Available devotional time': 'Tiempo devocional disponible',
+  'Bible familiarity': 'Familiaridad con la Biblia',
+  'Your name': 'Tu nombre',
+  'What may we call you?': '¿Cómo podemos llamarte?',
+  'What is your life stage?': '¿Cuál es tu etapa de vida?',
+  'How would you describe this season?': '¿Cómo describirías esta temporada?',
+  'This helps SOLAPATH walk with you gently.': 'Esto ayuda a SOLAPATH a acompañarte con cuidado.',
+  'Preferred Bible translation?': '¿Traducción bíblica preferida?',
+  'You can change this anytime.': 'Puedes cambiar esto en cualquier momento.',
+  'How deep would you like to go?': '¿Qué tan profundo te gustaría estudiar?',
+  'A few final questions': 'Unas últimas preguntas',
+  'Remember my context': 'Recordar mi contexto',
+  'Starting...': 'Iniciando...',
+  'Simple': 'Sencillo',
+  'Study': 'Estudio',
+  'Deep Study': 'Estudio profundo',
+  'Plain-language explanation': 'Explicación en lenguaje sencillo',
+  'Scripture, context, cross-references, doctrine': 'Escritura, contexto, referencias cruzadas y doctrina',
+  'Confessional, historical, original-language depth': 'Profundidad confesional, histórica y de idiomas originales',
+  'My Church': 'Mi Iglesia',
+  'Church': 'Iglesia',
+  'Church Features': 'Funciones de la iglesia',
+  'Church Owner': 'Propietario de la iglesia',
+  'Join My Church': 'Unirme a mi iglesia',
+  'Your Role': 'Tu función',
+  'Create a New Church': 'Crear una nueva iglesia',
+  'Edit Church': 'Editar iglesia',
+  'Church Name': 'Nombre de la iglesia',
+  'Church name': 'Nombre de la iglesia',
+  'City': 'Ciudad',
+  'City (optional)': 'Ciudad (opcional)',
+  'Search churches...': 'Buscar iglesias...',
+  'Small Groups': 'Grupos pequeños',
+  'No small groups yet.': 'Aún no hay grupos pequeños.',
+  'Create Small Group': 'Crear grupo pequeño',
+  'Join Small Group': 'Unirse a un grupo pequeño',
+  'Invite Code': 'Código de invitación',
+  'Enter invite code': 'Ingresa el código de invitación',
+  'Join Group': 'Unirse al grupo',
+  'Leave Group': 'Salir del grupo',
+  'Delete Group': 'Eliminar grupo',
+  'Delete small group': 'Eliminar grupo pequeño',
+  'Group name': 'Nombre del grupo',
+  'Meeting day (optional, e.g. Wednesday)': 'Día de reunión (opcional, p. ej. miércoles)',
+  'Discussion topic': 'Tema de conversación',
+  'Share your thoughts...': 'Comparte tus pensamientos...',
+  'Church-connected small groups. Read before gathering, reflect, share, pray.': 'Grupos pequeños conectados con la iglesia. Lee antes de reunirte, reflexiona, comparte y ora.',
+  'Your church hasn\'t added any small groups yet.': 'Tu iglesia aún no ha agregado grupos pequeños.',
+  'Create a small group for your church.': 'Crea un grupo pequeño para tu iglesia.',
+  'Church Studies': 'Estudios de la iglesia',
+  'Manage Church Studies': 'Administrar estudios de la iglesia',
+  'New Church Study': 'Nuevo estudio de la iglesia',
+  'Study title': 'Título del estudio',
+  'Short description (optional)': 'Descripción breve (opcional)',
+  'Create Draft': 'Crear borrador',
+  'Published': 'Publicado',
+  'Drafts': 'Borradores',
+  'Archived': 'Archivados',
+  'Church Prayer': 'Oración de la iglesia',
+  'Add Church Prayer': 'Agregar oración de la iglesia',
+  'Add Church Prayer Item': 'Agregar petición de oración',
+  'Prayer request title': 'Título de la petición',
+  'Small group': 'Grupo pequeño',
+  'Pastor': 'Pastor',
+  'Church Admin': 'Administrador de iglesia',
+  'Elder': 'Anciano',
+  'Leader': 'Líder',
+  'Verified Church Leadership': 'Liderazgo de iglesia verificado',
+  'Leadership Requests': 'Solicitudes de liderazgo',
+  'Request Pastor Verification': 'Solicitar verificación como pastor',
+  'Request Church Leadership Access': 'Solicitar acceso de liderazgo',
+  'Pastor Identity Verification': 'Verificación de identidad pastoral',
+  'Verification Required': 'Verificación requerida',
+  'Verified': 'Verificado',
+  'Approve': 'Aprobar',
+  'Reject': 'Rechazar',
+  'Revoke': 'Revocar',
+  'Admin Approval Center': 'Centro de aprobación administrativa',
+  'Together': 'Juntos',
+  'TOGETHER': 'JUNTOS',
+  'You were never meant to walk alone.': 'Nunca fuiste llamado a caminar solo.',
+  'My Circles': 'Mis círculos',
+  'You haven\'t joined any Circles yet.': 'Aún no te has unido a ningún círculo.',
+  'Create a private Circle for your marriage, small group, Bible study, or prayer group.': 'Crea un círculo privado para tu matrimonio, grupo pequeño, estudio bíblico o grupo de oración.',
+  'Family': 'Familia',
+  'SOLAPATH Family': 'Familia SOLAPATH',
+  'Create Family': 'Crear familia',
+  'Add Household Profile': 'Agregar perfil del hogar',
+  'My Family': 'Mi familia',
+  'Tonight\'s Family Walk': 'Caminata familiar de esta noche',
+  'Children & Household Profiles': 'Perfiles de niños y del hogar',
+  'Sermon Discussions': 'Conversaciones sobre sermones',
+  'Reach': 'Alcance',
+  'SOLAPATH Reach': 'Alcance SOLAPATH',
+  'Journey': 'Camino',
+  'Sermon Assistant': 'Asistente de sermones',
+  'Saved Recordings': 'Grabaciones guardadas',
+  'Discussion': 'Conversación',
+  'My Bible Notes': 'Mis notas bíblicas',
+  'Bookmarks': 'Marcadores',
+  'Bookmark': 'Guardar marcador',
+  'Bookmarked': 'Guardado',
+  'No bookmarks yet. Select verses and tap Bookmark to save a passage.': 'Aún no hay marcadores. Selecciona versículos y toca Guardar marcador.',
+  'Bible Version': 'Versión bíblica',
+  'Other Translations': 'Otras traducciones',
+  'Installed': 'Instalada',
+  'Cross References': 'Referencias cruzadas',
+  'Passage Study': 'Estudio del pasaje',
+  'Select Book': 'Seleccionar libro',
+  'Old Testament': 'Antiguo Testamento',
+  'New Testament': 'Nuevo Testamento',
+  'Previous chapter': 'Capítulo anterior',
+  'Next chapter': 'Capítulo siguiente',
+  'Text size': 'Tamaño del texto',
+  'Loading Scripture...': 'Cargando Escritura...',
+  'No verses found for this chapter.': 'No se encontraron versículos para este capítulo.',
+  'Ask SOLAPATH a question': 'Haz una pregunta a SOLAPATH',
+  'Send follow-up': 'Enviar seguimiento',
+  'Helpful': 'Útil',
+  'Not helpful': 'No fue útil',
+  'Report Concern': 'Reportar inquietud',
+  'Thank you': 'Gracias',
+  'What SOLAPATH Remembers': 'Lo que SOLAPATH recuerda',
+  'SOLAPATH doesn\'t remember anything yet.': 'SOLAPATH aún no recuerda nada.',
+  'Privacy & Data': 'Privacidad y datos',
+  'What SOLAPATH stores · Download · Delete': 'Lo que SOLAPATH guarda · Descargar · Eliminar',
+  'Theological Library': 'Biblioteca teológica',
+  'Confessional Documents': 'Documentos confesionales',
+  'Historic Theologians': 'Teólogos históricos',
+  'Selected Teachers': 'Maestros seleccionados',
+  'Library Search': 'Buscar en la biblioteca',
+  'About SOLAPATH': 'Acerca de SOLAPATH',
+  'Send Feedback': 'Enviar comentarios',
+  'Activity': 'Actividad',
+  'Notifications': 'Notificaciones',
+  'App Guide': 'Guía de la aplicación',
+  'How to use SOLAPATH': 'Cómo usar SOLAPATH',
+  'Depth · Translation · Memory · About': 'Profundidad · Traducción · Memoria · Acerca de',
+  'Language · Depth · Translation · Memory · About': 'Idioma · Profundidad · Traducción · Memoria · Acerca de',
+  'AI is the servant. Scripture is the authority.': 'La IA es la sierva. La Escritura es la autoridad.',
+  'Coming': 'Próximamente',
+  'Privacy Boundary': 'Límite de privacidad',
+  'Active': 'Activo',
+  'Category': 'Categoría',
+  'Name': 'Nombre',
+  'Description (optional)': 'Descripción (opcional)',
+  'Saving...': 'Guardando...',
+  'Create': 'Crear',
+  'Share': 'Compartir',
+  'Search notes': 'Buscar notas',
+  'Search notes...': 'Buscar notas...',
+  'Delete note': 'Eliminar nota',
+  'Title (optional)': 'Título (opcional)',
+  'Write your observation, interpretation, or application...': 'Escribe tu observación, interpretación o aplicación...',
+};
+
+interface LanguageContextValue {
+  language: AppLanguage;
+  setLanguage: (language: AppLanguage) => void;
+  t: (english: string) => string;
+}
+
+const LanguageContext = createContext<LanguageContextValue>({
+  language: 'en',
+  setLanguage: () => undefined,
+  t: (english) => english,
+});
+
+function getInitialLanguage(): AppLanguage {
+  if (typeof localStorage === 'undefined') return 'en';
+  return localStorage.getItem(STORAGE_KEY) === 'es' ? 'es' : 'en';
+}
+
+function translateTextNode(node: Text, originals: Map<Text, string>) {
+  const raw = node.nodeValue ?? '';
+  const trimmed = raw.trim();
+  const translated = ES[trimmed];
+  if (!translated) return;
+  if (!originals.has(node)) originals.set(node, raw);
+  node.nodeValue = raw.replace(trimmed, translated);
+}
+
+function translateAttributes(el: Element, originals: Map<Element, Map<string, string>>) {
+  for (const attr of ['placeholder', 'aria-label', 'title']) {
+    const raw = el.getAttribute(attr);
+    if (!raw) continue;
+    const translated = ES[raw.trim()];
+    if (!translated) continue;
+    let stored = originals.get(el);
+    if (!stored) {
+      stored = new Map();
+      originals.set(el, stored);
+    }
+    if (!stored.has(attr)) stored.set(attr, raw);
+    el.setAttribute(attr, translated);
+  }
+}
+
+function translateTree(root: Node, textOriginals: Map<Text, string>, attrOriginals: Map<Element, Map<string, string>>) {
+  if (root.nodeType === Node.TEXT_NODE) {
+    translateTextNode(root as Text, textOriginals);
+    return;
+  }
+  if (root.nodeType !== Node.ELEMENT_NODE && root.nodeType !== Node.DOCUMENT_NODE) return;
+
+  if (root.nodeType === Node.ELEMENT_NODE) translateAttributes(root as Element, attrOriginals);
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  let current = walker.nextNode();
+  while (current) {
+    if (current.nodeType === Node.TEXT_NODE) translateTextNode(current as Text, textOriginals);
+    else translateAttributes(current as Element, attrOriginals);
+    current = walker.nextNode();
+  }
+}
+
+export function LanguageProvider({ children }: { children: ReactNode }) {
+  const [language, setLanguageState] = useState<AppLanguage>(getInitialLanguage);
+  const textOriginals = useMemo(() => new Map<Text, string>(), []);
+  const attrOriginals = useMemo(() => new Map<Element, Map<string, string>>(), []);
+
+  const setLanguage = (next: AppLanguage) => {
+    setLanguageState(next);
+    if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, next);
+  };
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+
+    if (language === 'en') {
+      for (const [node, original] of textOriginals) {
+        if (node.isConnected) node.nodeValue = original;
+      }
+      for (const [el, attrs] of attrOriginals) {
+        if (!el.isConnected) continue;
+        for (const [attr, original] of attrs) el.setAttribute(attr, original);
+      }
+      textOriginals.clear();
+      attrOriginals.clear();
+      return;
+    }
+
+    const apply = (root: Node = document.body) => {
+      if (!root) return;
+      translateTree(root, textOriginals, attrOriginals);
+    };
+
+    apply();
+    const observer = new MutationObserver((records) => {
+      for (const record of records) {
+        if (record.type === 'characterData' && record.target.nodeType === Node.TEXT_NODE) {
+          translateTextNode(record.target as Text, textOriginals);
+        }
+        for (const node of record.addedNodes) apply(node);
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, [language, textOriginals, attrOriginals]);
+
+  const value = useMemo<LanguageContextValue>(() => ({
+    language,
+    setLanguage,
+    t: (english) => language === 'es' ? ES[english] ?? english : english,
+  }), [language]);
+
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+}
+
+export function useLanguage() {
+  return useContext(LanguageContext);
+}
