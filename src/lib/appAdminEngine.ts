@@ -86,3 +86,21 @@ export async function adminDeleteChurchStudy(studyId: string): Promise<boolean> 
   const result = data as { deleted?: unknown } | null;
   return result?.deleted === true;
 }
+
+
+export async function verifyPastorClaim(
+  claimId: string,
+  note: string,
+): Promise<boolean> {
+  const { error } = await supabase.rpc('verify_pastor_claim', {
+    p_claim_id: claimId,
+    p_staff_page_confirmed: true,
+    p_direct_church_confirmation: true,
+    p_note: note.trim(),
+  });
+  if (error) {
+    console.error('[Admin] pastor verification failed', { code: error.code, message: error.message });
+    return false;
+  }
+  return true;
+}
