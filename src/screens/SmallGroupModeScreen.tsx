@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Heart, Plus, ChevronRight } from 'lucide-react';
+import { X, Heart, Plus, ChevronRight, Trash2 } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
 import { LoadingState, ErrorState, EmptyState } from '@/components/States';
-import { getMyChurchMembership, getChurch, getChurchGroups, getGroupDiscussions, addGroupDiscussion, createChurchGroup, isChurchOwner } from '@/lib/churchEngine';
+import { getMyChurchMembership, getChurch, getChurchGroups, getGroupDiscussions, addGroupDiscussion, createChurchGroup, deleteChurchGroup, isChurchOwner } from '@/lib/churchEngine';
 import type { Profile } from '@/lib/types';
 import type { ChurchGroup, GroupDiscussion } from '@/lib/togetherTypes';
+import CircleConfirmDialog from '@/components/circle/CircleConfirmDialog';
 
 interface Props {
   profile: Profile;
@@ -27,6 +28,9 @@ export default function SmallGroupModeScreen({ profile, activeChurchId, onBack }
   const [newDesc, setNewDesc] = useState('');
   const [newDay, setNewDay] = useState('');
   const [creating, setCreating] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState<ChurchGroup | null>(null);
+  const [deletingGroup, setDeletingGroup] = useState(false);
+  const [deleteGroupError, setDeleteGroupError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -64,6 +68,24 @@ export default function SmallGroupModeScreen({ profile, activeChurchId, onBack }
     setDiscussions(discs);
   }
 
+  async function handleDeleteGroup() {
+    if (!groupToDelete || deletingGroup) return;
+    vibrate(20);
+    setDeletingGroup(true);
+    setDeleteGroupError(null);
+    const ok = await deleteChurchGroup(groupToDelete.id);
+    if (!ok) {
+      setDeleteGroupError("We couldn't delete this group. Please try again.");
+      setDeletingGroup(false);
+      return;
+    }
+    setGroupToDelete(null);
+    setActiveGroup(null);
+    setDiscussions([]);
+    setDeletingGroup(false);
+    await load();
+  }
+
   async function handlePost() {
     if (!activeGroup || !topic.trim() || !body.trim()) return;
     vibrate(15);
@@ -83,7 +105,17 @@ export default function SmallGroupModeScreen({ profile, activeChurchId, onBack }
       <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28 flex flex-col">
         <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
           <button onClick={() => setActiveGroup(null)} className="btn-ghost"><X size={20} /></button>
-          <p className="ui-label">{activeGroup.name}</p><span className="w-10" />
+          <p className="ui-label">{activeGroup.name}</p>
+          {(isOwner || activeGroup.leader_profile_id === profile.id) ? (
+            <button
+              type="button"
+              className="btn-ghost text-clay-400"
+              aria-label="Delete small group"
+              onClick={() => { vibrate(8); setDeleteGroupError(null); setGroupToDelete(activeGroup); }}
+            >
+              <Trash2 size={16} />
+            </button>
+          ) : <span className="w-10" />}
         </header>
 
         <div className="flex-1 overflow-y-auto px-6 mt-4">
@@ -121,6 +153,20 @@ export default function SmallGroupModeScreen({ profile, activeChurchId, onBack }
             )}
           </div>
         </div>
+
+        {groupToDelete && (
+          <CircleConfirmDialog
+            title={`Delete ${groupToDelete.name}?`}
+            body="This permanently deletes this church small group and its discussion posts. You can create a new group afterward."
+            confirmLabel="Delete Group"
+            cancelLabel="Cancel"
+            destructive
+            busy={deletingGroup}
+            error={deleteGroupError}
+            onConfirm={() => void handleDeleteGroup()}
+            onCancel={() => setGroupToDelete(null)}
+          />
+        )}
       </div>
     );
   }
