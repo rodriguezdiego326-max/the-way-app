@@ -42,7 +42,7 @@ export default function ActivityScreen({ userId, onBack, onOpenItem, onReadState
     } finally {
       setLoading(false);
     }
-  }, [fetchFirst]);
+  }, [fetchFirst, t]);
 
   useEffect(() => { load(); }, [load]);
 
