@@ -4,6 +4,7 @@ import { parsePassageReference } from '@/lib/passageParser';
 import { fetchVerses } from '@/lib/bibleEngine';
 import { getBookDisplayName, type BibleTranslation } from '@/lib/bibleTypes';
 import { vibrate } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n';
 
 const COLLAPSE_THRESHOLD = 4;
 
@@ -15,6 +16,7 @@ interface ScriptureBlockProps {
 }
 
 export default function ScriptureBlock({ reference, translation, onOpenBible, onTextStatus }: ScriptureBlockProps) {
+  const { language, t } = useLanguage();
   const [verses, setVerses] = useState<{ verse: number; text: string }[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -57,7 +59,7 @@ export default function ScriptureBlock({ reference, translation, onOpenBible, on
   if (loading) {
     return (
       <div className="my-3 px-4 py-3 rounded-xl bg-ink-800/25 border border-ink-600/15 animate-pulse">
-        <p className="text-ivory-600 text-xs italic">Loading Scripture...</p>
+        <p className="text-ivory-600 text-xs italic">{t('Loading Scripture...')}</p>
       </div>
     );
   }
@@ -103,14 +105,16 @@ export default function ScriptureBlock({ reference, translation, onOpenBible, on
           className="flex items-center gap-1 mt-2 text-gold-400/50 text-xs hover:text-gold-300/80 transition-colors no-tap-highlight"
         >
           {expanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-          {expanded ? 'Show less' : `Show full passage (${verses.length} verses)`}
+          {expanded
+            ? (language === 'es' ? 'Mostrar menos' : 'Show less')
+            : (language === 'es' ? `Mostrar pasaje completo (${verses.length} versículos)` : `Show full passage (${verses.length} verses)`)}
         </button>
       )}
       <button
         onClick={() => { vibrate(8); onOpenBible(reference); }}
         className="flex items-center gap-1 mt-2.5 text-gold-400/45 text-xs hover:text-gold-300/70 transition-colors no-tap-highlight"
       >
-        <span className="font-medium">Open in Bible</span>
+        <span className="font-medium">{language === 'es' ? 'Abrir en la Biblia' : 'Open in Bible'}</span>
         <ArrowUpRight size={11} />
       </button>
     </div>
