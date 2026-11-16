@@ -573,7 +573,20 @@ export default function App() {
       />
     ) : null;
 
-    if (!studyDetail) return <ErrorBoundary>{bibleLayer}</ErrorBoundary>;
+    if (!studyDetail) {
+      const returnType = overlay.type === 'bible-reference' ? overlay.returnOverlay?.type : undefined;
+      const fromTogetherOrChurch =
+        overlay.type === 'bible-reference'
+        && (
+          overlay.returnTo === 'church_studies'
+          || returnType === 'scripture_together'
+          || returnType === 'encouragement'
+          || returnType === 'circle_sermon_discussion'
+        );
+      return fromTogetherOrChurch
+        ? renderOverlayWithHome(bibleLayer)
+        : <ErrorBoundary>{bibleLayer}</ErrorBoundary>;
+    }
 
     return renderOverlayWithHome(
       <div>
