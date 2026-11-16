@@ -33,7 +33,7 @@ const config: CapacitorConfig = {
       resizeOnFullScreen: true,
     },
     PushNotifications: {
-      presentationOptions: ['badge'],  // No alert/sound on lock screen by default — privacy
+      presentationOptions: [],
     },
   },
 };

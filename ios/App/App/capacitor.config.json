@@ -29,9 +29,7 @@
 			"resizeOnFullScreen": true
 		},
 		"PushNotifications": {
-			"presentationOptions": [
-				"badge"
-			]
+			"presentationOptions": []
 		}
 	},
 	"packageClassList": [

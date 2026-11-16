@@ -12,7 +12,7 @@ workflows:
         XCODE_PROJECT: ios/App/App.xcodeproj
         XCODE_SCHEME: App
         BUNDLE_ID: com.rfgforge.solapath
-        EXPECTED_BUILD_NUMBER: "153"
+        EXPECTED_BUILD_NUMBER: "154"
         EXPECTED_MARKETING_VERSION: "0.2.0"
       node: latest
       xcode: latest
@@ -57,6 +57,17 @@ workflows:
           xcode-project build-ipa \
             --project "App.xcodeproj" \
             --scheme "App"
+      - name: Assert push entitlement in signed build
+        script: |
+          IPA=$(ls ios/App/build/ios/ipa/*.ipa | head -n 1)
+          EXTRACT_DIR=$(mktemp -d)
+          unzip -q "$IPA" -d "$EXTRACT_DIR"
+          APP=$(ls -d "$EXTRACT_DIR"/Payload/*.app | head -n 1)
+          APS_ENV=$(codesign -d --entitlements :- "$APP" 2>/dev/null | plutil -extract aps-environment raw -o - -)
+          if [ "$APS_ENV" != "production" ]; then
+            echo "Signed build aps-environment is '$APS_ENV', expected 'production'"
+            exit 1
+          fi
     artifacts:
       - ios/App/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
