@@ -1,4 +1,4 @@
-import { registerPlugin } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 
 export type SermonRecorderState = 'idle' | 'recording' | 'paused';
 
@@ -70,3 +70,8 @@ export interface PreparedTranscriptionParts {
 }
 
 export const sermonRecorderNative = registerPlugin<SermonRecorderPlugin>('SermonRecorder');
+
+
+export function isSermonRecorderAvailable(): boolean {
+  return Capacitor.getPlatform() === 'ios';
+}
