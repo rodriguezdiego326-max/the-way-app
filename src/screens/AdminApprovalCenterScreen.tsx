@@ -10,6 +10,7 @@ import {
   listChurchStudiesForAdmin,
   reviewChurchAdminClaim,
   revokeChurchAdminAccess,
+  verifyPastorClaim,
 } from '@/lib/appAdminEngine';
 import { formatRelative, vibrate } from '@/lib/utils';
 import type {
@@ -51,6 +52,11 @@ export default function AdminApprovalCenterScreen({ currentProfileId, onBack }: 
   const [error, setError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
+  const [verifyingClaimId, setVerifyingClaimId] = useState<string | null>(null);
+  const [staffPageConfirmed, setStaffPageConfirmed] = useState(false);
+  const [directChurchConfirmed, setDirectChurchConfirmed] = useState(false);
+  const [verificationNote, setVerificationNote] = useState('');
+  const [verificationBusy, setVerificationBusy] = useState(false);
 
   const load = useCallback(async (quiet = false) => {
     if (quiet) setRefreshing(true);
@@ -113,6 +119,24 @@ export default function AdminApprovalCenterScreen({ currentProfileId, onBack }: 
     }
 
     setPendingAction(null);
+    await load(true);
+  }
+
+  async function handleVerifyPastor(claimId: string) {
+    if (verificationBusy || !staffPageConfirmed || !directChurchConfirmed || !verificationNote.trim()) return;
+    vibrate(12);
+    setVerificationBusy(true);
+    setError(null);
+    const ok = await verifyPastorClaim(claimId, verificationNote);
+    setVerificationBusy(false);
+    if (!ok) {
+      setError('Pastor verification could not be saved. Confirm both checks and try again.');
+      return;
+    }
+    setVerifyingClaimId(null);
+    setStaffPageConfirmed(false);
+    setDirectChurchConfirmed(false);
+    setVerificationNote('');
     await load(true);
   }
 
@@ -213,6 +237,100 @@ export default function AdminApprovalCenterScreen({ currentProfileId, onBack }: 
                             </div>
                           </div>
 
+                          {claim.requested_role === 'PASTOR' && (
+                            <div className="rounded-xl border border-gold-500/20 bg-gold-500/5 p-4 mt-4">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-gold-200 text-xs font-medium">Pastor Identity Verification</p>
+                                <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded ${
+                                  claim.pastor_verification_status === 'verified'
+                                    ? 'bg-sage-500/10 text-sage-400'
+                                    : 'bg-gold-500/10 text-gold-300'
+                                }`}>
+                                  {claim.pastor_verification_status === 'verified' ? 'Verified' : 'Verification Required'}
+                                </span>
+                              </div>
+                              <div className="mt-3 space-y-2 text-xs">
+                                {claim.church_website && (
+                                  <p className="text-ivory-500">
+                                    Church website: <a href={claim.church_website} target="_blank" rel="noreferrer" className="text-gold-300 underline">Open</a>
+                                  </p>
+                                )}
+                                <p className="text-ivory-500">
+                                  Staff evidence: {claim.evidence_staff_url
+                                    ? <a href={claim.evidence_staff_url} target="_blank" rel="noreferrer" className="text-gold-300 underline">Open official staff page</a>
+                                    : <span className="text-clay-400">Missing</span>}
+                                </p>
+                                <p className="text-ivory-500">Church contact: <span className="text-ivory-300">{claim.evidence_church_contact || 'Missing'}</span></p>
+                              </div>
+
+                              {claim.pastor_verification_status !== 'verified' && verifyingClaimId !== claim.claim_id && !self && (
+                                <button
+                                  type="button"
+                                  className="btn-secondary w-full text-xs mt-3"
+                                  onClick={() => {
+                                    setVerifyingClaimId(claim.claim_id);
+                                    setStaffPageConfirmed(false);
+                                    setDirectChurchConfirmed(false);
+                                    setVerificationNote('');
+                                  }}
+                                >
+                                  <ShieldCheck size={13} /> Verify Pastor Identity
+                                </button>
+                              )}
+
+                              {verifyingClaimId === claim.claim_id && (
+                                <div className="mt-4 pt-4 border-t border-gold-500/10">
+                                  <label className="flex items-start gap-2 text-xs text-ivory-300 mb-3">
+                                    <input
+                                      type="checkbox"
+                                      checked={staffPageConfirmed}
+                                      onChange={(e) => setStaffPageConfirmed(e.target.checked)}
+                                      className="mt-0.5"
+                                    />
+                                    I confirmed this person is listed as a pastor on an official church source.
+                                  </label>
+                                  <label className="flex items-start gap-2 text-xs text-ivory-300 mb-3">
+                                    <input
+                                      type="checkbox"
+                                      checked={directChurchConfirmed}
+                                      onChange={(e) => setDirectChurchConfirmed(e.target.checked)}
+                                      className="mt-0.5"
+                                    />
+                                    I independently confirmed the pastor's identity/role through the church's official contact channel.
+                                  </label>
+                                  <textarea
+                                    value={verificationNote}
+                                    onChange={(e) => setVerificationNote(e.target.value)}
+                                    placeholder="Verification note — e.g. staff page matched and church office confirmed."
+                                    className="input-field min-h-[80px] resize-none text-sm"
+                                  />
+                                  <div className="grid grid-cols-2 gap-2 mt-3">
+                                    <button
+                                      type="button"
+                                      className="btn-secondary text-xs"
+                                      disabled={verificationBusy}
+                                      onClick={() => setVerifyingClaimId(null)}
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn-primary text-xs"
+                                      disabled={verificationBusy || !staffPageConfirmed || !directChurchConfirmed || !verificationNote.trim()}
+                                      onClick={() => void handleVerifyPastor(claim.claim_id)}
+                                    >
+                                      {verificationBusy ? 'Saving...' : 'Mark Verified'}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {claim.pastor_verification_status === 'verified' && claim.pastor_verification_note && (
+                                <p className="text-sage-400 text-xs mt-3 leading-relaxed">{claim.pastor_verification_note}</p>
+                              )}
+                            </div>
+                          )}
+
                           {!self && (
                             <div className="grid grid-cols-2 gap-2 mt-4">
                               <button
@@ -229,15 +347,16 @@ export default function AdminApprovalCenterScreen({ currentProfileId, onBack }: 
                               </button>
                               <button
                                 type="button"
-                                className="btn-primary text-sm"
+                                className="btn-primary text-sm disabled:opacity-40"
+                                disabled={claim.requested_role === 'PASTOR' && claim.pastor_verification_status !== 'verified'}
                                 onClick={() => setPendingAction({
                                   kind: 'approve',
                                   id: claim.claim_id,
-                                  title: 'Approve verified access?',
+                                  title: claim.requested_role === 'PASTOR' ? 'Approve verified Pastor?' : 'Approve verified access?',
                                   body: `${name} will receive ${roleLabel(claim.requested_role)} access for ${claim.church_name}.`,
                                 })}
                               >
-                                <Check size={14} /> Approve
+                                <Check size={14} /> {claim.requested_role === 'PASTOR' && claim.pastor_verification_status !== 'verified' ? 'Verify First' : 'Approve'}
                               </button>
                             </div>
                           )}
