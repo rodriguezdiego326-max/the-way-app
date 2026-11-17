@@ -677,8 +677,11 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
                 type="button"
                 onClick={() => {
                   vibrate(8);
+                  narrationRunRef.current += 1;
+                  window.speechSynthesis?.cancel();
                   setSelectedId(null);
                   setPlaying(false);
+                  setAudioProgress(0);
                 }}
                 className="btn-ghost"
                 aria-label={language === 'es' ? 'Volver a videos' : 'Back to videos'}
