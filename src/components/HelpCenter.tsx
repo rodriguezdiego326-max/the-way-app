@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bell,
   BookOpen,
@@ -16,6 +16,7 @@ import {
   Pause,
   Play,
   RotateCcw,
+  Volume2,
   ShieldCheck,
   Users,
   X,
@@ -24,6 +25,7 @@ import { useLanguage } from '@/lib/i18n';
 import { vibrate } from '@/lib/utils';
 
 type GuideId =
+  | 'overview'
   | 'today'
   | 'bible'
   | 'ask'
@@ -57,6 +59,8 @@ type HelpGuide = {
   title: LocalizedCopy;
   summary: LocalizedCopy;
   frames: HelpFrame[];
+  narrated?: boolean;
+  audioUrl?: LocalizedCopy;
 };
 
 const GUIDE_FRAME_MS = 4500;
@@ -64,6 +68,75 @@ const GUIDE_FRAME_MS = 4500;
 const c = (en: string, es: string): LocalizedCopy => ({ en, es });
 
 const GUIDES: HelpGuide[] = [
+  {
+    id: 'overview',
+    icon: Volume2,
+    title: c('What is SOLAPATH?', '¿Qué es SOLAPATH?'),
+    summary: c('A narrated overview of why SOLAPATH exists and how the whole app works together.', 'Una introducción narrada sobre por qué existe SOLAPATH y cómo funciona toda la aplicación en conjunto.'),
+    narrated: true,
+    audioUrl: c(
+      'https://www.aidocmaker.com/g0/audio?name=5c029fcf96c34d5798243cc07334a359',
+      'https://www.aidocmaker.com/g0/audio?name=1bcd677049664ee1bece62f5d094e84a',
+    ),
+    frames: [
+      {
+        title: c('Scripture at the center', 'La Escritura en el centro'),
+        body: c(
+          'SOLAPATH is a Christian discipleship app built to help Scripture shape everyday life. It supports discipleship without replacing the Bible, your church, your pastor, your family, or Christian community.',
+          'SOLAPATH es una aplicación cristiana de discipulado creada para ayudar a que la Escritura forme la vida diaria. Apoya el discipulado sin reemplazar la Biblia, tu iglesia, tu pastor, tu familia ni la comunidad cristiana.',
+        ),
+      },
+      {
+        title: c('Walk, read, ask, and pray', 'Camina, lee, pregunta y ora'),
+        body: c(
+          'Today gives you a faithful starting point. Bible helps you read and study. Ask helps you work through biblical and life questions. Prayer keeps your personal prayer life organized.',
+          'Hoy te da un punto de inicio fiel. Biblia te ayuda a leer y estudiar. Preguntar te ayuda con preguntas bíblicas y de la vida. Oración organiza tu vida personal de oración.',
+        ),
+      },
+      {
+        title: c('Disciple with real people', 'Discípula con personas reales'),
+        body: c(
+          'Family supports discipleship at home, while Together gives you private Circles for prayer, study, accountability, encouragement, and Christian conversation.',
+          'Familia apoya el discipulado en el hogar, mientras Juntos ofrece Círculos privados para oración, estudio, rendición de cuentas, ánimo y conversación cristiana.',
+        ),
+      },
+      {
+        title: c('Stay connected to your church', 'Mantente conectado con tu iglesia'),
+        body: c(
+          'My Church connects SOLAPATH to your local congregation. Verified leadership can serve through church prayer and small groups, and verified pastors can publish church studies.',
+          'Mi Iglesia conecta SOLAPATH con tu congregación local. El liderazgo verificado puede servir mediante oración y grupos pequeños, y los pastores verificados pueden publicar estudios de la iglesia.',
+        ),
+      },
+      {
+        title: c('Carry sermons into the week', 'Lleva el sermón a la semana'),
+        body: c(
+          'Sermon Assistant can capture a sermon, create a transcript, surface key insights, and help continue the sermon into Scripture, Ask, Family, or a Circle.',
+          'El Asistente de Sermones puede capturar un sermón, crear una transcripción, destacar ideas clave y continuar el sermón en la Escritura, Preguntar, Familia o un Círculo.',
+        ),
+      },
+      {
+        title: c('Reach people and remember faithfulness', 'Alcanza personas y recuerda la fidelidad'),
+        body: c(
+          'REACH helps you pray for people and remember gospel conversations. Legacy helps you look back on seasons, prayers, Scripture, testimony, milestones, and God’s faithfulness.',
+          'ALCANCE te ayuda a orar por personas y recordar conversaciones del evangelio. Legado te ayuda a mirar temporadas, oraciones, Escritura, testimonio, hitos y la fidelidad de Dios.',
+        ),
+      },
+      {
+        title: c('You stay in control', 'Tú mantienes el control'),
+        body: c(
+          'SOLAPATH includes controls for privacy, memory, notifications, exports, deletion, and language, with English and Spanish support throughout the app.',
+          'SOLAPATH incluye controles de privacidad, memoria, notificaciones, exportaciones, eliminación e idioma, con soporte en inglés y español en toda la aplicación.',
+        ),
+      },
+      {
+        title: c('A tool for the road', 'Una herramienta para el camino'),
+        body: c(
+          'SOLAPATH is designed to help move from information to faithful action. Scripture remains the authority. Christ remains the center. Discipleship remains something we live out with real people, in real churches, in everyday life.',
+          'SOLAPATH está diseñado para ayudarte a pasar de la información a la acción fiel. La Escritura sigue siendo la autoridad. Cristo sigue siendo el centro. El discipulado se vive con personas reales, en iglesias reales y en la vida cotidiana.',
+        ),
+      },
+    ],
+  },
   {
     id: 'today',
     icon: Home,
@@ -381,6 +454,8 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
   const [selectedId, setSelectedId] = useState<GuideId | null>(null);
   const [frameIndex, setFrameIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [audioProgress, setAudioProgress] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const selected = useMemo(
     () => GUIDES.find((guide) => guide.id === selectedId) ?? null,
@@ -389,14 +464,16 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
 
   useEffect(() => {
     if (!open) {
+      audioRef.current?.pause();
       setSelectedId(null);
       setFrameIndex(0);
       setPlaying(false);
+      setAudioProgress(0);
     }
   }, [open]);
 
   useEffect(() => {
-    if (!open || !selected || !playing) return;
+    if (!open || !selected || !playing || selected.narrated) return;
     const timer = window.setTimeout(() => {
       if (frameIndex >= selected.frames.length - 1) {
         setPlaying(false);
@@ -407,13 +484,27 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
     return () => window.clearTimeout(timer);
   }, [frameIndex, open, playing, selected]);
 
+  useEffect(() => {
+    if (!selected?.narrated) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
+    setFrameIndex(0);
+    setPlaying(false);
+    setAudioProgress(0);
+  }, [language, selected?.id, selected?.narrated]);
+
   if (!open) return null;
 
   const chooseGuide = (id: GuideId) => {
     vibrate(8);
+    audioRef.current?.pause();
     setSelectedId(id);
     setFrameIndex(0);
-    setPlaying(true);
+    setAudioProgress(0);
+    const guide = GUIDES.find((item) => item.id === id);
+    setPlaying(!guide?.narrated);
   };
 
   const close = () => {
@@ -423,6 +514,42 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
 
   const current = GUIDES.find((guide) => guide.id === currentGuideId);
   const CurrentIcon = current?.icon;
+  const narratedAudioUrl = selected?.narrated && selected.audioUrl
+    ? localize(selected.audioUrl, language)
+    : null;
+
+  const seekNarratedFrame = (nextFrame: number, shouldPlay = false) => {
+    if (!selected?.narrated) return;
+    const audio = audioRef.current;
+    if (!audio || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+    const bounded = Math.max(0, Math.min(selected.frames.length - 1, nextFrame));
+    audio.currentTime = (bounded / selected.frames.length) * audio.duration;
+    setFrameIndex(bounded);
+    setAudioProgress((bounded / selected.frames.length) * 100);
+    if (shouldPlay) {
+      void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    }
+  };
+
+  const togglePlayback = () => {
+    if (!selected) return;
+    vibrate(8);
+    if (!selected.narrated) {
+      if (frameIndex === selected.frames.length - 1 && !playing) setFrameIndex(0);
+      setPlaying((value) => !value);
+      return;
+    }
+
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) {
+      audio.pause();
+      setPlaying(false);
+      return;
+    }
+    if (audio.ended || audio.currentTime >= audio.duration) audio.currentTime = 0;
+    void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+  };
 
   return (
     <div className="fixed inset-0 z-[140] flex items-end justify-center bg-ink-950/75 backdrop-blur-sm animate-fade-in">
@@ -481,13 +608,17 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-ivory-50">{localize(guide.title, language)}</p>
-                        <span className="rounded-full bg-ink-700 px-2 py-0.5 text-[9px] uppercase tracking-wide text-ivory-500">
-                          {language === 'es' ? 'video corto' : 'quick video'}
+                        <span className={`rounded-full px-2 py-0.5 text-[9px] uppercase tracking-wide ${guide.narrated ? 'bg-gold-500/15 text-gold-300' : 'bg-ink-700 text-ivory-500'}`}>
+                          {guide.narrated
+                            ? (language === 'es' ? 'con narración' : 'narrated')
+                            : (language === 'es' ? 'video corto' : 'quick video')}
                         </span>
                       </div>
                       <p className="mt-1 text-xs leading-relaxed text-ivory-500">{localize(guide.summary, language)}</p>
                     </div>
-                    <Play size={16} className="shrink-0 text-ivory-500" />
+                    {guide.narrated
+                      ? <Volume2 size={16} className="shrink-0 text-gold-300" />
+                      : <Play size={16} className="shrink-0 text-ivory-500" />}
                   </button>
                 );
               })}
@@ -518,7 +649,7 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
                   <div className="absolute inset-x-0 top-0 h-1 bg-ink-700">
                     <div
                       className="h-full bg-gold-400 transition-all duration-500"
-                      style={{ width: `${((frameIndex + 1) / selected.frames.length) * 100}%` }}
+                      style={{ width: `${selected.narrated ? audioProgress : ((frameIndex + 1) / selected.frames.length) * 100}%` }}
                     />
                   </div>
 
@@ -557,8 +688,12 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
                     type="button"
                     onClick={() => {
                       vibrate(6);
-                      setPlaying(false);
-                      setFrameIndex((index) => Math.max(0, index - 1));
+                      if (selected.narrated) {
+                        seekNarratedFrame(frameIndex - 1, playing);
+                      } else {
+                        setPlaying(false);
+                        setFrameIndex((index) => Math.max(0, index - 1));
+                      }
                     }}
                     disabled={frameIndex === 0}
                     className="btn-ghost disabled:opacity-30"
@@ -569,11 +704,7 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
 
                   <button
                     type="button"
-                    onClick={() => {
-                      vibrate(8);
-                      if (frameIndex === selected.frames.length - 1 && !playing) setFrameIndex(0);
-                      setPlaying((value) => !value);
-                    }}
+                    onClick={togglePlayback}
                     className="flex h-12 w-12 items-center justify-center rounded-full bg-gold-400 text-ink-950 shadow-lg"
                     aria-label={playing ? (language === 'es' ? 'Pausar' : 'Pause') : (language === 'es' ? 'Reproducir' : 'Play')}
                   >
@@ -584,7 +715,19 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
                     type="button"
                     onClick={() => {
                       vibrate(6);
-                      if (frameIndex >= selected.frames.length - 1) {
+                      if (selected.narrated) {
+                        if (frameIndex >= selected.frames.length - 1) {
+                          const audio = audioRef.current;
+                          if (audio) {
+                            audio.currentTime = 0;
+                            setFrameIndex(0);
+                            setAudioProgress(0);
+                            void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+                          }
+                        } else {
+                          seekNarratedFrame(frameIndex + 1, playing);
+                        }
+                      } else if (frameIndex >= selected.frames.length - 1) {
                         setFrameIndex(0);
                         setPlaying(true);
                       } else {
@@ -600,10 +743,40 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
                 </div>
               </div>
 
+              {narratedAudioUrl && (
+                <audio
+                  ref={audioRef}
+                  src={narratedAudioUrl}
+                  preload="metadata"
+                  onPlay={() => setPlaying(true)}
+                  onPause={() => setPlaying(false)}
+                  onEnded={() => {
+                    setPlaying(false);
+                    setFrameIndex(selected.frames.length - 1);
+                    setAudioProgress(100);
+                  }}
+                  onTimeUpdate={(event) => {
+                    const audio = event.currentTarget;
+                    if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
+                    const progress = Math.min(100, Math.max(0, (audio.currentTime / audio.duration) * 100));
+                    setAudioProgress(progress);
+                    const nextFrame = Math.min(
+                      selected.frames.length - 1,
+                      Math.floor((audio.currentTime / audio.duration) * selected.frames.length),
+                    );
+                    setFrameIndex(nextFrame);
+                  }}
+                />
+              )}
+
               <p className="mt-4 text-center text-[11px] leading-relaxed text-ivory-600">
-                {language === 'es'
-                  ? 'Estas guías se reproducen dentro de SOLAPATH y no abren sitios externos.'
-                  : 'These guides play inside SOLAPATH and do not open an external website.'}
+                {selected.narrated
+                  ? (language === 'es'
+                    ? 'La narración y las imágenes permanecen sincronizadas mientras se reproduce.'
+                    : 'Narration and visuals stay synchronized while the overview plays.')
+                  : (language === 'es'
+                    ? 'Estas guías se reproducen dentro de SOLAPATH y no abren sitios externos.'
+                    : 'These guides play inside SOLAPATH and do not open an external website.')}
               </p>
             </div>
           </div>
