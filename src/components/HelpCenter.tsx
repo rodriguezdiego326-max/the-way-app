@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n';
 import { vibrate } from '@/lib/utils';
+import PurposeFilmPlayer from '@/components/PurposeFilmPlayer';
 
 type GuideId =
   | 'overview'
@@ -60,6 +61,7 @@ type HelpGuide = {
   summary: LocalizedCopy;
   frames: HelpFrame[];
   narrated?: boolean;
+  videoSrc?: LocalizedCopy;
 };
 
 const GUIDE_FRAME_MS = 4500;
@@ -73,6 +75,7 @@ const GUIDES: HelpGuide[] = [
     title: c('What is SOLAPATH?', '¿Qué es SOLAPATH?'),
     summary: c('A narrated overview of why SOLAPATH exists and how the whole app works together.', 'Una introducción narrada sobre por qué existe SOLAPATH y cómo funciona toda la aplicación en conjunto.'),
     narrated: true,
+    videoSrc: c('/videos/solapath-purpose-en.mp4', '/videos/solapath-purpose-es.mp4'),
     frames: [
       {
         title: c('Scripture at the center', 'La Escritura en el centro'),
@@ -655,9 +658,11 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-ivory-50">{localize(guide.title, language)}</p>
                         <span className={`rounded-full px-2 py-0.5 text-[9px] uppercase tracking-wide ${guide.narrated ? 'bg-gold-500/15 text-gold-300' : 'bg-ink-700 text-ivory-500'}`}>
-                          {guide.narrated
-                            ? (language === 'es' ? 'con narración' : 'narrated')
-                            : (language === 'es' ? 'video corto' : 'quick video')}
+                          {guide.videoSrc
+                            ? (language === 'es' ? 'película' : 'film')
+                            : guide.narrated
+                              ? (language === 'es' ? 'con narración' : 'narrated')
+                              : (language === 'es' ? 'video corto' : 'quick video')}
                         </span>
                       </div>
                       <p className="mt-1 text-xs leading-relaxed text-ivory-500">{localize(guide.summary, language)}</p>
@@ -670,6 +675,16 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
               })}
             </div>
           </div>
+        ) : selected.videoSrc ? (
+          <PurposeFilmPlayer
+            src={localize(selected.videoSrc, language)}
+            title={localize(selected.title, language)}
+            onBack={() => {
+              vibrate(8);
+              setSelectedId(null);
+              setPlaying(false);
+            }}
+          />
         ) : (
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="flex items-center gap-2 px-5 py-3">
