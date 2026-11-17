@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Bell,
   BookOpen,
   ChevronLeft,
   ChevronRight,
@@ -8,6 +9,7 @@ import {
   Heart,
   HelpCircle,
   Home,
+  Landmark,
   Languages,
   MessageSquare,
   Mic,
@@ -28,11 +30,14 @@ type GuideId =
   | 'ask'
   | 'prayer'
   | 'explore'
+  | 'activity'
   | 'family'
   | 'together'
   | 'my_church'
   | 'sermon_assistant'
   | 'reach'
+  | 'legacy'
+  | 'library'
   | 'privacy'
   | 'language';
 
@@ -161,6 +166,26 @@ const GUIDES: HelpGuide[] = [
     ],
   },
   {
+    id: 'activity',
+    icon: Bell,
+    title: c('Activity', 'Actividad'),
+    summary: c('See new Family and Circle activity, read status, and notification preferences.', 'Ve actividad nueva de Familia y Círculos, estado de lectura y preferencias de notificación.'),
+    frames: [
+      {
+        title: c('See what changed', 'Ve lo que cambió'),
+        body: c('Activity collects supported Family and Circle events in one place so you can quickly see what is new.', 'Actividad reúne eventos compatibles de Familia y Círculos en un solo lugar para que puedas ver rápidamente qué hay de nuevo.'),
+      },
+      {
+        title: c('Open the source', 'Abre el contenido'),
+        body: c('Tap an Activity item to move into the relevant Family or Circle context instead of searching for it manually.', 'Toca un elemento de Actividad para ir al contexto correspondiente de Familia o Círculo sin tener que buscarlo manualmente.'),
+      },
+      {
+        title: c('Control alerts', 'Controla las alertas'),
+        body: c('Use Activity settings to choose the categories you want to see and whether this iPhone should receive supported push alerts.', 'Usa la configuración de Actividad para elegir las categorías que deseas ver y si este iPhone debe recibir alertas push compatibles.'),
+      },
+    ],
+  },
+  {
     id: 'family',
     icon: Users,
     title: c('Family', 'Familia'),
@@ -257,6 +282,46 @@ const GUIDES: HelpGuide[] = [
       {
         title: c('Walk patiently', 'Acompaña con paciencia'),
         body: c('Prodigal Journey helps you keep prayer, Scripture, reflections, and updates together over a longer season.', 'Camino del Pródigo te ayuda a mantener oración, Escritura, reflexiones y actualizaciones juntas durante una temporada más larga.'),
+      },
+    ],
+  },
+  {
+    id: 'legacy',
+    icon: Landmark,
+    title: c('Legacy', 'Legado'),
+    summary: c('Look back on God’s faithfulness through seasons, prayers, Scripture, testimony, and milestones.', 'Mira hacia atrás a la fidelidad de Dios mediante temporadas, oraciones, Escritura, testimonio e hitos.'),
+    frames: [
+      {
+        title: c('Review the journey', 'Revisa el camino'),
+        body: c('Legacy brings together long-term reflections so you can remember seasons, answered prayers, Scripture, and milestones over time.', 'Legado reúne reflexiones a largo plazo para que recuerdes temporadas, oraciones contestadas, Escritura e hitos con el paso del tiempo.'),
+      },
+      {
+        title: c('Build a testimony', 'Construye un testimonio'),
+        body: c('Use testimony, faithfulness, letters, and year review tools to record what God has taught you without turning the app into the source of that story.', 'Usa testimonio, fidelidad, cartas y revisión anual para registrar lo que Dios te ha enseñado sin convertir la app en la fuente de esa historia.'),
+      },
+      {
+        title: c('Keep private things private', 'Mantén lo privado en privado'),
+        body: c('Legacy entries stay under the same account privacy model as your other personal SOLAPATH content.', 'Las entradas de Legado permanecen bajo el mismo modelo de privacidad de cuenta que tu otro contenido personal de SOLAPATH.'),
+      },
+    ],
+  },
+  {
+    id: 'library',
+    icon: BookOpen,
+    title: c('Library & Confessions', 'Biblioteca y Confesiones'),
+    summary: c('Search trusted theological sources and browse confessional resources.', 'Busca fuentes teológicas confiables y explora recursos confesionales.'),
+    frames: [
+      {
+        title: c('Search trusted sources', 'Busca fuentes confiables'),
+        body: c('Use the theological library to search curated Reformed and historic Christian sources that support deeper study.', 'Usa la biblioteca teológica para buscar fuentes reformadas e históricas cristianas seleccionadas que apoyan un estudio más profundo.'),
+      },
+      {
+        title: c('Browse confessional resources', 'Explora recursos confesionales'),
+        body: c('Open the confessional library to review catechisms and confessional documents available inside SOLAPATH.', 'Abre la biblioteca confesional para revisar catecismos y documentos confesionales disponibles dentro de SOLAPATH.'),
+      },
+      {
+        title: c('Use sources as support', 'Usa las fuentes como apoyo'),
+        body: c('The library helps explain and contextualize doctrine, but Scripture remains the final authority for faith and practice.', 'La biblioteca ayuda a explicar y contextualizar la doctrina, pero la Escritura sigue siendo la autoridad final para la fe y la práctica.'),
       },
     ],
   },
