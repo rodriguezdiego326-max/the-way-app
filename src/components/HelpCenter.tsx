@@ -73,8 +73,8 @@ const GUIDES: HelpGuide[] = [
     id: 'overview',
     icon: Volume2,
     title: c('What is SOLAPATH?', '¿Qué es SOLAPATH?'),
-    summary: c('A narrated overview of why SOLAPATH exists and how the whole app works together.', 'Una introducción narrada sobre por qué existe SOLAPATH y cómo funciona toda la aplicación en conjunto.'),
-    narrated: true,
+    summary: c('A cinematic introduction to why SOLAPATH exists and how Scripture, family, church, prayer, and discipleship work together.', 'Una introducción cinematográfica sobre por qué existe SOLAPATH y cómo la Escritura, la familia, la iglesia, la oración y el discipulado trabajan juntos.'),
+    narrated: false,
     videoSrc: c('https://tmdozaxdvammarxsxjai.supabase.co/storage/v1/object/public/help-media/solapath-purpose-en.mp4', 'https://tmdozaxdvammarxsxjai.supabase.co/storage/v1/object/public/help-media/solapath-purpose-es.mp4'),
     frames: [
       {
