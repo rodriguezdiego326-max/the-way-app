@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Bell,
   BookOpen,
@@ -60,7 +60,6 @@ type HelpGuide = {
   title: LocalizedCopy;
   summary: LocalizedCopy;
   frames: HelpFrame[];
-  narrated?: boolean;
   videoSrc?: LocalizedCopy;
 };
 
@@ -74,7 +73,6 @@ const GUIDES: HelpGuide[] = [
     icon: Volume2,
     title: c('What is SOLAPATH?', '¿Qué es SOLAPATH?'),
     summary: c('A cinematic introduction to why SOLAPATH exists and how Scripture, family, church, prayer, and discipleship work together.', 'Una introducción cinematográfica sobre por qué existe SOLAPATH y cómo la Escritura, la familia, la iglesia, la oración y el discipulado trabajan juntos.'),
-    narrated: false,
     videoSrc: c('https://tmdozaxdvammarxsxjai.supabase.co/storage/v1/object/public/help-media/solapath-purpose-en.mp4', 'https://tmdozaxdvammarxsxjai.supabase.co/storage/v1/object/public/help-media/solapath-purpose-es.mp4'),
     frames: [
       {
@@ -452,8 +450,6 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
   const [selectedId, setSelectedId] = useState<GuideId | null>(null);
   const [frameIndex, setFrameIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [audioProgress, setAudioProgress] = useState(0);
-  const narrationRunRef = useRef(0);
 
   const selected = useMemo(
     () => GUIDES.find((guide) => guide.id === selectedId) ?? null,
@@ -462,17 +458,14 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
 
   useEffect(() => {
     if (!open) {
-      narrationRunRef.current += 1;
-      window.speechSynthesis?.cancel();
       setSelectedId(null);
       setFrameIndex(0);
       setPlaying(false);
-      setAudioProgress(0);
     }
   }, [open]);
 
   useEffect(() => {
-    if (!open || !selected || !playing || selected.narrated) return;
+    if (!open || !selected || !playing || selected.videoSrc) return;
     const timer = window.setTimeout(() => {
       if (frameIndex >= selected.frames.length - 1) {
         setPlaying(false);
@@ -483,26 +476,14 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
     return () => window.clearTimeout(timer);
   }, [frameIndex, open, playing, selected]);
 
-  useEffect(() => {
-    if (!selected?.narrated) return;
-    narrationRunRef.current += 1;
-    window.speechSynthesis?.cancel();
-    setFrameIndex(0);
-    setPlaying(false);
-    setAudioProgress(0);
-  }, [language, selected?.id, selected?.narrated]);
-
   if (!open) return null;
 
   const chooseGuide = (id: GuideId) => {
     vibrate(8);
-    narrationRunRef.current += 1;
-    window.speechSynthesis?.cancel();
     setSelectedId(id);
     setFrameIndex(0);
-    setAudioProgress(0);
     const guide = GUIDES.find((item) => item.id === id);
-    setPlaying(!guide?.narrated);
+    setPlaying(!guide?.videoSrc);
   };
 
   const close = () => {
@@ -512,92 +493,11 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
 
   const current = GUIDES.find((guide) => guide.id === currentGuideId);
   const CurrentIcon = current?.icon;
-  const speakNarratedFrame = (index: number, runId: number) => {
-    if (!selected?.narrated || !('speechSynthesis' in window)) {
-      setPlaying(false);
-      return;
-    }
-    const bounded = Math.max(0, Math.min(selected.frames.length - 1, index));
-    const frame = selected.frames[bounded];
-    const utterance = new SpeechSynthesisUtterance(
-      `${localize(frame.title, language)}. ${localize(frame.body, language)}`,
-    );
-    utterance.lang = language === 'es' ? 'es-US' : 'en-US';
-    utterance.rate = 0.92;
-    utterance.pitch = 1;
-    const preferredVoice = window.speechSynthesis
-      .getVoices()
-      .find((voice) => voice.lang.toLowerCase().startsWith(language === 'es' ? 'es' : 'en'));
-    if (preferredVoice) utterance.voice = preferredVoice;
-
-    utterance.onstart = () => {
-      if (runId !== narrationRunRef.current) return;
-      setFrameIndex(bounded);
-      setPlaying(true);
-      setAudioProgress((bounded / selected.frames.length) * 100);
-    };
-    utterance.onend = () => {
-      if (runId !== narrationRunRef.current) return;
-      const next = bounded + 1;
-      if (next >= selected.frames.length) {
-        setFrameIndex(selected.frames.length - 1);
-        setAudioProgress(100);
-        setPlaying(false);
-        return;
-      }
-      setFrameIndex(next);
-      setAudioProgress((next / selected.frames.length) * 100);
-      window.setTimeout(() => {
-        if (runId === narrationRunRef.current) speakNarratedFrame(next, runId);
-      }, 180);
-    };
-    utterance.onerror = () => {
-      if (runId !== narrationRunRef.current) return;
-      setPlaying(false);
-    };
-
-    window.speechSynthesis.speak(utterance);
-  };
-
-  const seekNarratedFrame = (nextFrame: number, shouldPlay = false) => {
-    if (!selected?.narrated) return;
-    narrationRunRef.current += 1;
-    window.speechSynthesis?.cancel();
-    const bounded = Math.max(0, Math.min(selected.frames.length - 1, nextFrame));
-    setFrameIndex(bounded);
-    setAudioProgress((bounded / selected.frames.length) * 100);
-    setPlaying(false);
-    if (shouldPlay) {
-      const runId = narrationRunRef.current;
-      window.setTimeout(() => speakNarratedFrame(bounded, runId), 80);
-    }
-  };
-
   const togglePlayback = () => {
-    if (!selected) return;
+    if (!selected || selected.videoSrc) return;
     vibrate(8);
-    if (!selected.narrated) {
-      if (frameIndex === selected.frames.length - 1 && !playing) setFrameIndex(0);
-      setPlaying((value) => !value);
-      return;
-    }
-
-    if (!('speechSynthesis' in window)) {
-      setPlaying(false);
-      return;
-    }
-    if (playing) {
-      narrationRunRef.current += 1;
-      window.speechSynthesis.cancel();
-      setPlaying(false);
-      return;
-    }
-    const startFrame = frameIndex >= selected.frames.length - 1 && audioProgress >= 100 ? 0 : frameIndex;
-    if (startFrame === 0 && frameIndex !== 0) setFrameIndex(0);
-    narrationRunRef.current += 1;
-    const runId = narrationRunRef.current;
-    window.speechSynthesis.cancel();
-    window.setTimeout(() => speakNarratedFrame(startFrame, runId), 80);
+    if (frameIndex === selected.frames.length - 1 && !playing) setFrameIndex(0);
+    setPlaying((value) => !value);
   };
 
   return (
@@ -657,17 +557,15 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-ivory-50">{localize(guide.title, language)}</p>
-                        <span className={`rounded-full px-2 py-0.5 text-[9px] uppercase tracking-wide ${guide.narrated ? 'bg-gold-500/15 text-gold-300' : 'bg-ink-700 text-ivory-500'}`}>
+                        <span className={`rounded-full px-2 py-0.5 text-[9px] uppercase tracking-wide ${guide.videoSrc ? 'bg-gold-500/15 text-gold-300' : 'bg-ink-700 text-ivory-500'}`}>
                           {guide.videoSrc
                             ? (language === 'es' ? 'película' : 'film')
-                            : guide.narrated
-                              ? (language === 'es' ? 'con narración' : 'narrated')
-                              : (language === 'es' ? 'video corto' : 'quick video')}
+                            : (language === 'es' ? 'video corto' : 'quick video')}
                         </span>
                       </div>
                       <p className="mt-1 text-xs leading-relaxed text-ivory-500">{localize(guide.summary, language)}</p>
                     </div>
-                    {guide.narrated
+                    {guide.videoSrc
                       ? <Volume2 size={16} className="shrink-0 text-gold-300" />
                       : <Play size={16} className="shrink-0 text-ivory-500" />}
                   </button>
@@ -692,11 +590,8 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
                 type="button"
                 onClick={() => {
                   vibrate(8);
-                  narrationRunRef.current += 1;
-                  window.speechSynthesis?.cancel();
                   setSelectedId(null);
                   setPlaying(false);
-                  setAudioProgress(0);
                 }}
                 className="btn-ghost"
                 aria-label={language === 'es' ? 'Volver a videos' : 'Back to videos'}
@@ -713,7 +608,7 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
                   <div className="absolute inset-x-0 top-0 h-1 bg-ink-700">
                     <div
                       className="h-full bg-gold-400 transition-all duration-500"
-                      style={{ width: `${selected.narrated ? audioProgress : ((frameIndex + 1) / selected.frames.length) * 100}%` }}
+                      style={{ width: `${((frameIndex + 1) / selected.frames.length) * 100}%` }}
                     />
                   </div>
 
@@ -752,12 +647,8 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
                     type="button"
                     onClick={() => {
                       vibrate(6);
-                      if (selected.narrated) {
-                        seekNarratedFrame(frameIndex - 1, playing);
-                      } else {
-                        setPlaying(false);
-                        setFrameIndex((index) => Math.max(0, index - 1));
-                      }
+                      setPlaying(false);
+                      setFrameIndex((index) => Math.max(0, index - 1));
                     }}
                     disabled={frameIndex === 0}
                     className="btn-ghost disabled:opacity-30"
@@ -779,18 +670,7 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
                     type="button"
                     onClick={() => {
                       vibrate(6);
-                      if (selected.narrated) {
-                        if (frameIndex >= selected.frames.length - 1) {
-                          narrationRunRef.current += 1;
-                          window.speechSynthesis?.cancel();
-                          setFrameIndex(0);
-                          setAudioProgress(0);
-                          const runId = narrationRunRef.current;
-                          window.setTimeout(() => speakNarratedFrame(0, runId), 80);
-                        } else {
-                          seekNarratedFrame(frameIndex + 1, playing);
-                        }
-                      } else if (frameIndex >= selected.frames.length - 1) {
+                      if (frameIndex >= selected.frames.length - 1) {
                         setFrameIndex(0);
                         setPlaying(true);
                       } else {
@@ -807,13 +687,9 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
               </div>
 
               <p className="mt-4 text-center text-[11px] leading-relaxed text-ivory-600">
-                {selected.narrated
-                  ? (language === 'es'
-                    ? 'La narración por voz del dispositivo y las imágenes permanecen sincronizadas mientras se reproduce.'
-                    : 'Device voice narration and visuals stay synchronized while the overview plays.')
-                  : (language === 'es'
-                    ? 'Estas guías se reproducen dentro de SOLAPATH y no abren sitios externos.'
-                    : 'These guides play inside SOLAPATH and do not open an external website.')}
+                {language === 'es'
+                  ? 'Estas guías se reproducen dentro de SOLAPATH y no abren sitios externos.'
+                  : 'These guides play inside SOLAPATH and do not open an external website.'}
               </p>
             </div>
           </div>
