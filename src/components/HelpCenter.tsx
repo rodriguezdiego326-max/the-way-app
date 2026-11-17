@@ -60,7 +60,6 @@ type HelpGuide = {
   summary: LocalizedCopy;
   frames: HelpFrame[];
   narrated?: boolean;
-  audioUrl?: LocalizedCopy;
 };
 
 const GUIDE_FRAME_MS = 4500;
@@ -74,10 +73,6 @@ const GUIDES: HelpGuide[] = [
     title: c('What is SOLAPATH?', '¿Qué es SOLAPATH?'),
     summary: c('A narrated overview of why SOLAPATH exists and how the whole app works together.', 'Una introducción narrada sobre por qué existe SOLAPATH y cómo funciona toda la aplicación en conjunto.'),
     narrated: true,
-    audioUrl: c(
-      'https://www.aidocmaker.com/g0/audio?name=5c029fcf96c34d5798243cc07334a359',
-      'https://www.aidocmaker.com/g0/audio?name=1bcd677049664ee1bece62f5d094e84a',
-    ),
     frames: [
       {
         title: c('Scripture at the center', 'La Escritura en el centro'),
@@ -455,7 +450,7 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
   const [frameIndex, setFrameIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const narrationRunRef = useRef(0);
 
   const selected = useMemo(
     () => GUIDES.find((guide) => guide.id === selectedId) ?? null,
@@ -464,7 +459,8 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
 
   useEffect(() => {
     if (!open) {
-      audioRef.current?.pause();
+      narrationRunRef.current += 1;
+      window.speechSynthesis?.cancel();
       setSelectedId(null);
       setFrameIndex(0);
       setPlaying(false);
@@ -486,10 +482,8 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
 
   useEffect(() => {
     if (!selected?.narrated) return;
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.pause();
-    audio.currentTime = 0;
+    narrationRunRef.current += 1;
+    window.speechSynthesis?.cancel();
     setFrameIndex(0);
     setPlaying(false);
     setAudioProgress(0);
@@ -499,7 +493,8 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
 
   const chooseGuide = (id: GuideId) => {
     vibrate(8);
-    audioRef.current?.pause();
+    narrationRunRef.current += 1;
+    window.speechSynthesis?.cancel();
     setSelectedId(id);
     setFrameIndex(0);
     setAudioProgress(0);
@@ -514,20 +509,64 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
 
   const current = GUIDES.find((guide) => guide.id === currentGuideId);
   const CurrentIcon = current?.icon;
-  const narratedAudioUrl = selected?.narrated && selected.audioUrl
-    ? localize(selected.audioUrl, language)
-    : null;
+  const speakNarratedFrame = (index: number, runId: number) => {
+    if (!selected?.narrated || !('speechSynthesis' in window)) {
+      setPlaying(false);
+      return;
+    }
+    const bounded = Math.max(0, Math.min(selected.frames.length - 1, index));
+    const frame = selected.frames[bounded];
+    const utterance = new SpeechSynthesisUtterance(
+      `${localize(frame.title, language)}. ${localize(frame.body, language)}`,
+    );
+    utterance.lang = language === 'es' ? 'es-US' : 'en-US';
+    utterance.rate = 0.92;
+    utterance.pitch = 1;
+    const preferredVoice = window.speechSynthesis
+      .getVoices()
+      .find((voice) => voice.lang.toLowerCase().startsWith(language === 'es' ? 'es' : 'en'));
+    if (preferredVoice) utterance.voice = preferredVoice;
+
+    utterance.onstart = () => {
+      if (runId !== narrationRunRef.current) return;
+      setFrameIndex(bounded);
+      setPlaying(true);
+      setAudioProgress((bounded / selected.frames.length) * 100);
+    };
+    utterance.onend = () => {
+      if (runId !== narrationRunRef.current) return;
+      const next = bounded + 1;
+      if (next >= selected.frames.length) {
+        setFrameIndex(selected.frames.length - 1);
+        setAudioProgress(100);
+        setPlaying(false);
+        return;
+      }
+      setFrameIndex(next);
+      setAudioProgress((next / selected.frames.length) * 100);
+      window.setTimeout(() => {
+        if (runId === narrationRunRef.current) speakNarratedFrame(next, runId);
+      }, 180);
+    };
+    utterance.onerror = () => {
+      if (runId !== narrationRunRef.current) return;
+      setPlaying(false);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
 
   const seekNarratedFrame = (nextFrame: number, shouldPlay = false) => {
     if (!selected?.narrated) return;
-    const audio = audioRef.current;
-    if (!audio || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+    narrationRunRef.current += 1;
+    window.speechSynthesis?.cancel();
     const bounded = Math.max(0, Math.min(selected.frames.length - 1, nextFrame));
-    audio.currentTime = (bounded / selected.frames.length) * audio.duration;
     setFrameIndex(bounded);
     setAudioProgress((bounded / selected.frames.length) * 100);
+    setPlaying(false);
     if (shouldPlay) {
-      void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+      const runId = narrationRunRef.current;
+      window.setTimeout(() => speakNarratedFrame(bounded, runId), 80);
     }
   };
 
@@ -540,15 +579,22 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
       return;
     }
 
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (playing) {
-      audio.pause();
+    if (!('speechSynthesis' in window)) {
       setPlaying(false);
       return;
     }
-    if (audio.ended || audio.currentTime >= audio.duration) audio.currentTime = 0;
-    void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    if (playing) {
+      narrationRunRef.current += 1;
+      window.speechSynthesis.cancel();
+      setPlaying(false);
+      return;
+    }
+    const startFrame = frameIndex >= selected.frames.length - 1 && audioProgress >= 100 ? 0 : frameIndex;
+    if (startFrame === 0 && frameIndex !== 0) setFrameIndex(0);
+    narrationRunRef.current += 1;
+    const runId = narrationRunRef.current;
+    window.speechSynthesis.cancel();
+    window.setTimeout(() => speakNarratedFrame(startFrame, runId), 80);
   };
 
   return (
@@ -717,13 +763,12 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
                       vibrate(6);
                       if (selected.narrated) {
                         if (frameIndex >= selected.frames.length - 1) {
-                          const audio = audioRef.current;
-                          if (audio) {
-                            audio.currentTime = 0;
-                            setFrameIndex(0);
-                            setAudioProgress(0);
-                            void audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
-                          }
+                          narrationRunRef.current += 1;
+                          window.speechSynthesis?.cancel();
+                          setFrameIndex(0);
+                          setAudioProgress(0);
+                          const runId = narrationRunRef.current;
+                          window.setTimeout(() => speakNarratedFrame(0, runId), 80);
                         } else {
                           seekNarratedFrame(frameIndex + 1, playing);
                         }
@@ -743,37 +788,11 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
                 </div>
               </div>
 
-              {narratedAudioUrl && (
-                <audio
-                  ref={audioRef}
-                  src={narratedAudioUrl}
-                  preload="metadata"
-                  onPlay={() => setPlaying(true)}
-                  onPause={() => setPlaying(false)}
-                  onEnded={() => {
-                    setPlaying(false);
-                    setFrameIndex(selected.frames.length - 1);
-                    setAudioProgress(100);
-                  }}
-                  onTimeUpdate={(event) => {
-                    const audio = event.currentTarget;
-                    if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
-                    const progress = Math.min(100, Math.max(0, (audio.currentTime / audio.duration) * 100));
-                    setAudioProgress(progress);
-                    const nextFrame = Math.min(
-                      selected.frames.length - 1,
-                      Math.floor((audio.currentTime / audio.duration) * selected.frames.length),
-                    );
-                    setFrameIndex(nextFrame);
-                  }}
-                />
-              )}
-
               <p className="mt-4 text-center text-[11px] leading-relaxed text-ivory-600">
                 {selected.narrated
                   ? (language === 'es'
-                    ? 'La narración y las imágenes permanecen sincronizadas mientras se reproduce.'
-                    : 'Narration and visuals stay synchronized while the overview plays.')
+                    ? 'La narración por voz del dispositivo y las imágenes permanecen sincronizadas mientras se reproduce.'
+                    : 'Device voice narration and visuals stay synchronized while the overview plays.')
                   : (language === 'es'
                     ? 'Estas guías se reproducen dentro de SOLAPATH y no abren sitios externos.'
                     : 'These guides play inside SOLAPATH and do not open an external website.')}
