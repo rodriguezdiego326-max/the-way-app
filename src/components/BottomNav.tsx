@@ -1,6 +1,8 @@
-import { Home, BookOpen, MessageSquare, Heart, Compass } from 'lucide-react';
+import { useState } from 'react';
+import { Home, BookOpen, MessageSquare, Heart, Compass, HelpCircle } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n';
+import HelpCenter, { type GuideId } from '@/components/HelpCenter';
 
 export type Tab = 'today' | 'bible' | 'ask' | 'prayer' | 'explore';
 
@@ -8,6 +10,7 @@ interface BottomNavProps {
   active: Tab;
   onChange: (tab: Tab) => void;
   badges?: Partial<Record<Tab, number>>;
+  helpGuideId?: GuideId;
 }
 
 const tabs: { id: Tab; label: string; icon: typeof Home }[] = [
@@ -18,10 +21,28 @@ const tabs: { id: Tab; label: string; icon: typeof Home }[] = [
   { id: 'explore', label: 'Explore', icon: Compass },
 ];
 
-export default function BottomNav({ active, onChange, badges }: BottomNavProps) {
-  const { t } = useLanguage();
+export default function BottomNav({ active, onChange, badges, helpGuideId }: BottomNavProps) {
+  const { t, language } = useLanguage();
+  const [helpOpen, setHelpOpen] = useState(false);
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-50 safe-bottom">
+    <>
+      <button
+        type="button"
+        onClick={() => { vibrate(8); setHelpOpen(true); }}
+        aria-label={language === 'es' ? 'Abrir ayuda y videos' : 'Open help and videos'}
+        className="fixed right-4 z-[55] flex h-11 w-11 items-center justify-center rounded-full border border-gold-500/30 bg-ink-850/95 text-gold-200 shadow-2xl backdrop-blur-xl no-tap-highlight"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 92px)' }}
+      >
+        <HelpCircle size={19} />
+      </button>
+
+      <HelpCenter
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        currentGuideId={helpGuideId ?? active}
+      />
+
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-50 safe-bottom">
       <div className="mx-2 mb-2 rounded-3xl bg-ink-850/90 backdrop-blur-2xl border border-ink-700/50 shadow-2xl shadow-stone-900/15">
         <div className="flex items-stretch px-2 py-1.5">
           {tabs.map(({ id, label, icon: Icon }) => {
@@ -74,6 +95,7 @@ export default function BottomNav({ active, onChange, badges }: BottomNavProps) 
           })}
         </div>
       </div>
-    </nav>
+      </nav>
+    </>
   );
 }
