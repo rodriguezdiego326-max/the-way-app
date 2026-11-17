@@ -718,6 +718,7 @@ function AppContent() {
               setActiveTab(tab);
             }}
             badges={{ explore: activityCounts?.total ?? 0 }}
+            helpGuideId="family"
           />
         </>
       </ErrorBoundary>
