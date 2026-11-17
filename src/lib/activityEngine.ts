@@ -133,11 +133,13 @@ export async function saveActivityPreferences(userId: string, patch: Partial<Act
 }
 
 export function subscribeToActivity(userId: string, onChange: () => void): () => void {
+  // RLS on activity_notifications already limits Postgres Changes to rows this user can read.
+  // Avoid a Realtime column filter here; it can fail subscription setup when Realtime's schema cache is stale.
   const channel = supabase
     .channel(`activity:${userId}`)
     .on(
       'postgres_changes',
-      { event: '*', schema: 'public', table: 'activity_notifications', filter: `recipient_profile_id=eq.${userId}` },
+      { event: '*', schema: 'public', table: 'activity_notifications' },
       () => onChange(),
     )
     .subscribe();
