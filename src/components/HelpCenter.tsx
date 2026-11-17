@@ -19,7 +19,6 @@ import {
   ShieldCheck,
   Users,
   X,
-  type LucideIcon,
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n';
 import { vibrate } from '@/lib/utils';
@@ -54,7 +53,7 @@ type HelpFrame = {
 
 type HelpGuide = {
   id: GuideId;
-  icon: LucideIcon;
+  icon: typeof Home;
   title: LocalizedCopy;
   summary: LocalizedCopy;
   frames: HelpFrame[];
@@ -370,7 +369,7 @@ const GUIDES: HelpGuide[] = [
 interface Props {
   open: boolean;
   onClose: () => void;
-  currentGuideId?: string;
+  currentGuideId?: GuideId;
 }
 
 function localize(copy: LocalizedCopy, language: 'en' | 'es'): string {
@@ -423,6 +422,7 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
   };
 
   const current = GUIDES.find((guide) => guide.id === currentGuideId);
+  const CurrentIcon = current?.icon;
 
   return (
     <div className="fixed inset-0 z-[140] flex items-end justify-center bg-ink-950/75 backdrop-blur-sm animate-fade-in">
@@ -446,7 +446,7 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
 
         {!selected ? (
           <div className="flex-1 overflow-y-auto px-5 pb-10 pt-5">
-            {current && (
+            {current && CurrentIcon && (
               <button
                 type="button"
                 onClick={() => chooseGuide(current.id)}
@@ -454,7 +454,7 @@ export default function HelpCenter({ open, onClose, currentGuideId }: Props) {
               >
                 <p className="ui-label text-gold-300">{language === 'es' ? 'Tu sección actual' : 'Your current section'}</p>
                 <div className="mt-2 flex items-center gap-3">
-                  <current.icon size={20} className="text-gold-300" />
+                  <CurrentIcon size={20} className="text-gold-300" />
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-ivory-50">{localize(current.title, language)}</p>
                     <p className="mt-0.5 text-xs leading-relaxed text-ivory-400">{localize(current.summary, language)}</p>
