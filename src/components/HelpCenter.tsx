@@ -75,7 +75,7 @@ const GUIDES: HelpGuide[] = [
     title: c('What is SOLAPATH?', '¿Qué es SOLAPATH?'),
     summary: c('A narrated overview of why SOLAPATH exists and how the whole app works together.', 'Una introducción narrada sobre por qué existe SOLAPATH y cómo funciona toda la aplicación en conjunto.'),
     narrated: true,
-    videoSrc: c('/videos/solapath-purpose-en.mp4', '/videos/solapath-purpose-es.mp4'),
+    videoSrc: c('https://tmdozaxdvammarxsxjai.supabase.co/storage/v1/object/public/help-media/solapath-purpose-en.mp4', 'https://tmdozaxdvammarxsxjai.supabase.co/storage/v1/object/public/help-media/solapath-purpose-es.mp4'),
     frames: [
       {
         title: c('Scripture at the center', 'La Escritura en el centro'),
