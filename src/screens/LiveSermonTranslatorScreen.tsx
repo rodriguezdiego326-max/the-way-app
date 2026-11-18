@@ -84,7 +84,7 @@ export default function LiveSermonTranslatorScreen({ onBack }: Props) {
         onSourceDelta: (delta) => setSourceTranscript((current) => current + delta),
         onTranslationDelta: (delta) => setTranslatedTranscript((current) => current + delta),
         onStateChange: (state) => setConnectionState(state),
-        onError: (message) => setError(message),
+        onError: (message) => setError(t(message)),
       });
       sessionRef.current = session;
       timerRef.current = window.setInterval(() => {
@@ -93,7 +93,7 @@ export default function LiveSermonTranslatorScreen({ onBack }: Props) {
     } catch (cause) {
       sessionRef.current = null;
       setConnectionState('closed');
-      setError(cause instanceof Error ? cause.message : t('Live translation could not start. Please try again.'));
+      setError(cause instanceof Error ? t(cause.message) : t('Live translation could not start. Please try again.'));
     }
   }
 
@@ -105,7 +105,7 @@ export default function LiveSermonTranslatorScreen({ onBack }: Props) {
       await session.setTranslatedAudioEnabled(next);
       setTranslatedAudioEnabled(next);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('Translated audio could not play.'));
+      setError(cause instanceof Error ? t(cause.message) : t('Translated audio could not play.'));
     }
   }
 
