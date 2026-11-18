@@ -59,6 +59,7 @@ import AdminApprovalCenterScreen from '@/screens/AdminApprovalCenterScreen';
 import SundayModeScreen from '@/screens/SundayModeScreen';
 import SermonNotesScreen from '@/screens/SermonNotesScreen';
 import SermonAssistantScreen from '@/screens/SermonAssistantScreen';
+import LiveSermonTranslatorScreen from '@/screens/LiveSermonTranslatorScreen';
 import SermonRecordingScreen from '@/screens/SermonRecordingScreen';
 import SermonRecordingDetailScreen from '@/screens/SermonRecordingDetailScreen';
 import SermonFollowUpScreen from '@/screens/SermonFollowUpScreen';
@@ -139,6 +140,7 @@ export type Overlay =
   | { type: 'sunday_mode' }
   | { type: 'sermon_notes' }
   | { type: 'sermon_assistant' }
+  | { type: 'live_sermon_translator' }
   | { type: 'sermon_recording' }
   | { type: 'sermon_recording_detail'; recordingId: string; fresh: boolean; interrupted: boolean; initialView?: 'details' | 'insights' }
   | { type: 'sermon_follow_up'; sermon: Sermon }
@@ -966,7 +968,16 @@ function AppContent() {
         profile={profile}
         onBack={() => setOverlay({ type: 'my_church' })}
         onRecord={() => setOverlay({ type: 'sermon_recording' })}
+        onLiveTranslate={() => setOverlay({ type: 'live_sermon_translator' })}
         onOpenRecording={(recordingId) => setOverlay({ type: 'sermon_recording_detail', recordingId, fresh: false, interrupted: false })}
+      />,
+    );
+  }
+
+  if (overlay.type === 'live_sermon_translator' && profile) {
+    return renderOverlayWithHome(
+      <LiveSermonTranslatorScreen
+        onBack={() => setOverlay({ type: 'sermon_assistant' })}
       />,
     );
   }
