@@ -14,7 +14,7 @@ interface Props {
 
 type Direction = 'en-es' | 'es-en';
 
-const MAX_SESSION_SECONDS = 90 * 60;
+const MAX_SESSION_SECONDS = 60 * 60;
 
 function formatClock(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60);
@@ -37,7 +37,7 @@ export default function LiveSermonTranslatorScreen({ onBack }: Props) {
   const active = connectionState !== 'closed';
   const sourceLanguage = direction === 'en-es' ? t('English') : t('Spanish');
   const targetLanguage = direction === 'en-es' ? t('Spanish') : t('English');
-  const targetCode = direction === 'en-es' ? 'es' : 'en';
+  const sourceCode = direction === 'en-es' ? 'en' : 'es';\n  const targetCode = direction === 'en-es' ? 'es' : 'en';
 
   function clearTimer() {
     if (timerRef.current !== null) {
@@ -65,7 +65,7 @@ export default function LiveSermonTranslatorScreen({ onBack }: Props) {
   useEffect(() => {
     if (!active) return;
     if (elapsedSeconds < MAX_SESSION_SECONDS) return;
-    setError(t('The 90-minute beta session limit was reached. Start a new session to continue.'));
+    setError(t('The 90-minute beta session limit was reached. Start a new session to continue.').replace('90', '60'));
     stopSession();
   }, [active, elapsedSeconds, t]);
 
@@ -182,7 +182,7 @@ export default function LiveSermonTranslatorScreen({ onBack }: Props) {
                 <Mic size={17} /> {t('Start Live Translation')}
               </button>
               <p className="text-ivory-600 text-xs leading-relaxed mt-3 text-center">
-                {t('Beta sessions are limited to 90 minutes. Live translated audio is off by default.')}
+                {t('Beta sessions are limited to 90 minutes. Live translated audio is off by default.').replace('90', '60')}
               </p>
             </div>
           ) : (
