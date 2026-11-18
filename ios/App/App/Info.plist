@@ -83,7 +83,7 @@
 		<string>audio</string>
 	</array>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>SOLAPATH uses the microphone when you choose to record a sermon for Sermon Assistant.</string>
+	<string>SOLAPATH uses the microphone when you choose to record a sermon or use live sermon translation.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>
