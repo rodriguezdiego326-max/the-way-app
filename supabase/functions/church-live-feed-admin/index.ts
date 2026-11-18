@@ -9,6 +9,7 @@ const corsHeaders = {
 };
 
 const LEADERSHIP_ROLES = new Set(["PASTOR", "CHURCH_ADMIN", "ELDER", "LEADER"]);
+const TRANSLATION_AGENT_NAME = "solapath-sermon-translator";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -23,6 +24,37 @@ function serverHost(url: string) {
 
 function clientHost(url: string) {
   return url.replace(/^https:/i, "wss:").replace(/^http:/i, "ws:");
+}
+
+async function ensureTranslationAgent(
+  api: LiveKitAPI,
+  roomName: string,
+  churchId: string,
+  sourceLanguage: "en" | "es",
+  targetLanguage: "en" | "es",
+) {
+  try {
+    const existing = await api.agentDispatch.listDispatch(roomName);
+    const active = existing.find((item) => item.agentName === TRANSLATION_AGENT_NAME);
+    if (active) return { status: "ready", dispatchId: active.id };
+
+    const dispatch = await api.agentDispatch.createDispatch(
+      roomName,
+      TRANSLATION_AGENT_NAME,
+      {
+        metadata: JSON.stringify({
+          churchId,
+          sourceLanguage,
+          targetLanguage,
+          sourceParticipantIdentity: `church-feed-${churchId}`,
+        }),
+      },
+    );
+    return { status: "ready", dispatchId: dispatch.id };
+  } catch (cause) {
+    console.warn("church-live-feed-admin: translation agent dispatch pending", cause);
+    return { status: "pending", dispatchId: null };
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -142,12 +174,26 @@ Deno.serve(async (req: Request) => {
       return json({ error: "livekit_not_configured" }, 503);
     }
 
+    const api = new LiveKitAPI({
+      host: serverHost(livekitUrl),
+      apiKey: livekitApiKey,
+      secret: livekitApiSecret,
+    });
+
     const { data: savedConfig } = await serviceClient.rpc(
       "get_church_live_provider_config_for_service",
       { p_church_id: churchId },
     );
     const prior = Array.isArray(savedConfig) ? savedConfig[0] : null;
     if (prior?.ingress_url && prior?.ingress_id) {
+      const agent = await ensureTranslationAgent(
+        api,
+        prior.room_name,
+        churchId,
+        sourceLanguage,
+        targetLanguage,
+      );
+
       await userClient
         .from("church_live_translation_settings")
         .update({
@@ -166,14 +212,9 @@ Deno.serve(async (req: Request) => {
         streamKey: prior.stream_key,
         roomName: prior.room_name,
         reused: true,
+        agentStatus: agent.status,
       });
     }
-
-    const api = new LiveKitAPI({
-      host: serverHost(livekitUrl),
-      apiKey: livekitApiKey,
-      secret: livekitApiSecret,
-    });
 
     const roomName = `church-${churchId}`;
     const ingress = await api.ingress.createIngress(
@@ -183,6 +224,10 @@ Deno.serve(async (req: Request) => {
         roomName,
         participantIdentity: `church-feed-${churchId}`,
         participantName: "Church Sermon Feed",
+        participantMetadata: JSON.stringify({
+          role: "sermon_source",
+          churchId,
+        }),
         enableTranscoding: inputType === "rtmp",
       },
     );
@@ -212,6 +257,14 @@ Deno.serve(async (req: Request) => {
     );
     if (saveError) return json({ error: "provider_config_save_failed" }, 500);
 
+    const agent = await ensureTranslationAgent(
+      api,
+      roomName,
+      churchId,
+      sourceLanguage,
+      targetLanguage,
+    );
+
     await userClient
       .from("church_live_translation_settings")
       .update({
@@ -230,6 +283,7 @@ Deno.serve(async (req: Request) => {
       streamKey: ingress.streamKey ?? null,
       roomName,
       reused: false,
+      agentStatus: agent.status,
     });
   }
 
