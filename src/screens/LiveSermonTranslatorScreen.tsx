@@ -37,7 +37,8 @@ export default function LiveSermonTranslatorScreen({ onBack }: Props) {
   const active = connectionState !== 'closed';
   const sourceLanguage = direction === 'en-es' ? t('English') : t('Spanish');
   const targetLanguage = direction === 'en-es' ? t('Spanish') : t('English');
-  const sourceCode = direction === 'en-es' ? 'en' : 'es';\n  const targetCode = direction === 'en-es' ? 'es' : 'en';
+  const sourceCode = direction === 'en-es' ? 'en' : 'es';
+  const targetCode = direction === 'en-es' ? 'es' : 'en';
 
   function clearTimer() {
     if (timerRef.current !== null) {
