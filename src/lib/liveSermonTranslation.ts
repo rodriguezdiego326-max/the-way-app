@@ -144,6 +144,7 @@ export async function startLiveSermonTranslation(
   let captionConnected = false;
   let responseInProgress = false;
   let responseQueued = false;
+  let responseWatchdog: number | null = null;
   let stopped = false;
 
   const updateConnectedState = () => {
@@ -152,9 +153,17 @@ export async function startLiveSermonTranslation(
     }
   };
 
+  const clearResponseWatchdog = () => {
+    if (responseWatchdog !== null) {
+      window.clearTimeout(responseWatchdog);
+      responseWatchdog = null;
+    }
+  };
+
   const cleanup = () => {
     if (stopped) return;
     stopped = true;
+    clearResponseWatchdog();
     sourceStream.getTracks().forEach((track) => track.stop());
     captionTrack.stop();
     translatedAudio.pause();
@@ -211,6 +220,7 @@ export async function startLiveSermonTranslation(
         return;
       }
 
+      clearResponseWatchdog();
       responseQueued = false;
       responseInProgress = true;
       translationEvents.send(JSON.stringify({
@@ -221,12 +231,27 @@ export async function startLiveSermonTranslation(
       }));
     };
 
+    const scheduleResponseFallback = () => {
+      clearResponseWatchdog();
+      responseWatchdog = window.setTimeout(() => {
+        responseWatchdog = null;
+        if (!stopped && !responseInProgress) {
+          responseQueued = true;
+          requestQueuedResponse();
+        }
+      }, 1200);
+    };
+
     translationEvents.onmessage = ({ data: raw }) => {
       try {
         const event = JSON.parse(String(raw)) as RealtimeEvent;
 
         if (event.type === 'input_audio_buffer.committed') {
-          if (responseInProgress) responseQueued = true;
+          if (responseInProgress) {
+            responseQueued = true;
+          } else {
+            scheduleResponseFallback();
+          }
           return;
         }
 
@@ -253,11 +278,13 @@ export async function startLiveSermonTranslation(
         }
 
         if (event.type === 'response.created') {
+          clearResponseWatchdog();
           responseInProgress = true;
           return;
         }
 
         if (event.type === 'response.done') {
+          clearResponseWatchdog();
           responseInProgress = false;
           if (event.response?.status && event.response.status !== 'completed') {
             callbacks.onError?.('The live translation session reported an error.');
