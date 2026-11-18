@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { X, Church, Plus, ChevronRight, Search, MapPin, Globe, BookOpen, Heart, Users, Sun, LogOut, Check, Pencil, Mic } from 'lucide-react';
+import { X, Church, Plus, ChevronRight, Search, MapPin, Globe, BookOpen, Heart, Users, Sun, LogOut, Check, Pencil, Mic, Radio } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import PullToRefresh from '@/components/PullToRefresh';
@@ -16,6 +16,7 @@ import type { ChurchProfile, ChurchMembership, ChurchStudy, ChurchPrayerItem, Ch
 import { CHURCH_ROLES } from '@/lib/togetherTypes';
 import { isAppleChurchSearchAvailable, searchChurches as searchAppleChurches, type AppleChurchResult } from '@/lib/churchSearchNative';
 import { mergeChurchSearchResults, type ChurchSearchResult } from '@/lib/churchSearchMerge';
+import { useLanguage } from '@/lib/i18n';
 
 interface Props {
   profile: Profile;
@@ -25,6 +26,7 @@ interface Props {
   onOpenSundayMode: () => void;
   onOpenSermonNotes: () => void;
   onOpenSermonAssistant: () => void;
+  onOpenLiveTranslation: () => void;
   onOpenChurchStudies: () => void;
   onOpenManageChurchStudies: () => void;
   onOpenChurchPrayer: () => void;
@@ -41,8 +43,9 @@ interface ChurchWithMeta {
 }
 
 export default function MyChurchScreen({
-  profile, activeChurchId, onActiveChurchChange, onBack, onOpenSundayMode, onOpenSermonNotes, onOpenSermonAssistant, onOpenChurchStudies, onOpenManageChurchStudies, onOpenChurchPrayer, onOpenSmallGroups,
+  profile, activeChurchId, onActiveChurchChange, onBack, onOpenSundayMode, onOpenSermonNotes, onOpenSermonAssistant, onOpenLiveTranslation, onOpenChurchStudies, onOpenManageChurchStudies, onOpenChurchPrayer, onOpenSmallGroups,
 }: Props) {
+  const { t } = useLanguage();
   const [memberships, setMemberships] = useState<ChurchWithMeta[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -377,6 +380,7 @@ export default function MyChurchScreen({
                 <ChurchActionCard icon={Sun} label="Sunday Mode" desc="Prepare your heart for worship" onClick={onOpenSundayMode} />
                 <ChurchActionCard icon={BookOpen} label="Sermon Notes" desc={sermonNoteCount === 0 ? 'No studies available' : `${sermonNoteCount} ${sermonNoteCount === 1 ? 'study' : 'studies'} available`} onClick={onOpenSermonNotes} />
                 <ChurchActionCard icon={Mic} label="Sermon Assistant" desc="Record a sermon and build notes as you listen." onClick={onOpenSermonAssistant} />
+                <ChurchActionCard icon={Radio} label={t('Live Sermon Translation')} desc={t('Use your church’s clean sermon feed or microphone fallback.')} onClick={onOpenLiveTranslation} />
                 <ChurchActionCard icon={BookOpen} label="From My Church" desc={`${active.studies.length} church studies`} onClick={onOpenChurchStudies} />
                 <ChurchActionCard icon={Heart} label="Church Prayer" desc={`${active.prayerItems.length} prayer items`} onClick={onOpenChurchPrayer} />
                 <ChurchActionCard icon={Users} label="Small Groups" desc={`${active.groups.length} groups`} onClick={onOpenSmallGroups} />
