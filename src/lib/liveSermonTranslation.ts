@@ -121,10 +121,15 @@ export async function startLiveSermonTranslation(
       }
     };
 
+    events.onerror = () => {
+      callbacks.onError?.('The live translation session reported an error.');
+    };
+
     peer.onconnectionstatechange = () => {
       if (peer.connectionState === 'connected') callbacks.onStateChange?.('connected');
       if (peer.connectionState === 'failed') {
         callbacks.onError?.('The live translation connection was lost.');
+        cleanup();
       }
     };
 
