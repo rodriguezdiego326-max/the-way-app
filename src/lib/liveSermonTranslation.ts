@@ -20,7 +20,12 @@ interface TranslationSecretResponse {
   expires_at?: unknown;
 }
 
+type BufferedRTCRtpReceiver = RTCRtpReceiver & {
+  jitterBufferTarget?: number | null;
+};
+
 const OPENAI_TRANSLATION_CALLS_URL = 'https://api.openai.com/v1/realtime/translations/calls';
+const SMOOTH_TRANSLATION_BUFFER_MS = 1500;
 
 function messageFromFunctionError(error: unknown): string {
   const response = (error as { context?: unknown } | null)?.context;
@@ -85,7 +90,19 @@ export async function startLiveSermonTranslation(
     if (!sourceTrack) throw new Error('No microphone audio track was available.');
     peer.addTrack(sourceTrack, sourceStream);
 
-    peer.ontrack = ({ streams }) => {
+    peer.ontrack = ({ streams, receiver }) => {
+      const bufferedReceiver = receiver as BufferedRTCRtpReceiver;
+      if ('jitterBufferTarget' in bufferedReceiver) {
+        try {
+          // Hold a small amount of translated audio before playout so short
+          // delivery stalls are absorbed instead of becoming mid-phrase cuts.
+          bufferedReceiver.jitterBufferTarget = SMOOTH_TRANSLATION_BUFFER_MS;
+        } catch {
+          // Older WebViews can expose the receiver without supporting the hint.
+          // Fall back to their normal WebRTC buffering without interrupting audio.
+        }
+      }
+
       const stream = streams[0];
       if (stream) {
         translatedAudio.srcObject = stream;
