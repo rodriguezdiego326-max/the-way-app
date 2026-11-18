@@ -158,7 +158,7 @@ Deno.serve(async (req: Request) => {
                 noise_reduction: { type: "far_field" },
                 turn_detection: {
                   type: "semantic_vad",
-                  eagerness: "low",
+                  eagerness: "medium",
                   create_response: false,
                   interrupt_response: false,
                 },
