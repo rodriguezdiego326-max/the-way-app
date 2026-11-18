@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Mic, ChevronRight, AudioLines } from 'lucide-react';
+import { X, Mic, ChevronRight, AudioLines, Languages } from 'lucide-react';
 import { vibrate, formatDate, formatDuration } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import { listSermonRecordings, type SermonRecordingMeta } from '@/lib/sermonRecordingStore';
@@ -11,10 +11,11 @@ interface Props {
   profile: Profile;
   onBack: () => void;
   onRecord: () => void;
+  onLiveTranslate: () => void;
   onOpenRecording: (recordingId: string) => void;
 }
 
-export default function SermonAssistantScreen({ profile, onBack, onRecord, onOpenRecording }: Props) {
+export default function SermonAssistantScreen({ profile, onBack, onRecord, onLiveTranslate, onOpenRecording }: Props) {
   const { t } = useLanguage();
   const recorderAvailable = isSermonRecorderAvailable();
   const [recordings, setRecordings] = useState<SermonRecordingMeta[]>([]);
@@ -62,6 +63,22 @@ export default function SermonAssistantScreen({ profile, onBack, onRecord, onOpe
                 ? t('Transcription and sermon insights will be added after recording is complete.')
                 : t('The Android app is enabled for testing now. Native sermon recording remains iPhone-only until the Android recorder is added.')}
             </p>
+          </div>
+
+          <div className="premium-card p-6 mb-6">
+            <div className="w-12 h-12 rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center mb-4">
+              <Languages size={20} className="text-gold-300" />
+            </div>
+            <h3 className="font-serif text-2xl text-ivory-50 leading-tight mb-2">{t('Live Sermon Translator')}</h3>
+            <p className="text-ivory-400 text-sm leading-relaxed mb-5">
+              {t('Translate a sermon live between English and Spanish with on-screen captions and optional translated audio.')}
+            </p>
+            <button
+              onClick={() => { vibrate(10); onLiveTranslate(); }}
+              className="btn-secondary w-full"
+            >
+              <Languages size={16} /> {t('Open Live Translator')}
+            </button>
           </div>
 
           <p className="ui-label mb-3">{t('Saved Recordings')}</p>
