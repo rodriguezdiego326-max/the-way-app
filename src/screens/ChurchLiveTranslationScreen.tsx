@@ -4,6 +4,7 @@ import { useLanguage } from '@/lib/i18n';
 import { vibrate } from '@/lib/utils';
 import type { ChurchMembership } from '@/lib/togetherTypes';
 import { isVerifiedChurchLeadership } from '@/lib/togetherTypes';
+import { getChurch, getChurchMembershipForChurch } from '@/lib/churchEngine';
 import {
   getChurchLiveFeedCredentials,
   getChurchLiveTranslationSettings,
@@ -15,9 +16,8 @@ import {
 } from '@/lib/churchLiveTranslationEngine';
 
 interface Props {
+  profileId: string;
   churchId: string | null;
-  churchName: string | null;
-  membership: ChurchMembership | null;
   onBack: () => void;
   onOpenMicrophoneTranslator: () => void;
 }
@@ -42,13 +42,14 @@ function selectedButton(selected: boolean) {
 }
 
 export default function ChurchLiveTranslationScreen({
+  profileId,
   churchId,
-  churchName,
-  membership,
   onBack,
   onOpenMicrophoneTranslator,
 }: Props) {
   const { t } = useLanguage();
+  const [churchName, setChurchName] = useState<string | null>(null);
+  const [membership, setMembership] = useState<ChurchMembership | null>(null);
   const [settings, setSettings] = useState<ChurchLiveTranslationSettings | null>(null);
   const [credentials, setCredentials] = useState<ChurchLiveFeedCredentials | null>(null);
   const [inputType, setInputType] = useState<ChurchLiveInputType>('rtmp');
@@ -79,8 +80,14 @@ export default function ChurchLiveTranslationScreen({
       }
 
       setLoading(true);
-      const next = await getChurchLiveTranslationSettings(churchId);
+      const [church, member, next] = await Promise.all([
+        getChurch(churchId),
+        getChurchMembershipForChurch(profileId, churchId),
+        getChurchLiveTranslationSettings(churchId),
+      ]);
       if (cancelled) return;
+      setChurchName(church?.name ?? null);
+      setMembership(member);
       setSettings(next);
 
       if (next) {
@@ -99,7 +106,7 @@ export default function ChurchLiveTranslationScreen({
 
     void load();
     return () => { cancelled = true; };
-  }, [churchId, isLeadership]);
+  }, [churchId, isLeadership, profileId]);
 
   function selectDirection(source: ChurchLiveLanguage) {
     setSourceLanguage(source);
