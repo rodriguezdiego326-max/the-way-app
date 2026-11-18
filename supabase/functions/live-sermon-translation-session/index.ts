@@ -74,7 +74,13 @@ Deno.serve(async (req: Request) => {
         body: JSON.stringify({
           session: {
             model: "gpt-realtime-translate",
-            audio: { output: { language: targetLanguage } },
+            audio: {
+              input: {
+                transcription: { model: "gpt-realtime-whisper" },
+                noise_reduction: { type: "far_field" },
+              },
+              output: { language: targetLanguage },
+            },
           },
         }),
         signal: AbortSignal.timeout(15_000),
