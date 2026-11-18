@@ -77,6 +77,9 @@ create table if not exists private.church_live_provider_config (
 revoke all on table private.church_live_provider_config
 from public, anon, authenticated;
 
+grant usage on schema private to service_role;
+grant select, insert, update on table private.church_live_provider_config to service_role;
+
 create or replace function public.save_church_live_provider_config_for_service(
   p_church_id uuid,
   p_room_name text,
@@ -87,14 +90,10 @@ create or replace function public.save_church_live_provider_config_for_service(
 )
 returns void
 language plpgsql
-security definer
+security invoker
 set search_path = ''
-as $$
+as $
 begin
-  if current_user <> 'service_role' then
-    raise exception 'not_authorized' using errcode = '42501';
-  end if;
-
   if p_input_type not in ('rtmp','whip') then
     raise exception 'invalid_input_type';
   end if;
@@ -130,22 +129,15 @@ returns table (
   stream_key text,
   input_type text
 )
-language plpgsql
+language sql
 stable
-security definer
+security invoker
 set search_path = ''
-as $$
-begin
-  if current_user <> 'service_role' then
-    raise exception 'not_authorized' using errcode = '42501';
-  end if;
-
-  return query
+as $
   select c.room_name, c.ingress_id, c.ingress_url, c.stream_key, c.input_type
   from private.church_live_provider_config c
   where c.church_id = p_church_id;
-end;
-$$;
+$;
 
 revoke execute on function public.get_church_live_provider_config_for_service(uuid)
 from public, anon, authenticated;
