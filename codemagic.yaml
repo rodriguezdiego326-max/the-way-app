@@ -85,3 +85,64 @@ workflows:
         auth: integration
         submit_to_testflight: false
         submit_to_app_store: false
+
+  solapath-android-verify:
+    name: SOLAPATH — Android 0.3.0 Verification
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      groups:
+        - solapath_client
+      vars:
+        PACKAGE_NAME: com.rfgforge.solapath
+        EXPECTED_ANDROID_VERSION_CODE: "167"
+        EXPECTED_ANDROID_VERSION_NAME: "0.3.0"
+      node: latest
+      java: 17
+    cache:
+      cache_paths:
+        - $HOME/.npm
+        - $HOME/.gradle/caches
+        - $HOME/.gradle/wrapper
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm ci
+      - name: Lint
+        script: |
+          npm run lint
+      - name: Typecheck
+        script: |
+          npm run typecheck
+      - name: Language contract
+        script: |
+          npm run test:language
+      - name: Build web application
+        script: |
+          npm run build:web
+      - name: Sync Capacitor Android
+        script: |
+          npx cap sync android
+      - name: Assert Android version
+        script: |
+          VERSION_CODE=$(grep -E '^[[:space:]]*versionCode ' android/app/build.gradle | awk '{print $2}')
+          VERSION_NAME=$(grep -E '^[[:space:]]*versionName ' android/app/build.gradle | sed -E 's/.*versionName "([^"]+)".*/\1/')
+          if [ "$VERSION_CODE" != "$EXPECTED_ANDROID_VERSION_CODE" ]; then
+            echo "Android versionCode is '$VERSION_CODE', expected '$EXPECTED_ANDROID_VERSION_CODE'"
+            exit 1
+          fi
+          if [ "$VERSION_NAME" != "$EXPECTED_ANDROID_VERSION_NAME" ]; then
+            echo "Android versionName is '$VERSION_NAME', expected '$EXPECTED_ANDROID_VERSION_NAME'"
+            exit 1
+          fi
+      - name: Set Android SDK location
+        script: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+      - name: Build Android release bundle
+        script: |
+          cd android
+          ./gradlew bundleRelease
+    artifacts:
+      - android/app/build/outputs/**/*.aab
+      - android/app/build/reports/**/*
+
