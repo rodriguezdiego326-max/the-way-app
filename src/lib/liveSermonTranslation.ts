@@ -114,7 +114,7 @@ export async function startLiveSermonTranslation(
         }
 
         if (event.type === 'error') {
-          callbacks.onError?.(event.error?.message || 'The live translation session reported an error.');
+          callbacks.onError?.('The live translation session reported an error.');
         }
       } catch {
         // Ignore malformed provider events rather than interrupting an active sermon.
