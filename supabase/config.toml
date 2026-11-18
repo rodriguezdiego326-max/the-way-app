@@ -18,3 +18,6 @@ verify_jwt = false
 
 [functions.push-activity]
 verify_jwt = false
+
+[functions.live-sermon-translation-session]
+verify_jwt = true
