@@ -81,9 +81,9 @@ export default function LiveSermonTranslatorScreen({ onBack }: Props) {
     setConnectionState('connecting');
 
     try {
-      const session = await startLiveSermonTranslation(targetCode, {
-        onSourceDelta: (delta) => setSourceTranscript((current) => current + delta),
-        onTranslationDelta: (delta) => setTranslatedTranscript((current) => current + delta),
+      const session = await startLiveSermonTranslation(sourceCode, targetCode, {
+        onSourceTranscript: setSourceTranscript,
+        onTranslationTranscript: setTranslatedTranscript,
         onStateChange: (state) => setConnectionState(state),
         onError: (message) => setError(t(message)),
       });
