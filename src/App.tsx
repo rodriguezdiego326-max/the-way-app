@@ -60,6 +60,7 @@ import SundayModeScreen from '@/screens/SundayModeScreen';
 import SermonNotesScreen from '@/screens/SermonNotesScreen';
 import SermonAssistantScreen from '@/screens/SermonAssistantScreen';
 import LiveSermonTranslatorScreen from '@/screens/LiveSermonTranslatorScreen';
+import ChurchLiveTranslationScreen from '@/screens/ChurchLiveTranslationScreen';
 import SermonRecordingScreen from '@/screens/SermonRecordingScreen';
 import SermonRecordingDetailScreen from '@/screens/SermonRecordingDetailScreen';
 import SermonFollowUpScreen from '@/screens/SermonFollowUpScreen';
@@ -141,6 +142,7 @@ export type Overlay =
   | { type: 'sermon_notes' }
   | { type: 'sermon_assistant' }
   | { type: 'live_sermon_translator' }
+  | { type: 'church_live_translation' }
   | { type: 'sermon_recording' }
   | { type: 'sermon_recording_detail'; recordingId: string; fresh: boolean; interrupted: boolean; initialView?: 'details' | 'insights' }
   | { type: 'sermon_follow_up'; sermon: Sermon }
@@ -931,6 +933,7 @@ function AppContent() {
         onOpenSundayMode={() => setOverlay({ type: 'sunday_mode' })}
         onOpenSermonNotes={() => setOverlay({ type: 'sermon_notes' })}
         onOpenSermonAssistant={() => setOverlay({ type: 'sermon_assistant' })}
+        onOpenLiveTranslation={() => setOverlay({ type: 'church_live_translation' })}
         onOpenChurchStudies={() => setOverlay({ type: 'church_studies' })}
         onOpenManageChurchStudies={() => setOverlay({ type: 'manage_church_studies' })}
         onOpenChurchPrayer={() => setOverlay({ type: 'church_prayer' })}
@@ -958,6 +961,17 @@ function AppContent() {
         onOpenContinueSunday={() => setOverlay({ type: 'continue_sunday' })}
         onOpenSermonCompanion={(sermon) => setOverlay({ type: 'sermon_companion', sermon })}
         onOpenAskMyPastor={(sermon) => setOverlay({ type: 'ask_my_pastor', sermon })}
+      />,
+    );
+  }
+
+  if (overlay.type === 'church_live_translation' && profile) {
+    return renderOverlayWithHome(
+      <ChurchLiveTranslationScreen
+        profileId={profile.id}
+        churchId={activeChurchId}
+        onBack={() => setOverlay({ type: 'my_church' })}
+        onOpenMicrophoneTranslator={() => setOverlay({ type: 'live_sermon_translator' })}
       />,
     );
   }
