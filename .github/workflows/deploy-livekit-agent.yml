@@ -29,14 +29,38 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Choose first-run or update mode
+      - name: Recover existing LiveKit agent or choose create mode
         id: mode
         shell: bash
+        env:
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+          LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+          LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
+          LK_NO_SKILLS_PROMPT: "1"
         run: |
+          set -euo pipefail
+
           if [ -f "livekit-agent/livekit.toml" ]; then
             echo "operation=deploy" >> "$GITHUB_OUTPUT"
+            echo "config_created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          curl -sSL https://get.livekit.io/cli | bash
+
+          lk agent list --json > /tmp/livekit-agents.json
+          AGENT_ID="$(jq -r '.. | strings | select(startswith("CA_"))' /tmp/livekit-agents.json | head -n 1)"
+
+          if [ -n "$AGENT_ID" ]; then
+            echo "Recovering existing LiveKit agent configuration."
+            lk agent config --id "$AGENT_ID" livekit-agent
+            test -f "livekit-agent/livekit.toml"
+            echo "operation=deploy" >> "$GITHUB_OUTPUT"
+            echo "config_created=true" >> "$GITHUB_OUTPUT"
           else
+            echo "No existing agent found; first deployment will create one."
             echo "operation=create" >> "$GITHUB_OUTPUT"
+            echo "config_created=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create or deploy SOLAPATH sermon translator
@@ -52,12 +76,12 @@ jobs:
           WORKING_DIRECTORY: livekit-agent
           TIMEOUT: 5m
 
-      - name: Persist first-run LiveKit agent configuration
-        if: steps.mode.outputs.operation == 'create'
+      - name: Persist LiveKit agent configuration
+        if: steps.mode.outputs.config_created == 'true' || steps.mode.outputs.operation == 'create'
         shell: bash
         run: |
           if [ ! -f "livekit-agent/livekit.toml" ]; then
-            echo "LiveKit create completed without generating livekit.toml"
+            echo "LiveKit operation completed without a livekit.toml"
             exit 1
           fi
           git config user.name "github-actions[bot]"
