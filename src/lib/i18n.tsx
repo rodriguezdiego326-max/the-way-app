@@ -2698,6 +2698,7 @@ const ES: Record<string, string> = {
   'Use the phone microphone when your church does not have a direct feed available.': 'Usa el micrófono del teléfono cuando tu iglesia no tenga disponible una transmisión directa.',
   'Use My Microphone': 'Usar mi micrófono',
   'Church Live Feed Setup': 'Configuración de transmisión en vivo de la iglesia',
+  'SOLAPATH App Owner access is active for development. Your church membership remains unchanged.': 'El acceso de Propietario de SOLAPATH está activo para desarrollo. Tu membresía de la iglesia permanece sin cambios.',
   'Verified church leadership can connect the church mixer or OBS encoder. Stream keys are never shown to regular members.': 'El liderazgo verificado de la iglesia puede conectar la consola de audio o el codificador OBS. Las claves de transmisión nunca se muestran a los miembros regulares.',
   'Encoder Type': 'Tipo de codificador',
   'LiveKit still needs to be connected to SOLAPATH before encoder credentials can be created.': 'LiveKit todavía debe conectarse a SOLAPATH antes de poder crear las credenciales del codificador.',
