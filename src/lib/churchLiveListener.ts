@@ -97,7 +97,7 @@ export async function startChurchLiveListener(
     try {
       const message = await reader.readAll();
       const attributes = reader.info.attributes ?? {};
-      const segmentId = attributes['lk.segment_id'] || reader.info.streamId;
+      const segmentId = attributes['lk.segment_id'] || reader.info.id;
       const isTranscription = !!attributes['lk.transcribed_track_id'];
       if (!isTranscription || !message.trim()) return;
 
