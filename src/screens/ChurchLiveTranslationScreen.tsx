@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, Cable, Check, Copy, Languages, Mic, Radio, ShieldCheck, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, Cable, Check, Copy, Headphones, Languages, Mic, Radio, ShieldCheck, Square, Volume2, X } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n';
 import { vibrate } from '@/lib/utils';
 import type { ChurchMembership } from '@/lib/togetherTypes';
@@ -14,6 +14,11 @@ import {
   type ChurchLiveLanguage,
   type ChurchLiveTranslationSettings,
 } from '@/lib/churchLiveTranslationEngine';
+import {
+  startChurchLiveListener,
+  type ChurchLiveListenerSession,
+  type ChurchLiveListenerState,
+} from '@/lib/churchLiveListener';
 
 interface Props {
   profileId: string;
@@ -59,6 +64,12 @@ export default function ChurchLiveTranslationScreen({
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<'server' | 'key' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [listenerState, setListenerState] = useState<ChurchLiveListenerState>('closed');
+  const [listenerError, setListenerError] = useState<string | null>(null);
+  const [needsAudioStart, setNeedsAudioStart] = useState(false);
+  const [sourceTranscript, setSourceTranscript] = useState('');
+  const [translatedTranscript, setTranslatedTranscript] = useState('');
+  const listenerSessionRef = useRef<ChurchLiveListenerSession | null>(null);
 
   const isLeadership = isVerifiedChurchLeadership(membership?.verified_church_role);
   const feedAvailable = !!settings?.enabled && ['ready', 'live', 'offline'].includes(settings.provider_status);
@@ -108,6 +119,14 @@ export default function ChurchLiveTranslationScreen({
     return () => { cancelled = true; };
   }, [churchId, isLeadership, profileId]);
 
+  useEffect(() => {
+    return () => {
+      const activeSession = listenerSessionRef.current;
+      listenerSessionRef.current = null;
+      if (activeSession) void activeSession.stop();
+    };
+  }, [churchId]);
+
   function selectDirection(source: ChurchLiveLanguage) {
     setSourceLanguage(source);
     setTargetLanguage(source === 'en' ? 'es' : 'en');
@@ -150,6 +169,51 @@ export default function ChurchLiveTranslationScreen({
       window.setTimeout(() => setCopied(null), 1600);
     } catch {
       setError(t('Could not copy this value. Press and hold to copy it manually.'));
+    }
+  }
+
+  async function handleStartListening() {
+    if (!churchId || !feedAvailable || listenerSessionRef.current) return;
+
+    vibrate(10);
+    setListenerError(null);
+    setSourceTranscript('');
+    setTranslatedTranscript('');
+    setNeedsAudioStart(false);
+    setListenerState('connecting');
+
+    try {
+      const session = await startChurchLiveListener(churchId, {
+        onStateChange: setListenerState,
+        onSourceTranscript: setSourceTranscript,
+        onTranslationTranscript: setTranslatedTranscript,
+        onNeedsAudioStart: setNeedsAudioStart,
+        onError: (message) => setListenerError(t(message)),
+      });
+      listenerSessionRef.current = session;
+    } catch {
+      listenerSessionRef.current = null;
+      setListenerState('closed');
+      setListenerError(t('Could not connect to the church translation feed.'));
+    }
+  }
+
+  async function handleStopListening() {
+    const session = listenerSessionRef.current;
+    listenerSessionRef.current = null;
+    if (session) await session.stop().catch(() => undefined);
+    setListenerState('closed');
+    setNeedsAudioStart(false);
+  }
+
+  async function handleResumeAudio() {
+    const session = listenerSessionRef.current;
+    if (!session) return;
+    try {
+      await session.startAudio();
+      setNeedsAudioStart(false);
+    } catch {
+      setListenerError(t('The translated audio needs another tap to play on this device.'));
     }
   }
 
@@ -213,10 +277,80 @@ export default function ChurchLiveTranslationScreen({
 
                 {feedAvailable ? (
                   <div className="rounded-xl border border-gold-500/20 bg-gold-500/5 p-4 mt-4">
-                    <p className="text-gold-200 text-sm font-medium">{t('Church feed prepared')}</p>
-                    <p className="text-ivory-500 text-xs mt-1 leading-relaxed">
-                      {t('The secure room is ready. Listener playback will be enabled when the LiveKit translation agent is connected.')}
+                    <div className="flex items-center gap-2">
+                      <Headphones size={15} className="text-gold-300" />
+                      <p className="text-gold-200 text-sm font-medium">
+                        {listenerState === 'connecting'
+                          ? t('Connecting to church feed...')
+                          : listenerState === 'waiting'
+                            ? t('Waiting for sermon audio...')
+                            : listenerState === 'listening'
+                              ? t('Translated audio is live')
+                              : t('Church feed prepared')}
+                      </p>
+                    </div>
+                    <p className="text-ivory-500 text-xs mt-2 leading-relaxed">
+                      {t('Listen to the translated sermon from your church’s clean audio feed. Your microphone stays off.')}
                     </p>
+
+                    {listenerError && (
+                      <div className="flex items-start gap-2 mt-3">
+                        <AlertCircle size={14} className="text-clay-400 shrink-0 mt-0.5" />
+                        <p className="text-clay-300 text-xs leading-relaxed">{listenerError}</p>
+                      </div>
+                    )}
+
+                    <div className="mt-4">
+                      {listenerState === 'closed' ? (
+                        <button
+                          type="button"
+                          className="btn-primary w-full"
+                          onClick={() => void handleStartListening()}
+                        >
+                          <Headphones size={16} /> {t('Listen to Translation')}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn-secondary w-full"
+                          disabled={listenerState === 'connecting'}
+                          onClick={() => void handleStopListening()}
+                        >
+                          <Square size={14} /> {
+                            listenerState === 'connecting'
+                              ? t('Connecting...')
+                              : t('Stop Listening')
+                          }
+                        </button>
+                      )}
+                    </div>
+
+                    {needsAudioStart && (
+                      <button
+                        type="button"
+                        className="btn-primary w-full mt-2"
+                        onClick={() => void handleResumeAudio()}
+                      >
+                        <Volume2 size={16} /> {t('Start Translated Audio')}
+                      </button>
+                    )}
+
+                    {listenerState !== 'closed' && (
+                      <div className="mt-5 grid gap-3">
+                        <div className="rounded-xl border border-ink-700/40 bg-ink-900/40 p-4">
+                          <p className="ui-label mb-2">{t('Original Sermon')}</p>
+                          <p className="text-ivory-300 text-sm leading-relaxed whitespace-pre-wrap">
+                            {sourceTranscript || t('Waiting for the pastor to begin speaking...')}
+                          </p>
+                        </div>
+                        <div className="rounded-xl border border-gold-500/20 bg-gold-500/5 p-4">
+                          <p className="ui-label mb-2">{t('Translated Sermon')}</p>
+                          <p className="text-ivory-100 text-sm leading-relaxed whitespace-pre-wrap">
+                            {translatedTranscript || t('Waiting for translation...')}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p className="text-ivory-600 text-xs mt-4 leading-relaxed">
