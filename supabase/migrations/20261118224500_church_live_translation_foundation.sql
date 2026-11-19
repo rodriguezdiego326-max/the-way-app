@@ -47,7 +47,7 @@ on public.church_live_translation_settings
 for insert
 to authenticated
 with check (
-  private.is_verified_church_leadership(church_id)
+  (private.is_admin() or private.is_verified_church_leadership(church_id))
   and created_by_profile_id = (select auth.uid())
   and updated_by_profile_id = (select auth.uid())
 );
@@ -57,9 +57,11 @@ create policy update_church_live_translation_settings
 on public.church_live_translation_settings
 for update
 to authenticated
-using (private.is_verified_church_leadership(church_id))
+using (
+  private.is_admin() or private.is_verified_church_leadership(church_id)
+)
 with check (
-  private.is_verified_church_leadership(church_id)
+  (private.is_admin() or private.is_verified_church_leadership(church_id))
   and updated_by_profile_id = (select auth.uid())
 );
 
