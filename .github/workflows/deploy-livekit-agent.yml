@@ -91,6 +91,7 @@ jobs:
             echo "No LiveKit configuration change to persist."
           else
             git commit -m "0.3.0: register SOLAPATH LiveKit agent"
+            git pull --rebase origin main
             git push origin HEAD:main
           fi
 
