@@ -104,6 +104,9 @@ Deno.serve(async (req: Request) => {
 
   const verifiedRole = (membership as { verified_church_role?: string | null }).verified_church_role ?? null;
   const isLeadership = verifiedRole ? LEADERSHIP_ROLES.has(verifiedRole) : false;
+  const { data: appAdminRole } = await userClient.rpc("get_app_admin_role");
+  const isAppOwner = appAdminRole === "APP_OWNER";
+  const canManageLiveFeed = isLeadership || isAppOwner;
 
   const livekitUrl = Deno.env.get("LIVEKIT_URL") ?? "";
   const livekitApiKey = Deno.env.get("LIVEKIT_API_KEY") ?? "";
@@ -116,11 +119,11 @@ Deno.serve(async (req: Request) => {
       .eq("church_id", churchId)
       .maybeSingle();
     if (error) return json({ error: "status_failed" }, 500);
-    return json({ settings, isLeadership, verifiedRole });
+    return json({ settings, isLeadership, isAppOwner, canManageLiveFeed, verifiedRole });
   }
 
   if (action === "provision") {
-    if (!isLeadership) return json({ error: "leadership_required" }, 403);
+    if (!canManageLiveFeed) return json({ error: "leadership_required" }, 403);
 
     const inputType = body.inputType === "whip" ? "whip" : "rtmp";
     const sourceLanguage = body.sourceLanguage === "es" ? "es" : "en";
@@ -288,7 +291,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (action === "credentials") {
-    if (!isLeadership) return json({ error: "leadership_required" }, 403);
+    if (!canManageLiveFeed) return json({ error: "leadership_required" }, 403);
 
     const { data, error } = await serviceClient.rpc(
       "get_church_live_provider_config_for_service",
