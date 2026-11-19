@@ -7,7 +7,14 @@ on:
       - main
     paths:
       - "livekit-agent/**"
+      - "!livekit-agent/livekit.toml"
+      - "!livekit-agent/README.md"
+      - "!livekit-agent/**/*.md"
       - ".github/workflows/deploy-livekit-agent.yml"
+
+permissions:
+  contents: write
+  actions: read
 
 jobs:
   deploy:
@@ -19,14 +26,57 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Deploy SOLAPATH sermon translator
+      - name: Choose first-run or update mode
+        id: mode
+        shell: bash
+        run: |
+          if [ -f "livekit-agent/livekit.toml" ]; then
+            echo "operation=deploy" >> "$GITHUB_OUTPUT"
+          else
+            echo "operation=create" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create or deploy SOLAPATH sermon translator
         uses: livekit/deploy-action@v2.12.2
         env:
           LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
           LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
           LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
           SECRET_LIST: ""
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          OPERATION: deploy
+          OPERATION: ${{ steps.mode.outputs.operation }}
           WORKING_DIRECTORY: livekit-agent
+          TIMEOUT: 5m
+
+      - name: Persist first-run LiveKit agent configuration
+        if: steps.mode.outputs.operation == 'create'
+        shell: bash
+        run: |
+          if [ ! -f "livekit-agent/livekit.toml" ]; then
+            echo "LiveKit create completed without generating livekit.toml"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add livekit-agent/livekit.toml
+          if git diff --cached --quiet; then
+            echo "No LiveKit configuration change to persist."
+          else
+            git commit -m "0.3.0: register SOLAPATH LiveKit agent"
+            git push origin HEAD:main
+          fi
+
+      - name: Wait for LiveKit agent to be running
+        uses: livekit/deploy-action@v2.12.2
+        env:
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+          LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+          LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
+        with:
+          OPERATION: status-retry
+          WORKING_DIRECTORY: livekit-agent
+          TIMEOUT: 5m
