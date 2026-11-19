@@ -39,3 +39,5 @@ lk agent create --region us-east .
 ```
 
 LiveKit Cloud injects its own runtime credentials. Do not commit API keys or secrets.
+
+<!-- deployment-trigger: 2026-11-18 -->
