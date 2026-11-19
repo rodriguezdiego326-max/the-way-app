@@ -2689,7 +2689,6 @@ const ES: Record<string, string> = {
   'LiveKit still needs to be connected to SOLAPATH before encoder credentials can be created.': 'LiveKit todavía debe conectarse a SOLAPATH antes de poder crear las credenciales del codificador.',
   'The church live feed could not be prepared. Please try again.': 'No se pudo preparar la transmisión en vivo de la iglesia. Inténtalo de nuevo.',
   'Could not copy this value. Press and hold to copy it manually.': 'No se pudo copiar este valor. Mantén presionado para copiarlo manualmente.',
-  'Preparing...': 'Preparando...',
   'Prepare Church Feed': 'Preparar transmisión de la iglesia',
   'Encoder credentials ready': 'Credenciales del codificador listas',
   'Server URL': 'URL del servidor',
