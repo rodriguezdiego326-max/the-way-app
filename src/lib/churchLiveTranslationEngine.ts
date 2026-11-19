@@ -49,6 +49,20 @@ function functionErrorCode(error: unknown): string | null {
   return response.headers.get('x-solapath-error');
 }
 
+export async function getAppAdminRole(): Promise<string | null> {
+  const { data, error } = await supabase.rpc('get_app_admin_role');
+
+  if (error) {
+    console.error('[ChurchLive] app admin role lookup failed', {
+      code: error.code,
+      message: error.message,
+    });
+    return null;
+  }
+
+  return typeof data === 'string' ? data : null;
+}
+
 export async function getChurchLiveTranslationSettings(
   churchId: string,
 ): Promise<ChurchLiveTranslationSettings | null> {
