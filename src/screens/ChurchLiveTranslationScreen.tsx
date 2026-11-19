@@ -6,6 +6,7 @@ import type { ChurchMembership } from '@/lib/togetherTypes';
 import { isVerifiedChurchLeadership } from '@/lib/togetherTypes';
 import { getChurch, getChurchMembershipForChurch } from '@/lib/churchEngine';
 import {
+  getAppAdminRole,
   getChurchLiveFeedCredentials,
   getChurchLiveTranslationSettings,
   provisionChurchLiveFeed,
@@ -55,6 +56,7 @@ export default function ChurchLiveTranslationScreen({
   const { t } = useLanguage();
   const [churchName, setChurchName] = useState<string | null>(null);
   const [membership, setMembership] = useState<ChurchMembership | null>(null);
+  const [appAdminRole, setAppAdminRole] = useState<string | null>(null);
   const [settings, setSettings] = useState<ChurchLiveTranslationSettings | null>(null);
   const [credentials, setCredentials] = useState<ChurchLiveFeedCredentials | null>(null);
   const [inputType, setInputType] = useState<ChurchLiveInputType>('rtmp');
@@ -72,6 +74,8 @@ export default function ChurchLiveTranslationScreen({
   const listenerSessionRef = useRef<ChurchLiveListenerSession | null>(null);
 
   const isLeadership = isVerifiedChurchLeadership(membership?.verified_church_role);
+  const isAppOwner = appAdminRole === 'APP_OWNER';
+  const canManageFeed = isLeadership || isAppOwner;
   const feedAvailable = !!settings?.enabled && ['ready', 'live', 'offline'].includes(settings.provider_status);
 
   const directionLabel = useMemo(
@@ -91,14 +95,20 @@ export default function ChurchLiveTranslationScreen({
       }
 
       setLoading(true);
-      const [church, member, next] = await Promise.all([
+      const [church, member, next, adminRole] = await Promise.all([
         getChurch(churchId),
         getChurchMembershipForChurch(profileId, churchId),
         getChurchLiveTranslationSettings(churchId),
+        getAppAdminRole(),
       ]);
       if (cancelled) return;
+
+      const canManage = isVerifiedChurchLeadership(member?.verified_church_role)
+        || adminRole === 'APP_OWNER';
+
       setChurchName(church?.name ?? null);
       setMembership(member);
+      setAppAdminRole(adminRole);
       setSettings(next);
 
       if (next) {
@@ -107,7 +117,7 @@ export default function ChurchLiveTranslationScreen({
         setTargetLanguage(next.target_language);
       }
 
-      if (isLeadership && next && ['ready', 'live', 'offline'].includes(next.provider_status)) {
+      if (canManage && next && ['ready', 'live', 'offline'].includes(next.provider_status)) {
         const saved = await getChurchLiveFeedCredentials(churchId);
         if (!cancelled) setCredentials(saved);
       }
@@ -117,7 +127,7 @@ export default function ChurchLiveTranslationScreen({
 
     void load();
     return () => { cancelled = true; };
-  }, [churchId, isLeadership, profileId]);
+  }, [churchId, profileId]);
 
   useEffect(() => {
     return () => {
@@ -133,7 +143,7 @@ export default function ChurchLiveTranslationScreen({
   }
 
   async function handleProvision() {
-    if (!churchId || !isLeadership || busy) return;
+    if (!churchId || !canManageFeed || busy) return;
     vibrate(10);
     setBusy(true);
     setError(null);
@@ -369,14 +379,16 @@ export default function ChurchLiveTranslationScreen({
                 </button>
               </div>
 
-              {isLeadership && (
+              {canManageFeed && (
                 <div className="premium-card p-5 mb-4 border-gold-500/20">
                   <div className="flex items-center gap-2 mb-2">
                     <ShieldCheck size={16} className="text-gold-300" />
                     <p className="ui-label">{t('Church Live Feed Setup')}</p>
                   </div>
                   <p className="text-ivory-500 text-xs leading-relaxed mb-4">
-                    {t('Verified church leadership can connect the church mixer or OBS encoder. Stream keys are never shown to regular members.')}
+                    {t(isAppOwner
+                      ? 'SOLAPATH App Owner access is active for development. Your church membership remains unchanged.'
+                      : 'Verified church leadership can connect the church mixer or OBS encoder. Stream keys are never shown to regular members.')}
                   </p>
 
                   <p className="ui-label mb-2">{t('Encoder Type')}</p>
