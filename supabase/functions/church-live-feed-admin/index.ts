@@ -313,6 +313,14 @@ Deno.serve(async (req: Request) => {
       return json({ error: "livekit_not_configured" }, 503);
     }
 
+    const { data: settings, error: settingsError } = await userClient
+      .from("church_live_translation_settings")
+      .select("enabled, source_language, target_language")
+      .eq("church_id", churchId)
+      .maybeSingle();
+    if (settingsError) return json({ error: "listener_settings_failed" }, 500);
+    if (!settings?.enabled) return json({ error: "feed_not_ready" }, 409);
+
     const { data, error } = await serviceClient.rpc(
       "get_church_live_provider_config_for_service",
       { p_church_id: churchId },
@@ -321,9 +329,24 @@ Deno.serve(async (req: Request) => {
     const config = Array.isArray(data) ? data[0] : null;
     if (!config?.room_name) return json({ error: "not_provisioned" }, 404);
 
+    const api = new LiveKitAPI({
+      host: serverHost(livekitUrl),
+      apiKey: livekitApiKey,
+      secret: livekitApiSecret,
+    });
+    const sourceLanguage = settings.source_language === "es" ? "es" : "en";
+    const targetLanguage = settings.target_language === "en" ? "en" : "es";
+    const agent = await ensureTranslationAgent(
+      api,
+      config.room_name,
+      churchId,
+      sourceLanguage,
+      targetLanguage,
+    );
+
     const access = new AccessToken(livekitApiKey, livekitApiSecret, {
       identity: userData.user.id,
-      ttl: "10m",
+      ttl: "2h",
     });
     access.addGrant({
       roomJoin: true,
@@ -337,6 +360,7 @@ Deno.serve(async (req: Request) => {
       url: clientHost(livekitUrl),
       token: await access.toJwt(),
       roomName: config.room_name,
+      agentStatus: agent.status,
     });
   }
 
