@@ -211,27 +211,23 @@ function AppContent() {
   const [globalTranslation, setGlobalTranslation] = useState<BibleTranslation>(getInitialTranslation);
 
   async function handleTranslationChange(tr: BibleTranslation) {
-    const nextLanguage = tr === 'RV1909' ? 'es' : 'en';
-    if (profile?.id) {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          app_language: nextLanguage,
-          preferred_translation: tr,
-        })
-        .eq('id', profile.id);
-      if (error) {
-        console.error('[App] language/translation sync failed', error);
-      }
-    }
-
+    // Bible translation is an in-reader preference. It must not change the
+    // app UI language or remount/restart the application.
     setGlobalTranslation(tr);
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('solapath_translation', tr);
     }
 
-    if (nextLanguage !== language) {
-      setLanguage(nextLanguage);
+    if (profile?.id) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ preferred_translation: tr })
+        .eq('id', profile.id);
+      if (error) {
+        console.error('[App] preferred Bible translation sync failed', error);
+      } else {
+        setProfile((current) => current ? { ...current, preferred_translation: tr } : current);
+      }
     }
   }
   const authGenerationRef = useRef(0);
@@ -259,9 +255,15 @@ function AppContent() {
     if (data) {
       const loadedProfile = data as Profile;
       const loadedLanguage = loadedProfile.app_language === 'es' ? 'es' : 'en';
-      const loadedTranslation: BibleTranslation = loadedLanguage === 'es' ? 'RV1909' : 'WEB';
+      const loadedTranslation: BibleTranslation =
+        loadedProfile.preferred_translation === 'RV1909' || loadedProfile.preferred_translation === 'WEB'
+          ? loadedProfile.preferred_translation
+          : loadedLanguage === 'es' ? 'RV1909' : 'WEB';
       setProfile(loadedProfile);
       setGlobalTranslation(loadedTranslation);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('solapath_translation', loadedTranslation);
+      }
       setLanguage(loadedLanguage);
       if (!loadedProfile.onboarding_completed) {
         setAppState('onboarding');
@@ -433,7 +435,14 @@ function AppContent() {
       }
     }
 
-    setGlobalTranslation(data.app_language === 'es' ? 'RV1909' : 'WEB');
+    const onboardingTranslation: BibleTranslation =
+      data.preferred_translation === 'RV1909' || data.preferred_translation === 'WEB'
+        ? data.preferred_translation
+        : data.app_language === 'es' ? 'RV1909' : 'WEB';
+    setGlobalTranslation(onboardingTranslation);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('solapath_translation', onboardingTranslation);
+    }
     setLanguage(data.app_language);
     setProfile(created as Profile);
     setAppState('app');
