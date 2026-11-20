@@ -4,6 +4,7 @@ import { vibrate } from '@/lib/utils';
 import { submitFeedback } from '@/lib/productionEngine';
 import { FEEDBACK_TYPES } from '@/lib/productionTypes';
 import type { Profile } from '@/lib/types';
+import { useLanguage } from '@/lib/i18n';
 
 interface Props {
   profile: Profile;
@@ -16,6 +17,7 @@ export default function BetaFeedbackScreen({ profile, onBack }: Props) {
   const [includeHistory, setIncludeHistory] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const { t } = useLanguage();
 
   const handleSubmit = useCallback(async () => {
     if (!description.trim() || submitting) return;
@@ -62,7 +64,7 @@ export default function BetaFeedbackScreen({ profile, onBack }: Props) {
               <div>
                 <label className="text-ivory-600 text-xs font-medium mb-1 block">Type</label>
                 <select value={feedbackType} onChange={e => setFeedbackType(e.target.value)} className="input-field">
-                  {FEEDBACK_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                  {FEEDBACK_TYPES.map(option => <option key={option.id} value={option.id}>{t(option.label)}</option>)}
                 </select>
               </div>
               <div>
