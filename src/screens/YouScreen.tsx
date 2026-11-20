@@ -49,6 +49,56 @@ const depthLabels: Record<TheologicalDepth, string> = {
   deep_study: 'Deep Study',
 };
 
+const memoryCategoryLabels: Record<string, string> = {
+  life_stage: 'Life Stage',
+  life: 'Life',
+  family: 'Family',
+  work: 'Work',
+  school: 'School',
+  spiritual_growth: 'Spiritual Growth',
+  bible_study: 'Bible Study',
+  prayer: 'Prayer',
+  church: 'Church',
+  goals: 'Goals',
+  important_event: 'Important Event',
+  struggle: 'Struggle',
+  recurring_question: 'Recurring Question',
+  reflection: 'Reflection',
+  walk: 'Walk',
+  life_event: 'Life Event',
+  preference: 'Preference',
+};
+
+function localizeMemoryContent(content: string, t: (english: string) => string): string {
+  const devotionalMatch = content.match(/^Available devotional time:\s*(\d+)\s*minutes?$/i);
+  if (devotionalMatch) {
+    const minutes = Number(devotionalMatch[1]);
+    return `${t('Available devotional time')}: ${minutes} ${t(minutes === 1 ? 'minute' : 'minutes')}`;
+  }
+
+  const prefPatterns = [
+    ['Bible familiarity:', 'Bible familiarity'],
+    ['Preferred translation:', 'Preferred translation'],
+    ['Current season:', 'Current season'],
+    ['Life stage:', 'Life stage'],
+  ] as const;
+
+  for (const [prefix, label] of prefPatterns) {
+    if (content.startsWith(prefix)) {
+      const value = content.slice(prefix.length).trim();
+      return `${t(label)}: ${t(value)}`;
+    }
+  }
+
+  return t(content);
+}
+
+function memorySensitivityLabel(sensitivity: string, t: (english: string) => string): string {
+  if (sensitivity === 'low') return t('Low sensitivity');
+  if (sensitivity === 'high') return t('High sensitivity');
+  return t('Medium sensitivity');
+}
+
 export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOpenReach, onOpenLibrarySearch, onOpenAdminSources, onOpenRetrievalDebug, onOpenRAGTests, onOpenPhase6Tests, onOpenQADashboard, onOpenSourceBatches, onOpenReleaseGate, onOpenProductionStatus, onOpenTogether, onOpenActivity, activityCounts, onOpenMyChurch, onOpenAppGuide, onOpenAdminApprovalCenter, onOpenPhase8Tests, onOpenLegacy, onOpenPhase9Tests, onOpenPrivacyCenter, onOpenProductionReadiness, onOpenPhase10Tests, onOpenBetaFeedback, session, onSignOut }: YouScreenProps) {
   const { language, setLanguage, t } = useLanguage();
   const [subView, setSubView] = useState<SubView>('main');
@@ -163,22 +213,22 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-[10px] uppercase tracking-wider text-gold-400/60 font-medium">
-                              {m.category.replace(/_/g, ' ')}
+                              {t(memoryCategoryLabels[m.category] || m.category.replace(/_/g, ' '))}
                             </span>
                             {m.sensitivity !== 'low' && (
                               <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded ${
                                 m.sensitivity === 'high' ? 'bg-error/15 text-error' : 'bg-clay-500/15 text-clay-400'
                               }`}>
-                                {m.sensitivity}
+                                {memorySensitivityLabel(m.sensitivity, t)}
                               </span>
                             )}
                           </div>
-                          <p className="text-ivory-200 text-sm mt-1 leading-relaxed">{m.content}</p>
+                          <p className="text-ivory-200 text-sm mt-1 leading-relaxed">{localizeMemoryContent(m.content, t)}</p>
                           <div className="flex items-center gap-3 mt-2">
                             <p className="text-ivory-600 text-xs">{formatDate(m.created_at)}</p>
                             {m.user_confirmed && (
                               <span className="text-[10px] text-sage-400 flex items-center gap-1">
-                                <ShieldCheck size={10} /> Confirmed
+                                <ShieldCheck size={10} /> {t('Confirmed')}
                               </span>
                             )}
                           </div>
@@ -207,7 +257,7 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
                   className="btn-secondary w-full text-error border-error/30 hover:bg-error/10"
                 >
                   <Trash2 size={16} />
-                  Delete All Remembered Context
+                  {t('Delete All Remembered Context')}
                 </button>
               </>
             )}
