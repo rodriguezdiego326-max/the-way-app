@@ -185,7 +185,7 @@ export type Overlay =
   | { type: 'mobile_build_guide' };
 
 function AppContent() {
-  const { language, setLanguage } = useLanguage();
+  const { setLanguage } = useLanguage();
   const [appState, setAppState] = useState<AppState>('splash');
   const [activeTab, setActiveTab] = useState<Tab>('today');
   const [profile, setProfile] = useState<Profile | null>(null);
