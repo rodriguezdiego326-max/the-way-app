@@ -7,6 +7,7 @@ import type { Profile } from '@/lib/types';
 import type { Circle, CircleCheckIn, CheckInState } from '@/lib/togetherTypes';
 import { CHECK_IN_STATES } from '@/lib/togetherTypes';
 import FeelingChip from '@/components/FeelingChip';
+import { useLanguage } from '@/lib/i18n';
 
 const CHECK_IN_FACES: Record<CheckInState, string> = {
   Ready: '😐',
@@ -25,19 +26,19 @@ interface Props {
   onBack: () => void;
 }
 
-function renderCheckIn(c: CircleCheckIn, isPrivate: boolean) {
+function renderCheckIn(c: CircleCheckIn, isPrivate: boolean, t: (english: string) => string) {
   return (
     <div key={c.id} className="premium-card p-3">
       <div className="flex items-center gap-2 mb-1">
-        <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-gold-500/10 text-gold-300">{c.state}</span>
+        <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-gold-500/10 text-gold-300">{t(c.state)}</span>
         {isPrivate && (
           <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-ink-700/40 text-ivory-300 flex items-center gap-1">
-            <Lock size={10} /> Private
+            <Lock size={10} /> {t('Private')}
           </span>
         )}
         {c.visibility === 'leader_only' && (
           <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-ink-700/40 text-ivory-300 flex items-center gap-1">
-            <Shield size={10} /> Leader Only
+            <Shield size={10} /> {t('Leader Only')}
           </span>
         )}
         <span className="text-ivory-600 text-xs ml-auto">{formatRelative(c.created_at)}</span>
@@ -57,6 +58,7 @@ export default function CheckInScreen({ profile, circle, onBack }: Props) {
   const [sharedCheckIns, setSharedCheckIns] = useState<CircleCheckIn[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const { t } = useLanguage();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -96,7 +98,7 @@ export default function CheckInScreen({ profile, circle, onBack }: Props) {
     <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28 flex flex-col">
       <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
         <button onClick={onBack} className="btn-ghost"><X size={20} /></button>
-        <p className="ui-label">Check In</p><span className="w-10" />
+        <p className="ui-label">{t('Check In')}</p><span className="w-10" />
       </header>
 
       <div className="flex-1 overflow-y-auto px-6 mt-4">
@@ -106,8 +108,8 @@ export default function CheckInScreen({ profile, circle, onBack }: Props) {
               <Shield size={18} className="text-gold-300" />
             </div>
             <div>
-              <h2 className="font-serif text-2xl text-ivory-50">Check In</h2>
-              <p className="text-ivory-500 text-sm mt-1 leading-relaxed">How are you arriving? Share with your Circle — or keep it private.</p>
+              <h2 className="font-serif text-2xl text-ivory-50">{t('Check In')}</h2>
+              <p className="text-ivory-500 text-sm mt-1 leading-relaxed">{t('How are you arriving? Share with your Circle — or keep it private.')}</p>
             </div>
           </div>
 
@@ -116,7 +118,7 @@ export default function CheckInScreen({ profile, circle, onBack }: Props) {
               <FeelingChip
                 key={s}
                 emoji={CHECK_IN_FACES[s]}
-                label={s}
+                label={t(s)}
                 selected={state === s}
                 onSelect={() => setState(s)}
               />
@@ -135,15 +137,15 @@ export default function CheckInScreen({ profile, circle, onBack }: Props) {
               <p className="ui-label mt-4 mb-2">Share With</p>
               <div className="flex flex-col gap-2 mb-4">
                 <button onClick={() => { vibrate(6); setVisibility('private'); }} className={`flex items-center gap-2 px-4 py-3 rounded-xl border text-sm transition-all ${visibility === 'private' ? 'bg-gold-500/10 border-gold-500/40 text-ivory-50' : 'bg-ink-800/40 border-ink-700/40 text-ivory-400'}`}>
-                  <Lock size={14} /> Keep Private
+                  <Lock size={14} /> {t('Keep Private')}
                 </button>
                 {circle && (
                   <>
                     <button onClick={() => { vibrate(6); setVisibility('circle'); }} className={`flex items-center gap-2 px-4 py-3 rounded-xl border text-sm transition-all ${visibility === 'circle' ? 'bg-gold-500/10 border-gold-500/40 text-ivory-50' : 'bg-ink-800/40 border-ink-700/40 text-ivory-400'}`}>
-                      <Users size={14} /> Share With Circle
+                      <Users size={14} /> {t('Share With Circle')}
                     </button>
                     <button onClick={() => { vibrate(6); setVisibility('leader_only'); }} className={`flex items-center gap-2 px-4 py-3 rounded-xl border text-sm transition-all ${visibility === 'leader_only' ? 'bg-gold-500/10 border-gold-500/40 text-ivory-50' : 'bg-ink-800/40 border-ink-700/40 text-ivory-400'}`}>
-                      <Shield size={14} /> Leader Only
+                      <Shield size={14} /> {t('Leader Only')}
                     </button>
                   </>
                 )}
@@ -151,7 +153,7 @@ export default function CheckInScreen({ profile, circle, onBack }: Props) {
 
               {saveError && <p role="alert" className="text-clay-400 text-xs mb-3">{saveError}</p>}
               <button onClick={handleSave} disabled={saving} className="btn-primary w-full disabled:opacity-40">
-                {saving ? 'Saving...' : 'Save Check-in'}
+                {t(saving ? 'Saving...' : 'Save Check-in')}
               </button>
             </div>
           )}
@@ -164,7 +166,7 @@ export default function CheckInScreen({ profile, circle, onBack }: Props) {
                 <>
                   <p className="ui-label mt-8 mb-3">Your Private Check-ins</p>
                   <div className="flex flex-col gap-2">
-                    {privateCheckIns.map((c) => renderCheckIn(c, true))}
+                    {privateCheckIns.map((c) => renderCheckIn(c, true, t))}
                   </div>
                 </>
               )}
@@ -174,7 +176,7 @@ export default function CheckInScreen({ profile, circle, onBack }: Props) {
                 <EmptyState message="No shared Circle check-ins yet." />
               ) : (
                 <div className="flex flex-col gap-2">
-                  {sharedCheckIns.map((c) => renderCheckIn(c, false))}
+                  {sharedCheckIns.map((c) => renderCheckIn(c, false, t))}
                 </div>
               )}
             </>
