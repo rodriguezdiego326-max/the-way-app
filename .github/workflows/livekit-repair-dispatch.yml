@@ -30,7 +30,7 @@ jobs:
           ROOM="church-4833b094-1f84-4415-8168-2ff3fea466fb"
           METADATA='{"churchId":"4833b094-1f84-4415-8168-2ff3fea466fb","sourceLanguage":"en","targetLanguage":"es","sourceParticipantIdentity":"church-feed-4833b094-1f84-4415-8168-2ff3fea466fb"}'
 
-          echo "Removing existing named sermon-translator dispatches for compatible duplex retry..."
+          echo "Removing existing named sermon-translator dispatches for low-latency retry..."
           lk dispatch list --json "$ROOM" > /tmp/dispatches.json
           mapfile -t DISPATCH_IDS < <(
             jq -r '.agentDispatches[]? | select(.agentName == "solapath-sermon-translator") | .id' /tmp/dispatches.json
