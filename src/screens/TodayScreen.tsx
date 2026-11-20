@@ -495,7 +495,6 @@ function localizeReference(ref: string, translation: string): string {
         context: ctx,
         profile,
         theologicalDepth: profile?.theological_depth || 'simple',
-        translation: activeTranslation,
         responseLanguage: language,
       });
 
@@ -504,7 +503,6 @@ function localizeReference(ref: string, translation: string): string {
         savedReflectionBody,
         result,
         ctx,
-        activeTranslation,
         language,
       );
 
