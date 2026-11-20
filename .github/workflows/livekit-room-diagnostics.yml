@@ -1,0 +1,44 @@
+name: LiveKit Room Diagnostics
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/livekit-room-diagnostics.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Inspect SOLAPATH church room
+        shell: bash
+        env:
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+          LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+          LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
+          LK_NO_SKILLS_PROMPT: "1"
+        run: |
+          set -euo pipefail
+          curl -sSL https://get.livekit.io/cli | bash
+
+          ROOM="church-4833b094-1f84-4415-8168-2ff3fea466fb"
+
+          echo "=== ROOM ==="
+          lk room list --json "$ROOM" || true
+
+          echo "=== PARTICIPANTS ==="
+          lk room participants list "$ROOM" || true
+
+          echo "=== DISPATCH ==="
+          lk dispatch list --json "$ROOM" || true
+
+          echo "=== AGENT STATUS ==="
+          cd livekit-agent
+          lk agent status || true
