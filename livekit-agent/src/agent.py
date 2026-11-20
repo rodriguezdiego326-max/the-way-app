@@ -6,6 +6,7 @@ from livekit.agents import (
     Agent,
     AgentServer,
     AgentSession,
+    AutoSubscribe,
     JobContext,
     TurnHandlingOptions,
     cli,
@@ -115,6 +116,11 @@ async def sermon_translator(ctx: JobContext) -> None:
             },
         ),
     )
+
+    # RoomOptions pins the session to a specific ingress participant. Connect
+    # explicitly first so LiveKit can resolve the agent's local participant before
+    # RoomIO initializes transcription/output state.
+    await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
     @session.on("user_input_transcribed")
     def on_source_transcript(event) -> None:
