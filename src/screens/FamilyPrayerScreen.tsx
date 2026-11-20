@@ -120,7 +120,7 @@ export default function FamilyPrayerScreen({ familyProfile, onBack }: FamilyPray
         <div className="flex-1 overflow-y-auto px-6 py-6">
           <div className="animate-fade-in-up">
             <span className={`inline-block px-3 py-1.5 rounded-full ${cfg.bg} ${cfg.border} border ${cfg.color} text-xs font-medium mb-4`}>
-              {cfg.label}
+              {t(cfg.label)}
             </span>
             <h2 className="font-serif text-3xl text-ivory-50 leading-tight mb-3">{selectedPrayer.title}</h2>
             {selectedPrayer.description && (
