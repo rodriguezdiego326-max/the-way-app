@@ -14,6 +14,7 @@ import type {
   DelegatableChurchRoleClaim,
   VerifiedChurchRole,
 } from '@/lib/togetherTypes';
+import { useLanguage } from '@/lib/i18n';
 import {
   VERIFIED_CHURCH_ROLES,
   VERIFIED_CHURCH_ROLE_LABELS,
@@ -37,6 +38,7 @@ export default function ChurchAdministrationCard({ churchId, membership, onManag
   const [busy, setBusy] = useState(false);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useLanguage();
 
   const verifiedRole = membership.verified_church_role;
   const isLeadership = isVerifiedChurchLeadership(verifiedRole);
@@ -213,7 +215,7 @@ export default function ChurchAdministrationCard({ churchId, membership, onManag
             <p className="text-clay-400 text-xs mb-3 leading-relaxed">Your previous verified access was revoked. You can submit a new request.</p>
           )}
           <p className="text-ivory-500 text-xs leading-relaxed mb-3">
-            Choosing a church title does not grant administrative access. Pastor requests require identity verification; other leadership roles require approval by a verified Pastor, Church Admin, or SOLAPATH App Admin.
+            {t('Choosing a church title does not grant administrative access. Pastor requests require identity verification; other leadership roles require approval by a verified Pastor, Church Admin, or SOLAPATH App Admin.')}
           </p>
           <p className="ui-label mb-2">Requested Role</p>
           <div className="flex flex-wrap gap-2 mb-4">
