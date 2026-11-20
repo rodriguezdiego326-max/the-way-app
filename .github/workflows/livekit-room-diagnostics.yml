@@ -42,3 +42,6 @@ jobs:
           echo "=== AGENT STATUS ==="
           cd livekit-agent
           lk agent status || true
+
+          echo "=== AGENT RUNTIME LOG SNAPSHOT ==="
+          timeout 12s lk agent logs || true
