@@ -122,6 +122,10 @@ async def sermon_translator(ctx: JobContext) -> None:
         ),
     )
 
+    # RoomOptions pins this session to the church ingress participant.
+    # Connect first so RoomIO can safely resolve the agent's local participant.
+    await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
+
     @session.on("user_input_transcribed")
     def on_source_transcript(event) -> None:
         if event.is_final:
