@@ -2674,6 +2674,7 @@ const ES: Record<string, string> = {
   "Son": "Hijo",
   "Daughter": "Hija",
   "Add": "Agregar",
+  "Prepare Me": "Prepárame",
   // Full localization audit additions
   'Text Size': 'Tamaño del texto',
   'Translation Info': 'Información de la traducción',
