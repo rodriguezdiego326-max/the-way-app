@@ -14,6 +14,7 @@ import {
   seasonOptions,
 } from '@/lib/profileOptions';
 import type { Profile, TheologicalDepth, LifeStage, LifeArea, GrowthArea } from '@/lib/types';
+import { useLanguage } from '@/lib/i18n';
 
 interface ProfileEditorProps {
   profile: Profile;
@@ -22,6 +23,7 @@ interface ProfileEditorProps {
 }
 
 export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEditorProps) {
+  const { t } = useLanguage();
   const [displayName, setDisplayName] = useState(profile.display_name || '');
   const [season, setSeason] = useState(profile.season || '');
   const [seasonText, setSeasonText] = useState('');
@@ -106,26 +108,26 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
         <button onClick={onClose} className="btn-ghost">
           <X size={20} />
         </button>
-        <p className="ui-label">Life & Faith Profile</p>
+        <p className="ui-label">{t('Life & Faith Profile')}</p>
         <span className="w-10" />
       </header>
 
       <div className="flex-1 overflow-y-auto px-6 py-6">
         {/* Name */}
         <section className="mb-6">
-          <p className="ui-label mb-3">Name</p>
+          <p className="ui-label mb-3">{t('Name')}</p>
           <input
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="Your name"
+            placeholder={t('Your name')}
             className="input-field"
           />
         </section>
 
         {/* Life Stages */}
         <section className="mb-6">
-          <p className="ui-label mb-3">Life Stage (select all that apply)</p>
+          <p className="ui-label mb-3">{t('Life Stage (select all that apply)')}</p>
           <div className="flex flex-wrap gap-2">
             {lifeStageOptions.map((stage) => (
               <button
@@ -140,7 +142,7 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
                     : 'bg-ink-800/40 border-ink-700/40 text-ivory-400'
                 }`}
               >
-                {stage}
+                {t(stage)}
               </button>
             ))}
           </div>
@@ -148,7 +150,7 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
 
         {/* Life Areas */}
         <section className="mb-6">
-          <p className="ui-label mb-3">Current Life Areas (select all that apply)</p>
+          <p className="ui-label mb-3">{t('Current Life Areas (select all that apply)')}</p>
           <div className="flex flex-wrap gap-2">
             {lifeAreaOptions.map((area) => (
               <button
@@ -163,7 +165,7 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
                     : 'bg-ink-800/40 border-ink-700/40 text-ivory-400'
                 }`}
               >
-                {area}
+                {t(area)}
               </button>
             ))}
           </div>
@@ -171,9 +173,9 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
 
         {/* Current Season */}
         <section className="mb-6">
-          <p className="ui-label mb-3">Current Season</p>
+          <p className="ui-label mb-3">{t('Current Season')}</p>
           <p className="text-ivory-500 text-xs mb-3">
-            Describe what is happening in your life. This is only stored if you choose.
+            {t('Describe what is happening in your life. This is only stored if you choose.')}
           </p>
           <div className="flex flex-wrap gap-2 mb-3">
             {seasonOptions.map((s) => (
@@ -190,7 +192,7 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
                     : 'bg-ink-800/40 border-ink-700/40 text-ivory-400'
                 }`}
               >
-                {s}
+                {t(s)}
               </button>
             ))}
           </div>
@@ -198,7 +200,7 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
             <textarea
               value={seasonText}
               onChange={(e) => setSeasonText(e.target.value)}
-              placeholder="Starting a business and trying to trust God through uncertainty."
+              placeholder={t('Starting a business and trying to trust God through uncertainty.')}
               className="input-field min-h-[80px] resize-none text-sm"
             />
           )}
@@ -206,7 +208,7 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
 
         {/* Growth Areas */}
         <section className="mb-6">
-          <p className="ui-label mb-3">Areas of Growth (select all that apply)</p>
+          <p className="ui-label mb-3">{t('Areas of Growth (select all that apply)')}</p>
           <div className="flex flex-wrap gap-2">
             {growthAreaOptions.map((area) => (
               <button
@@ -229,7 +231,7 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
 
         {/* Bible Familiarity */}
         <section className="mb-6">
-          <p className="ui-label mb-3">Bible Familiarity</p>
+          <p className="ui-label mb-3">{t('Bible Familiarity')}</p>
           <div className="flex flex-col gap-2">
             {familiarityOptions.map((f) => (
               <button
@@ -244,7 +246,7 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
                     : 'bg-ink-800/40 border-ink-700/40 text-ivory-400'
                 }`}
               >
-                {f.label}
+                {t(f.label)}
                 {bibleFamiliarity === f.value && <Check size={16} className="text-gold-300" />}
               </button>
             ))}
@@ -253,7 +255,7 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
 
         {/* Reformed Theology Familiarity */}
         <section className="mb-6">
-          <p className="ui-label mb-3">Theology Familiarity</p>
+          <p className="ui-label mb-3">{t('Theology Familiarity')}</p>
           <div className="flex flex-col gap-2">
             {familiarityOptions.map((f) => (
               <button
@@ -277,7 +279,7 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
 
         {/* Study Depth */}
         <section className="mb-6">
-          <p className="ui-label mb-3">Preferred Study Depth</p>
+          <p className="ui-label mb-3">{t('Preferred Study Depth')}</p>
           <div className="flex flex-col gap-2">
             {depthOptions.map((opt) => (
               <button
@@ -293,9 +295,9 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
                 }`}
               >
                 <span className={`font-medium text-sm ${depth === opt.value ? 'text-ivory-50' : 'text-ivory-200'}`}>
-                  {opt.label}
+                  {t(opt.label)}
                 </span>
-                <span className="text-xs text-ivory-500">{opt.desc}</span>
+                <span className="text-xs text-ivory-500">{t(opt.desc)}</span>
               </button>
             ))}
           </div>
@@ -303,7 +305,7 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
 
         {/* Translation */}
         <section className="mb-6">
-          <p className="ui-label mb-3">Preferred Bible Translation</p>
+          <p className="ui-label mb-3">{t('Preferred Bible Translation')}</p>
           <div className="grid grid-cols-3 gap-2">
             {translations.map((t) => (
               <button
@@ -323,13 +325,13 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
             ))}
           </div>
           <p className="text-ivory-600 text-xs mt-2">
-            SOLAPATH does not store copyrighted Bible text. References are used without storing translation text.
+            {t('SOLAPATH does not store copyrighted Bible text. References are used without storing translation text.')}
           </p>
         </section>
 
         {/* Current Study */}
         <section className="mb-6">
-          <p className="ui-label mb-3">Current Bible Study</p>
+          <p className="ui-label mb-3">{t('Current Bible Study')}</p>
           <div className="flex flex-col gap-2">
             {studyOptions.map((s) => (
               <button
@@ -353,7 +355,7 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
 
         {/* Available Time */}
         <section className="mb-6">
-          <p className="ui-label mb-3">Available Devotional Time</p>
+          <p className="ui-label mb-3">{t('Available Devotional Time')}</p>
           <div className="flex flex-wrap gap-2">
             {timeOptions.map((t) => (
               <button
@@ -373,14 +375,14 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
             ))}
           </div>
           <p className="text-ivory-600 text-xs mt-2">
-            SOLAPATH adapts Today's Walk to your available time — a 2-minute Walk is intentionally short, not a truncated study.
+            {t("SOLAPATH adapts Today's Walk to your available time — a 2-minute Walk is intentionally short, not a truncated study.")}
           </p>
         </section>
       </div>
 
       <div className="px-6 pt-4 nav-safe-padding shrink-0">
         <button onClick={save} disabled={saving} className="btn-primary w-full disabled:opacity-40">
-          {saving ? 'Saving...' : 'Save Profile'}
+          {saving ? t('Saving...') : t('Save Profile')}
         </button>
       </div>
     </div>
