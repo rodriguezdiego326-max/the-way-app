@@ -64,7 +64,8 @@ async def sermon_translator(ctx: JobContext) -> None:
     if not isinstance(source_identity, str) or not source_identity:
         raise RuntimeError("sourceParticipantIdentity is required")
 
-    target_voice_language = target_language
+    source_name = "English" if source_language == "en" else "Spanish"
+    target_name = "English" if target_language == "en" else "Spanish"
 
     ctx.log_context_fields = {
         "room_name": ctx.room.name,
