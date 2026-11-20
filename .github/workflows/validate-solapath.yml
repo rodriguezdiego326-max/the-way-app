@@ -10,6 +10,8 @@ on:
       - "scripts/**"
       - "package.json"
       - "package-lock.json"
+      - "index.html"
+      - "capacitor.config.ts"
       - "vite.config.*"
       - "tsconfig*.json"
       - ".github/workflows/validate-solapath.yml"
