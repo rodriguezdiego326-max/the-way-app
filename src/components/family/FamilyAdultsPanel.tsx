@@ -11,6 +11,7 @@ import {
 } from '@/lib/familyAccountEngine';
 import CircleConfirmDialog from '@/components/circle/CircleConfirmDialog';
 import FamilyPendingInvitations from '@/components/family/FamilyPendingInvitations';
+import { useLanguage } from '@/lib/i18n';
 
 interface FamilyAdultsPanelProps {
   familyProfileId: string;
@@ -30,6 +31,7 @@ export default function FamilyAdultsPanel({ familyProfileId, familyName, onInvit
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const { language, t } = useLanguage();
 
   const self = adults.find((a) => a.profile_id === accountId);
   const isOwner = self?.family_role === 'OWNER';
@@ -109,6 +111,8 @@ export default function FamilyAdultsPanel({ familyProfileId, familyName, onInvit
             const isSelf = adult.profile_id === accountId;
             const name = adult.display_name?.trim() || FALLBACK_NAME;
             const roleLabel = adult.family_role === 'OWNER' ? 'Owner' : 'Adult';
+            const joinedDate = new Date(adult.joined_at).toLocaleDateString(language === 'es' ? 'es-US' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const metaLabel = `${t(roleLabel)}${isSelf ? ` · ${t('You')}` : ''} · ${t('Joined')} ${joinedDate}`;
             return (
               <div key={adult.profile_id} className="flex items-center gap-3 p-4">
                 <div className="w-8 h-8 rounded-lg bg-ink-700/50 flex items-center justify-center shrink-0">
@@ -120,10 +124,7 @@ export default function FamilyAdultsPanel({ familyProfileId, familyName, onInvit
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-ivory-200 text-sm font-medium truncate">{name}</p>
-                  <p className="text-ivory-600 text-xs">
-                    {roleLabel}{isSelf ? ' · You' : ''} · Joined{' '}
-                    {new Date(adult.joined_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </p>
+                  <p className="text-ivory-600 text-xs">{metaLabel}</p>
                 </div>
                 {isOwner && !isSelf && adult.family_role !== 'OWNER' && (
                   <button
