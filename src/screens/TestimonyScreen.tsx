@@ -22,7 +22,7 @@ const PROMPTS = [
 ] as const;
 
 function localizeOrganizedTestimony(text: string, t: (english: string) => string): string {
-  return PROMPTS.reduce((result, prompt) => result.replaceAll(prompt.label, t(prompt.label)), text);
+  return PROMPTS.reduce((result, prompt) => result.split(prompt.label).join(t(prompt.label)), text);
 }
 
 export default function TestimonyScreen({ profile, onBack }: Props) {
