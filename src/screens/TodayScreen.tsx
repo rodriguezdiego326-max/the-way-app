@@ -27,6 +27,7 @@ import type { AskHandoffContext } from '@/lib/askHandoff';
 import { getTodayCopy } from '@/lib/todayCopy';
 import { localizeObservationPrompt, localizeReadingObjective, localizeWalkReason } from '@/lib/readingObjectiveLocale';
 import PullToRefresh from '@/components/PullToRefresh';
+import { useLanguage } from '@/lib/i18n';
 
 interface TodayScreenProps {
   profile: Profile | null;
@@ -49,6 +50,7 @@ const moods = [
 ];
 
 export default function TodayScreen({ profile, onStartWalk, onReadInApp, onContinueInAsk, onProfileUpdate, onOpenProfile }: TodayScreenProps) {
+  const { language } = useLanguage();
   const { ensureAiConsent, consentDialog } = useAiConsentGate(profile, onProfileUpdate);
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [todayWalk, setTodayWalk] = useState<Walk | null>(null);
@@ -198,14 +200,14 @@ function localizeReference(ref: string, translation: string): string {
       if (savedReflectionWalkIdRef.current && savedReflectionWalkIdRef.current !== todayWalk.id) {
         savedReflectionWalkIdRef.current = null;
       }
-      loadExistingReflection(todayWalk.id, todayWalk.passage_reference, activeTranslation === 'RV1909' ? 'es' : 'en');
+      loadExistingReflection(todayWalk.id, todayWalk.passage_reference, language);
     } else {
       savedReflectionWalkIdRef.current = null;
       setSavedReflection(null);
       setReflectionResponse(null);
       setReflectionError(null);
     }
-  }, [todayWalk?.id, todayWalk?.passage_reference, activeTranslation, loadScriptureText, loadExistingReflection]);
+  }, [todayWalk?.id, todayWalk?.passage_reference, activeTranslation, language, loadScriptureText, loadExistingReflection]);
 
   useLayoutEffect(() => {
     const el = heroScriptureRef.current;
@@ -494,6 +496,7 @@ function localizeReference(ref: string, translation: string): string {
         profile,
         theologicalDepth: profile?.theological_depth || 'simple',
         translation: activeTranslation,
+        responseLanguage: language,
       });
 
       const persisted = await saveReflectionAndResponse(
@@ -502,6 +505,7 @@ function localizeReference(ref: string, translation: string): string {
         result,
         ctx,
         activeTranslation,
+        language,
       );
 
       setReflectionResponse(result.response);
@@ -534,7 +538,7 @@ function localizeReference(ref: string, translation: string): string {
       passageReference: todayWalk.passage_reference,
       userReflection: savedReflectionBody,
       priorResponseSummary: reflectionResponse.answer_summary,
-      language: activeTranslation === 'RV1909' ? 'es' : 'en',
+      language,
     };
     onContinueInAsk(handoff);
   }
@@ -670,8 +674,9 @@ function localizeReference(ref: string, translation: string): string {
   const name = profile?.display_name;
   const availableTime = profile?.available_time_minutes ?? 7;
 
-  // Reflection Intelligence display strings (follow active translation language)
-  const reflLang = activeTranslation === 'RV1909' ? 'es' : 'en';
+  // Reflection Intelligence and UI copy follow the app language. The Bible
+  // translation is independent and controls Scripture text only.
+  const reflLang = language;
   const reflStrings = {
     reflectAction: reflLang === 'es' ? 'Reflexionar con SOLAPATH' : 'Reflect with SOLAPATH',
     continueInAsk: reflLang === 'es' ? 'Continuar en Preguntar' : 'Continue in Ask',
