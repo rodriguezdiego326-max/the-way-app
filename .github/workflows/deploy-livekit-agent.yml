@@ -63,6 +63,9 @@ jobs:
             echo "config_created=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Validate agent Python syntax
+        run: python -m py_compile livekit-agent/src/agent.py
+
       - name: Create or deploy SOLAPATH sermon translator
         uses: livekit/deploy-action@v2.12.2
         env:
