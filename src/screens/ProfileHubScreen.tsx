@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import ProfileEditor from '@/components/ProfileEditor';
 import { PrayersList, ReflectionsList, WalksList } from '@/components/WalkHistoryLists';
 import type { Profile, LifeStage, LifeArea, GrowthArea, TheologicalDepth } from '@/lib/types';
+import { useLanguage } from '@/lib/i18n';
 
 interface ProfileHubScreenProps {
   profile: Profile;
@@ -41,6 +42,7 @@ const historyConfig: Record<HistoryKind, { title: string; icon: typeof BookOpen;
 };
 
 export default function ProfileHubScreen({ profile, onBack, onProfileUpdate }: ProfileHubScreenProps) {
+  const { t } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [history, setHistory] = useState<HistoryKind | null>(null);
   const [walkCount, setWalkCount] = useState(0);
@@ -88,18 +90,18 @@ export default function ProfileHubScreen({ profile, onBack, onProfileUpdate }: P
     return (
       <div className="app-container bg-ink-950 bg-parchment min-h-screen flex flex-col">
         <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
-          <button onClick={() => setHistory(null)} className="btn-ghost" aria-label="Back to profile">
+          <button onClick={() => setHistory(null)} className="btn-ghost" aria-label={t('Back to profile')}>
             <X size={20} />
           </button>
-          <p className="ui-label">{config.title}</p>
+          <p className="ui-label">{t(config.title)}</p>
           <span className="w-10" />
         </header>
         <div className="flex-1 overflow-y-auto px-6 py-6">
           {count === 0 ? (
             <div className="premium-card p-6 text-center">
               <Icon size={24} className="text-gold-300 mx-auto mb-4" />
-              <p className="text-ivory-400 text-sm">{config.empty}</p>
-              <p className="text-ivory-600 text-xs mt-2 leading-relaxed">{config.hint}</p>
+              <p className="text-ivory-400 text-sm">{t(config.empty)}</p>
+              <p className="text-ivory-600 text-xs mt-2 leading-relaxed">{t(config.hint)}</p>
             </div>
           ) : history === 'walks' ? (
             <WalksList />
@@ -124,10 +126,10 @@ export default function ProfileHubScreen({ profile, onBack, onProfileUpdate }: P
     <div className="app-container bg-ink-950 bg-parchment min-h-screen nav-safe-padding">
       <header className="px-6 pt-14 safe-top">
         <div className="flex items-center justify-between">
-          <button onClick={onBack} className="btn-ghost" aria-label="Close profile">
+          <button onClick={onBack} className="btn-ghost" aria-label={t('Close profile')}>
             <X size={20} />
           </button>
-          <p className="ui-label">Profile</p>
+          <p className="ui-label">{t('Profile')}</p>
           <span className="w-10" />
         </div>
 
@@ -140,9 +142,9 @@ export default function ProfileHubScreen({ profile, onBack, onProfileUpdate }: P
           </div>
           <div className="min-w-0">
             <h1 className="font-serif text-3xl text-ivory-50 tracking-tight truncate">
-              {profile.display_name || 'Your Walk'}
+              {profile.display_name || t('Your Walk')}
             </h1>
-            {profile.season && <p className="text-ivory-300 text-sm mt-1">{profile.season}</p>}
+            {profile.season && <p className="text-ivory-300 text-sm mt-1">{t(profile.season)}</p>}
           </div>
         </div>
       </header>
@@ -156,15 +158,15 @@ export default function ProfileHubScreen({ profile, onBack, onProfileUpdate }: P
             <Pencil size={16} className="text-gold-300" />
           </div>
           <div className="flex-1">
-            <p className="text-ivory-100 font-medium text-sm">Edit Profile</p>
-            <p className="text-ivory-600 text-xs">Name · Season · Study · Time · Translation</p>
+            <p className="text-ivory-100 font-medium text-sm">{t('Edit Profile')}</p>
+            <p className="text-ivory-600 text-xs">{t('Name · Season · Study · Time · Translation')}</p>
           </div>
           <ChevronRight size={16} className="text-ivory-600 shrink-0" />
         </button>
       </section>
 
       <section className="px-6 mt-8 animate-fade-in-up" style={{ animationDelay: '0.05s' }}>
-        <p className="ui-label mb-3">My Walk</p>
+        <p className="ui-label mb-3">{t('My Walk')}</p>
         <div className="grid grid-cols-3 gap-3">
           {historyStats.map((stat) => (
             <button
@@ -175,58 +177,58 @@ export default function ProfileHubScreen({ profile, onBack, onProfileUpdate }: P
             >
               <stat.icon size={18} className="text-gold-300 mx-auto mb-2" />
               <p className="font-serif text-2xl text-ivory-50">{stat.value}</p>
-              <p className="text-ivory-600 text-[11px] mt-0.5">{stat.label}</p>
+              <p className="text-ivory-600 text-[11px] mt-0.5">{t(stat.label)}</p>
             </button>
           ))}
         </div>
         <p className="text-ivory-600 text-xs mt-3 text-center italic">
-          These are not a score. They are gentle reminders of God's faithfulness in your life.
+          {t("These are not a score. They are gentle reminders of God's faithfulness in your life.")}
         </p>
       </section>
 
       <section className="px-6 mt-8 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-        <p className="ui-label mb-3">Life & Faith Profile</p>
+        <p className="ui-label mb-3">{t('Life & Faith Profile')}</p>
         <div className="premium-card p-5">
           {stages.length > 0 && (
             <div className="mb-3">
-              <p className="text-ivory-600 text-xs mb-1">Life Stage</p>
+              <p className="text-ivory-600 text-xs mb-1">{t('Life Stage')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {stages.map((s) => (
-                  <span key={s} className="px-2.5 py-1 rounded-lg bg-ink-700/50 text-ivory-300 text-xs">{s}</span>
+                  <span key={s} className="px-2.5 py-1 rounded-lg bg-ink-700/50 text-ivory-300 text-xs">{t(s)}</span>
                 ))}
               </div>
             </div>
           )}
           {areas.length > 0 && (
             <div className="mb-3">
-              <p className="text-ivory-600 text-xs mb-1">Life Areas</p>
+              <p className="text-ivory-600 text-xs mb-1">{t('Life Areas')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {areas.map((a) => (
-                  <span key={a} className="px-2.5 py-1 rounded-lg bg-ink-700/50 text-ivory-300 text-xs">{a}</span>
+                  <span key={a} className="px-2.5 py-1 rounded-lg bg-ink-700/50 text-ivory-300 text-xs">{t(a)}</span>
                 ))}
               </div>
             </div>
           )}
           {growthAreas.length > 0 && (
             <div className="mb-3">
-              <p className="text-ivory-600 text-xs mb-1">Growth Areas</p>
+              <p className="text-ivory-600 text-xs mb-1">{t('Growth Areas')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {growthAreas.map((g) => (
-                  <span key={g} className="px-2.5 py-1 rounded-lg bg-gold-500/10 border border-gold-500/20 text-gold-200 text-xs">{g}</span>
+                  <span key={g} className="px-2.5 py-1 rounded-lg bg-gold-500/10 border border-gold-500/20 text-gold-200 text-xs">{t(g)}</span>
                 ))}
               </div>
             </div>
           )}
           <div className="flex flex-wrap gap-3 text-xs text-ivory-500 mt-3 pt-3 border-t border-ink-700/40">
-            <span>Depth: {depthLabels[profile.theological_depth || 'simple']}</span>
+            <span>{t('Depth')}: {t(depthLabels[profile.theological_depth || 'simple'])}</span>
             <span>·</span>
-            <span>Time: {profile.available_time_minutes || 7} min</span>
+            <span>{t('Time')}: {profile.available_time_minutes || 7} min</span>
             <span>·</span>
             <span>{profile.preferred_translation || 'ESV'}</span>
             {profile.current_study && (
               <>
                 <span>·</span>
-                <span>Studying: {profile.current_study}</span>
+                <span>{t('Studying')}: {t(profile.current_study)}</span>
               </>
             )}
           </div>
