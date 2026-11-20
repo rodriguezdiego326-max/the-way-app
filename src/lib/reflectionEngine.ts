@@ -40,6 +40,7 @@ export interface GenerateReflectionResponseArgs {
   profile: Profile | null;
   theologicalDepth: string;
   translation: BibleTranslation;
+  responseLanguage: 'en' | 'es';
 }
 
 export interface GenerateReflectionResponseResult {
@@ -66,8 +67,8 @@ export function reflectionContainsQuestion(text: string): boolean {
 // The Today passage is the PRIMARY interpretive anchor — the response
 // must center it, not substitute another passage. The user's reflection
 // is treated honestly as journal content, not a generic Ask question.
-function buildReflectionPrompt(reflection: string, ctx: ReflectionContext, translation: BibleTranslation): string {
-  const lang = translation === 'RV1909' ? 'es' : 'en';
+function buildReflectionPrompt(reflection: string, ctx: ReflectionContext, responseLanguage: 'en' | 'es'): string {
+  const lang = responseLanguage;
   const passageHeader = lang === 'es'
     ? `Pasaje asignado de hoy: ${ctx.passageReference}`
     : `Today's assigned passage: ${ctx.passageReference}`;
@@ -97,11 +98,11 @@ function buildReflectionPrompt(reflection: string, ctx: ReflectionContext, trans
 function buildCorrectiveReflectionPrompt(
   reflection: string,
   ctx: ReflectionContext,
-  translation: BibleTranslation,
+  responseLanguage: 'en' | 'es',
   originalPrompt: string,
   priorAnswer: string,
 ): string {
-  const lang = translation === 'RV1909' ? 'es' : 'en';
+  const lang = responseLanguage;
   const correction = lang === 'es'
     ? `CORRECCIÓN: Tu respuesta anterior centró un pasaje distinto a ${ctx.passageReference}. Debes volver a intentarlo. El pasaje asignado de hoy es ${ctx.passageReference}. Tu respuesta DEBE interpretar y aplicar ${ctx.passageReference} como el pasaje principal. No sustituyas otro pasaje. La respuesta del usuario está conectada a este pasaje específico — responde desde este pasaje.`
     : `CORRECTION: Your previous response centered a passage other than ${ctx.passageReference}. You must try again. The assigned Today passage is ${ctx.passageReference}. Your response MUST interpret and apply ${ctx.passageReference} as the primary passage. Do not substitute another passage. The user's reflection is connected to this specific passage — respond from this passage.`;
@@ -180,9 +181,9 @@ function normalizePassageRef(ref: string): string | null {
 export async function generateReflectionResponse(
   args: GenerateReflectionResponseArgs,
 ): Promise<GenerateReflectionResponseResult> {
-  const { reflection, context, profile, theologicalDepth, translation } = args;
-  const responseLanguage = translation === 'RV1909' ? 'Spanish' : 'English';
-  const reflectionPrompt = buildReflectionPrompt(reflection, context, translation);
+  const { reflection, context, profile, theologicalDepth, responseLanguage } = args;
+  const responseLanguageName = responseLanguage === 'es' ? 'Spanish' : 'English';
+  const reflectionPrompt = buildReflectionPrompt(reflection, context, responseLanguage);
 
   const studyMemoryEvidence = await retrieveStudyMemoryEvidence(reflectionPrompt, profile);
 
@@ -192,14 +193,14 @@ export async function generateReflectionResponse(
     theologicalDepth,
     [],
     `today-reflection-${context.passageReference}`,
-    responseLanguage,
+    responseLanguageName,
     studyMemoryEvidence,
   );
 
   // Combined validation: both passage grounding AND language must pass.
   // A response is not accepted if only one passes.
   const passageOk = responseCentersAssignedPassage(response.answer_summary, context.passageReference);
-  const spanishNeeded = responseLanguage === 'Spanish';
+  const spanishNeeded = responseLanguage === 'es';
   const spanishOk = !spanishNeeded || isPredominantlySpanish(response.answer_summary);
 
   if (passageOk && spanishOk) {
@@ -213,11 +214,11 @@ export async function generateReflectionResponse(
     // Both failed: use passage correction (which also re-asserts Spanish via
     // the original prompt's Spanish instruction)
     correctivePrompt = buildCorrectiveReflectionPrompt(
-      reflection, context, translation, reflectionPrompt, response.answer_summary,
+      reflection, context, responseLanguage, reflectionPrompt, response.answer_summary,
     );
   } else if (!passageOk) {
     correctivePrompt = buildCorrectiveReflectionPrompt(
-      reflection, context, translation, reflectionPrompt, response.answer_summary,
+      reflection, context, responseLanguage, reflectionPrompt, response.answer_summary,
     );
   } else {
     // Only Spanish failed
@@ -233,7 +234,7 @@ export async function generateReflectionResponse(
     theologicalDepth,
     [],
     `today-reflection-${context.passageReference}`,
-    responseLanguage,
+    responseLanguageName,
     correctiveMemoryEvidence,
   );
 
@@ -249,12 +250,13 @@ export async function saveReflectionAndResponse(
   result: GenerateReflectionResponseResult,
   context: ReflectionContext,
   translation: BibleTranslation,
+  responseLanguage: 'en' | 'es',
 ): Promise<WalkReflection | null> {
   const aiResponse: WalkReflectionAIResponse = {
     answer_summary: result.response.answer_summary,
     passage_reference: context.passageReference,
     reflection_prompt: result.reflectionPrompt,
-    response_language: translation === 'RV1909' ? 'es' : 'en',
+    response_language: responseLanguage,
     generated_at: new Date().toISOString(),
     structured: result.response,
   };
