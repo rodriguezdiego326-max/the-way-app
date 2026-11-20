@@ -106,7 +106,7 @@ export default function TogetherScreen({
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-ivory-100 font-medium text-sm">{c.name}</p>
-                        <p className="text-ivory-600 text-xs">{c.circle_type} · {t('Created')} {formatRelative(c.created_at)}</p>
+                        <p className="text-ivory-600 text-xs">{t(c.circle_type)} · {t('Created')} {formatRelative(c.created_at)}</p>
                       </div>
                       <ChevronRight size={16} className="text-ivory-600 shrink-0" />
                     </button>
