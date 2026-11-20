@@ -69,7 +69,9 @@ const memoryCategoryLabels: Record<string, string> = {
   preference: 'Preference',
 };
 
-function localizeMemoryContent(content: string, t: (english: string) => string): string {
+function localizeMemoryContent(content: string, source: string, t: (english: string) => string): string {
+  if (source !== 'onboarding') return content;
+
   const devotionalMatch = content.match(/^Available devotional time:\s*(\d+)\s*minutes?$/i);
   if (devotionalMatch) {
     const minutes = Number(devotionalMatch[1]);
@@ -223,7 +225,7 @@ export default function YouScreen({ profile, onProfileUpdate, onOpenFamily, onOp
                               </span>
                             )}
                           </div>
-                          <p className="text-ivory-200 text-sm mt-1 leading-relaxed">{localizeMemoryContent(m.content, t)}</p>
+                          <p className="text-ivory-200 text-sm mt-1 leading-relaxed">{localizeMemoryContent(m.content, m.source, t)}</p>
                           <div className="flex items-center gap-3 mt-2">
                             <p className="text-ivory-600 text-xs">{formatDate(m.created_at)}</p>
                             {m.user_confirmed && (
