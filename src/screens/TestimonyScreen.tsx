@@ -135,7 +135,7 @@ export default function TestimonyScreen({ profile, onBack }: Props) {
                     <div className="premium-card p-4 mb-4 border-gold-500/20">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-gold-300 text-xs font-medium">{t('Draft organized from your own words.')}</p>
-                        <button onClick={handleDeleteAi} className="text-ivory-600 text-xs hover:text-error transition-colors">Delete</button>
+                        <button onClick={handleDeleteAi} className="text-ivory-600 text-xs hover:text-error transition-colors">{t('Delete')}</button>
                       </div>
                       <p className="text-ivory-400 text-xs leading-relaxed whitespace-pre-wrap">{localizeOrganizedTestimony(testimony.ai_organized_version, t)}</p>
                     </div>
@@ -143,7 +143,7 @@ export default function TestimonyScreen({ profile, onBack }: Props) {
 
                   <div className="flex gap-2">
                     <button onClick={() => { vibrate(8); setEditing(true); }} className="btn-secondary flex-1 text-sm">
-                      <Edit3 size={14} /> Edit
+                      <Edit3 size={14} /> {t('Edit')}
                     </button>
                     <button onClick={handleOrganize} className="btn-secondary flex-1 text-sm">
                       <FileText size={14} /> {t('Help Me Organize')}
