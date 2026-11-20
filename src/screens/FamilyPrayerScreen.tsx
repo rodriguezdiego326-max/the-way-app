@@ -3,8 +3,9 @@ import {
   X, Plus, Heart, BookOpen, Calendar, Check, ChevronRight,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { vibrate, formatDate, formatRelative } from '@/lib/utils';
+import { vibrate, formatRelative } from '@/lib/utils';
 import type { FamilyProfile, FamilyPrayer, FamilyPrayerUpdate } from '@/lib/familyTypes';
+import { useLanguage } from '@/lib/i18n';
 
 interface FamilyPrayerScreenProps {
   familyProfile: FamilyProfile | null;
@@ -27,6 +28,7 @@ export default function FamilyPrayerScreen({ familyProfile, onBack }: FamilyPray
   const [description, setDescription] = useState('');
   const [scripture, setScripture] = useState('');
   const [updateText, setUpdateText] = useState('');
+  const { language, t } = useLanguage();
 
   const loadPrayers = useCallback(async () => {
     if (!familyProfile) return;
@@ -132,7 +134,7 @@ export default function FamilyPrayerScreen({ familyProfile, onBack }: FamilyPray
             )}
             <div className="flex items-center gap-2 text-ivory-600 text-xs mb-6">
               <Calendar size={12} />
-              <span>Started {formatDate(selectedPrayer.started_at)}</span>
+              <span>{t('Started')} {new Date(selectedPrayer.started_at).toLocaleDateString(language === 'es' ? 'es-US' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
             </div>
             <div className="gold-divider mb-6" />
 
@@ -149,7 +151,7 @@ export default function FamilyPrayerScreen({ familyProfile, onBack }: FamilyPray
                       isActive ? `${sc.bg} ${sc.border} ${sc.color}` : 'bg-ink-800/40 border-ink-700/40 text-ivory-500'
                     }`}
                   >
-                    {sc.label}
+                    {t(sc.label)}
                   </button>
                 );
               })}
