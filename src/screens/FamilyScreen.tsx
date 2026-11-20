@@ -21,6 +21,7 @@ import FamilyInviteAdult from '@/components/family/FamilyInviteAdult';
 import FamilyJoinForm from '@/components/family/FamilyJoinForm';
 import { createFamilyProfile, familyErrorMessage } from '@/lib/familyAccountEngine';
 import PullToRefresh from '@/components/PullToRefresh';
+import { useLanguage } from '@/lib/i18n';
 
 type SubView = 'main' | 'walk' | 'child_asked' | 'catechism' | 'journey' | 'parent_guide' | 'family_prayer' | 'invite_adult' | 'join';
 
@@ -53,6 +54,7 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
   const [memberRelationship, setMemberRelationship] = useState('');
   const [addingMember, setAddingMember] = useState(false);
   const [memberError, setMemberError] = useState<string | null>(null);
+  const { language, t } = useLanguage();
 
   useEffect(() => {
     loadFamilyData();
@@ -374,16 +376,16 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
                 <div className="flex items-center gap-2 mb-1">
                   <BookOpen size={16} className="text-gold-400" />
                   <p className="text-xs uppercase tracking-[0.2em] text-gold-400/80 font-medium">
-                    {walkRec.is_demo ? 'Demo Family Walk' : 'Family Walk'}
+                    {t(walkRec.is_demo ? 'Demo Family Walk' : 'Family Walk')}
                   </p>
                 </div>
-                <h3 className="font-serif text-2xl text-ivory-50 mt-2 mb-1">{walkRec.topic}</h3>
+                <h3 className="font-serif text-2xl text-ivory-50 mt-2 mb-1">{t(walkRec.topic)}</h3>
                 <p className="text-ivory-400 text-sm">{walkRec.passage_reference}</p>
                 <div className="flex items-center gap-1.5 text-ivory-500 text-xs mt-2">
-                  <span>{walkRec.estimated_minutes} minutes</span>
+                  <span>{walkRec.estimated_minutes} {language === 'es' ? 'minutos' : 'minutes'}</span>
                 </div>
                 {walkRec.reason && (
-                  <p className="text-ivory-600 text-xs mt-2 italic">{walkRec.reason}</p>
+                  <p className="text-ivory-600 text-xs mt-2 italic">{t(walkRec.reason)}</p>
                 )}
                 <div className="flex items-center justify-end mt-3">
                   <ChevronRight size={16} className="text-ivory-600 group-hover:text-gold-300 transition-colors" />
@@ -451,7 +453,7 @@ export default function FamilyScreen({ onClose, onAskHandoff, onOpenSermonDiscus
                           {displayName}
                         </p>
                         <p className="text-ivory-600 text-xs">
-                          {m.age_range}{m.relationship ? ` · ${m.relationship}` : ''}
+                          {m.age_range}{m.relationship ? ` · ${t(m.relationship)}` : ''}
                         </p>
                       </div>
                       <ChevronRight size={14} className="text-ivory-600 group-hover:text-gold-300 transition-colors ml-1" />
@@ -577,6 +579,7 @@ function FeatureCard({
   desc: string;
   onClick: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <button
       onClick={onClick}
@@ -585,8 +588,8 @@ function FeatureCard({
       <div className="w-10 h-10 rounded-xl bg-ink-700/50 flex items-center justify-center mb-3">
         <Icon size={17} className="text-ivory-400 group-hover:text-gold-300 transition-colors" />
       </div>
-      <p className="text-ivory-100 font-medium text-sm">{label}</p>
-      <p className="text-ivory-600 text-xs mt-0.5">{desc}</p>
+      <p className="text-ivory-100 font-medium text-sm">{t(label)}</p>
+      <p className="text-ivory-600 text-xs mt-0.5">{t(desc)}</p>
     </button>
   );
 }
