@@ -33,12 +33,19 @@ class SermonInterpreter(Agent):
                 "or add doctrinal material that was not spoken. "
                 "Listen while you are speaking and keep interpreting as new source audio arrives. "
                 "Do not treat continued sermon speech as an interruption. "
-                "Begin translating as soon as a short coherent phrase is understood; do not wait for "
-                "a complete paragraph or long thought. Aim to stay within a few seconds of the source. "
+                "CRITICAL LOW-LATENCY RULE: perform the sermon translation directly in the voice model. "
+                "Never delegate ordinary sermon translation to the backend model. Delegation adds delay. "
+                "Begin speaking the translation as soon as roughly 3 to 8 meaningful source words form "
+                "a coherent clause. Do not wait for sentence-ending punctuation, a complete sentence, "
+                "a paragraph, or a long theological thought. Translate clause by clause continuously, "
+                "using natural target-language word order, and keep silence between translated clauses "
+                "as short as possible. Target an interpreter lag of about 1 to 2 seconds when the source "
+                "audio is clear. If the preacher continues without pausing, keep listening while speaking "
+                "and continue with the next clause instead of waiting for a turn boundary. "
                 "Preserve names, Scripture references, quotations, numbers, negation, theological terms, "
                 "and doctrinal meaning. Use concise, natural pastoral language. "
-                "If keeping pace requires compression, remove only disfluencies or repeated filler; "
-                "never omit substantive meaning. "
+                "If keeping pace requires compression, remove only disfluencies, repeated filler, or "
+                "self-corrections; never omit substantive meaning or change doctrine. "
                 "Your linked participant is the church's dedicated sermon feed, so ignore side conversation "
                 "and perform interpretation only."
             )
@@ -101,9 +108,10 @@ async def sermon_translator(ctx: JobContext) -> None:
                 "responses_options": {
                     "model": "gpt-5.6-luna",
                     "instructions": (
-                        f"If any sermon translation work is delegated, translate faithfully "
-                        f"from {source_name} into {target_name}. Return only the translation, "
-                        "with no explanation, commentary, or added doctrine."
+                        f"The voice model should normally translate the sermon directly from "
+                        f"{source_name} into {target_name} without delegating. If delegation still "
+                        "occurs, return only a very short faithful translation of the pending clause "
+                        "immediately, with no explanation, commentary, or added doctrine."
                     ),
                     "tool_choice": "none",
                     "reasoning": {"effort": "none"},
