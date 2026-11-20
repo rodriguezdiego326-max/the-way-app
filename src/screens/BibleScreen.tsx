@@ -2315,9 +2315,9 @@ export default function BibleScreen({ onStartWalk, onAskScripture, initialRefere
                 onClick={() => {
                   if (t.id !== translation) {
                     vibrate(5);
+                    // Update the preference once. The translation-dependent
+                    // chapter loader will refresh this same reader in place.
                     setTranslation(t.id);
-                    setTranslation(t.id);
-                    loadChapter(book, chapter);
                   }
                   setShowVersionSheet(false);
                 }}
