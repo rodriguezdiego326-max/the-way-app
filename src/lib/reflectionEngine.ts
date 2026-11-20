@@ -24,7 +24,6 @@ import { supabase } from './supabase';
 import { fetchIntelligenceResponse, retrieveStudyMemoryEvidence } from './intelligenceService';
 import type { StructuredTheologicalResponse } from './intelligenceTypes';
 import type { Profile, WalkReflection, WalkReflectionAIResponse } from './types';
-import type { BibleTranslation } from './bibleTypes';
 
 export interface ReflectionContext {
   passageReference: string;
@@ -39,7 +38,6 @@ export interface GenerateReflectionResponseArgs {
   context: ReflectionContext;
   profile: Profile | null;
   theologicalDepth: string;
-  translation: BibleTranslation;
   responseLanguage: 'en' | 'es';
 }
 
@@ -249,7 +247,6 @@ export async function saveReflectionAndResponse(
   reflection: string,
   result: GenerateReflectionResponseResult,
   context: ReflectionContext,
-  translation: BibleTranslation,
   responseLanguage: 'en' | 'es',
 ): Promise<WalkReflection | null> {
   const aiResponse: WalkReflectionAIResponse = {
