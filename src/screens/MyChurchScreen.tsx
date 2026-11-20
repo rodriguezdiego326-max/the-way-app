@@ -45,7 +45,7 @@ interface ChurchWithMeta {
 export default function MyChurchScreen({
   profile, activeChurchId, onActiveChurchChange, onBack, onOpenSundayMode, onOpenSermonNotes, onOpenSermonAssistant, onOpenLiveTranslation, onOpenChurchStudies, onOpenManageChurchStudies, onOpenChurchPrayer, onOpenSmallGroups,
 }: Props) {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [memberships, setMemberships] = useState<ChurchWithMeta[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -73,6 +73,7 @@ export default function MyChurchScreen({
   const [editError, setEditError] = useState<string | null>(null);
   const [sermonNoteCount, setSermonNoteCount] = useState(0);
 
+  void language;
   const activeChurchIdRef = useRef(activeChurchId);
 
   const fetchChurchData = useCallback(async () => {
@@ -361,7 +362,7 @@ export default function MyChurchScreen({
                 <div className="flex flex-wrap gap-3 mt-2 text-xs text-ivory-500">
                   {active.church.city && <span className="flex items-center gap-1"><MapPin size={11} /> {active.church.city}</span>}
                   {active.church.website && <span className="flex items-center gap-1"><Globe size={11} /> {active.church.website}</span>}
-                  <span>· Your role: {active.membership.personal_role}</span>
+                  <span>· {t('Your role:')} {t(active.membership.personal_role)}</span>
                   <button type="button" onClick={() => { vibrate(6); setShowRoleEdit(true); }} className="flex items-center gap-1 text-gold-300 hover:text-gold-200 transition-colors">
                     <Pencil size={11} /> Edit Role
                   </button>
@@ -378,12 +379,12 @@ export default function MyChurchScreen({
               <p className="ui-label mb-3">Church Features</p>
               <div className="flex flex-col gap-2 mb-4">
                 <ChurchActionCard icon={Sun} label="Sunday Mode" desc="Prepare your heart for worship" onClick={onOpenSundayMode} />
-                <ChurchActionCard icon={BookOpen} label="Sermon Notes" desc={sermonNoteCount === 0 ? 'No studies available' : `${sermonNoteCount} ${sermonNoteCount === 1 ? 'study' : 'studies'} available`} onClick={onOpenSermonNotes} />
+                <ChurchActionCard icon={BookOpen} label="Sermon Notes" desc={sermonNoteCount === 0 ? t('No studies available') : `${sermonNoteCount} ${t(sermonNoteCount === 1 ? 'study available' : 'studies available')}`} onClick={onOpenSermonNotes} />
                 <ChurchActionCard icon={Mic} label="Sermon Assistant" desc="Record a sermon and build notes as you listen." onClick={onOpenSermonAssistant} />
                 <ChurchActionCard icon={Radio} label={t('Live Sermon Translation')} desc={t('Use your church’s clean sermon feed or microphone fallback.')} onClick={onOpenLiveTranslation} />
-                <ChurchActionCard icon={BookOpen} label="From My Church" desc={`${active.studies.length} church studies`} onClick={onOpenChurchStudies} />
-                <ChurchActionCard icon={Heart} label="Church Prayer" desc={`${active.prayerItems.length} prayer items`} onClick={onOpenChurchPrayer} />
-                <ChurchActionCard icon={Users} label="Small Groups" desc={`${active.groups.length} groups`} onClick={onOpenSmallGroups} />
+                <ChurchActionCard icon={BookOpen} label="From My Church" desc={`${active.studies.length} ${t(active.studies.length === 1 ? 'church study' : 'church studies')}`} onClick={onOpenChurchStudies} />
+                <ChurchActionCard icon={Heart} label="Church Prayer" desc={`${active.prayerItems.length} ${t(active.prayerItems.length === 1 ? 'prayer item' : 'prayer items')}`} onClick={onOpenChurchPrayer} />
+                <ChurchActionCard icon={Users} label="Small Groups" desc={`${active.groups.length} ${t(active.groups.length === 1 ? 'group' : 'groups')}`} onClick={onOpenSmallGroups} />
               </div>
 
               {active.isOwner && (
@@ -401,7 +402,7 @@ export default function MyChurchScreen({
                 onClick={() => { vibrate(8); setShowLeaveConfirm(active); }}
                 className="btn-secondary w-full text-sm text-clay-400 mb-4"
               >
-                <LogOut size={14} /> {active.isOwner ? 'Leave & Release Ownership' : 'Leave This Church'}
+                <LogOut size={14} /> {t(active.isOwner ? 'Leave & Release Ownership' : 'Leave This Church')}
               </button>
             </>
           )}
@@ -557,14 +558,15 @@ export default function MyChurchScreen({
 }
 
 function ChurchActionCard({ icon: Icon, label, desc, onClick }: { icon: typeof Church; label: string; desc: string; onClick: () => void }) {
+  const { t } = useLanguage();
   return (
     <button onClick={() => { vibrate(8); onClick(); }} className="premium-card p-4 flex items-center gap-3 text-left no-tap-highlight hover:border-gold-500/30 transition-all duration-300 group">
       <div className="w-9 h-9 rounded-lg bg-ink-700/50 flex items-center justify-center shrink-0">
         <Icon size={16} className="text-ivory-400 group-hover:text-gold-300 transition-colors" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-ivory-100 font-medium text-sm">{label}</p>
-        <p className="text-ivory-600 text-xs">{desc}</p>
+        <p className="text-ivory-100 font-medium text-sm">{t(label)}</p>
+        <p className="text-ivory-600 text-xs">{t(desc)}</p>
       </div>
       <ChevronRight size={16} className="text-ivory-600 shrink-0" />
     </button>
