@@ -30,7 +30,7 @@ jobs:
 
           ROOM="church-4833b094-1f84-4415-8168-2ff3fea466fb"
 
-          echo "=== ROOM AFTER IPHONE RETRY ==="
+          echo "=== ROOM LATENCY DIAGNOSTIC ==="
           lk room list --json "$ROOM" || true
 
           echo "=== PARTICIPANTS ==="
