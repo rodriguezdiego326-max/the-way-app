@@ -28,15 +28,17 @@ jobs:
           curl -sSL https://get.livekit.io/cli | bash
 
           ROOM="church-4833b094-1f84-4415-8168-2ff3fea466fb"
-          FAILED_DISPATCH="AD_7Cv4QpbrZjEp"
           METADATA='{"churchId":"4833b094-1f84-4415-8168-2ff3fea466fb","sourceLanguage":"en","targetLanguage":"es","sourceParticipantIdentity":"church-feed-4833b094-1f84-4415-8168-2ff3fea466fb"}'
 
-          echo "Deleting failed named dispatch if it still exists..."
-          if lk dispatch get "$ROOM" "$FAILED_DISPATCH" --json >/tmp/old-dispatch.json 2>/dev/null; then
-            lk dispatch delete "$ROOM" "$FAILED_DISPATCH"
-          else
-            echo "Failed dispatch already absent."
-          fi
+          echo "Removing existing named sermon-translator dispatches..."
+          lk dispatch list --json "$ROOM" > /tmp/dispatches.json
+          mapfile -t DISPATCH_IDS < <(
+            jq -r '.agentDispatches[]? | select(.agentName == "solapath-sermon-translator") | .id' /tmp/dispatches.json
+          )
+          for DISPATCH_ID in "${DISPATCH_IDS[@]}"; do
+            echo "Deleting translator dispatch $DISPATCH_ID"
+            lk dispatch delete "$ROOM" "$DISPATCH_ID"
+          done
 
           echo "Creating fresh translator dispatch..."
           lk dispatch create \
