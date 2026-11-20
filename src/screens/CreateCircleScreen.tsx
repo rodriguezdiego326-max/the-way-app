@@ -4,6 +4,7 @@ import { vibrate } from '@/lib/utils';
 import { createCircle } from '@/lib/togetherEngine';
 import { CIRCLE_TYPES } from '@/lib/togetherTypes';
 import type { Circle } from '@/lib/togetherTypes';
+import { useLanguage } from '@/lib/i18n';
 
 interface Props {
   onBack: () => void;
@@ -16,6 +17,7 @@ export default function CreateCircleScreen({ onBack, onCreated }: Props) {
   const [description, setDescription] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useLanguage();
 
   async function handleCreate() {
     if (!name.trim()) return;
@@ -72,17 +74,17 @@ export default function CreateCircleScreen({ onBack, onCreated }: Props) {
             <div>
               <p className="ui-label mb-2">Circle Type</p>
               <div className="flex flex-wrap gap-2">
-                {CIRCLE_TYPES.map((t) => (
+                {CIRCLE_TYPES.map((circleTypeOption) => (
                   <button
-                    key={t}
-                    onClick={() => { vibrate(6); setCircleType(t); }}
+                    key={circleTypeOption}
+                    onClick={() => { vibrate(6); setCircleType(circleTypeOption); }}
                     className={`px-3 py-2 rounded-xl border text-xs font-medium transition-all no-tap-highlight ${
-                      circleType === t
+                      circleType === circleTypeOption
                         ? 'bg-gold-500/10 border-gold-500/40 text-ivory-50'
                         : 'bg-ink-800/40 border-ink-700/40 text-ivory-400'
                     }`}
                   >
-                    {t}
+                    {t(circleTypeOption)}
                   </button>
                 ))}
               </div>
