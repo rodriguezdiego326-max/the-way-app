@@ -8,7 +8,6 @@ from livekit.agents import (
     AgentSession,
     AutoSubscribe,
     JobContext,
-    TurnHandlingOptions,
     cli,
     inference,
     room_io,
@@ -110,14 +109,6 @@ async def sermon_translator(ctx: JobContext) -> None:
                     "reasoning": {"effort": "none"},
                     "text": {"verbosity": "low"},
                 },
-            },
-        ),
-        # We need VAD for the parallel caption STT, but source sermon speech
-        # must never cut off the interpreter's output.
-        turn_handling=TurnHandlingOptions(
-            interruption={
-                "enabled": False,
-                "discard_audio_if_uninterruptible": False,
             },
         ),
     )
