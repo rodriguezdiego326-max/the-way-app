@@ -1,0 +1,58 @@
+name: Repair SOLAPATH LiveKit Dispatch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/livekit-repair-dispatch.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Replace failed translator dispatch and verify room
+        shell: bash
+        env:
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+          LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+          LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
+          LK_NO_SKILLS_PROMPT: "1"
+        run: |
+          set -euo pipefail
+          curl -sSL https://get.livekit.io/cli | bash
+
+          ROOM="church-4833b094-1f84-4415-8168-2ff3fea466fb"
+          FAILED_DISPATCH="AD_7Cv4QpbrZjEp"
+          METADATA='{"churchId":"4833b094-1f84-4415-8168-2ff3fea466fb","sourceLanguage":"en","targetLanguage":"es","sourceParticipantIdentity":"church-feed-4833b094-1f84-4415-8168-2ff3fea466fb"}'
+
+          echo "Deleting failed named dispatch if it still exists..."
+          if lk dispatch get "$ROOM" "$FAILED_DISPATCH" --json >/tmp/old-dispatch.json 2>/dev/null; then
+            lk dispatch delete "$ROOM" "$FAILED_DISPATCH"
+          else
+            echo "Failed dispatch already absent."
+          fi
+
+          echo "Creating fresh translator dispatch..."
+          lk dispatch create \
+            --room "$ROOM" \
+            --agent-name "solapath-sermon-translator" \
+            --metadata "$METADATA" \
+            --json | tee /tmp/new-dispatch.json
+
+          sleep 8
+
+          echo "=== PARTICIPANTS ==="
+          lk room participants list "$ROOM"
+
+          echo "=== DISPATCHES ==="
+          lk dispatch list --json "$ROOM"
+
+          echo "=== AGENT STATUS ==="
+          cd livekit-agent
+          lk agent status
