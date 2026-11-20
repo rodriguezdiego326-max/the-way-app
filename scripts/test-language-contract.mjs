@@ -26,6 +26,8 @@ const sermonFn = read('supabase/functions/generate-sermon-insights/index.ts');
 const parentGuideScreen = read('src/screens/ParentGuideScreen.tsx');
 const parentGuideEs = read('src/lib/parentGuideContent.es.ts');
 const catechismScreen = read('src/screens/CatechismScreen.tsx');
+const profileHub = read('src/screens/ProfileHubScreen.tsx');
+const profileEditor = read('src/components/ProfileEditor.tsx');
 const westminsterEs = read('src/lib/catechismWestminster.es.ts');
 const heidelbergEs = read('src/lib/catechismHeidelberg.es.ts');
 
@@ -102,6 +104,19 @@ assert((westminsterEs.match(/number:\s*\d+/g) || []).length === 25,
   'Spanish Westminster content must contain questions 1–25');
 assert((heidelbergEs.match(/number:\s*\d+/g) || []).length === 15,
   'Spanish Heidelberg content must contain questions 1–15');
+
+assert(profileHub.includes("const { t } = useLanguage()")
+  && profileHub.includes("{t('Life & Faith Profile')}")
+  && profileHub.includes("{t(s)}")
+  && profileHub.includes("{t(a)}")
+  && profileHub.includes("{t(g)}"),
+  'Profile Hub must explicitly localize Life & Faith labels and saved profile chips');
+assert(profileEditor.includes("const { t } = useLanguage()")
+  && profileEditor.includes("{t('Life Stage (select all that apply)')}")
+  && profileEditor.includes("{t('Preferred Study Depth')}")
+  && profileEditor.includes("{t(f.label)}")
+  && profileEditor.includes("{t(opt.desc)}"),
+  'Life & Faith Profile editor must explicitly localize labels, options, and descriptions');
 
 if (!process.exitCode) {
   console.log('Language contract: PASS');
