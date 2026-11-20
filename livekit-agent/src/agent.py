@@ -27,18 +27,21 @@ class SermonInterpreter(Agent):
 
         super().__init__(
             instructions=(
-                f"You are SOLAPATH's live sermon interpreter. "
-                f"Translate the main sermon speaker faithfully from {source_name} into {target_name}. "
-                "Output only the translation. Never answer the preacher, summarize, explain, comment, "
-                "add application, or add doctrinal material that was not spoken. "
+                f"You are SOLAPATH's simultaneous live sermon interpreter. "
+                f"Continuously interpret the main sermon speaker from {source_name} into {target_name}. "
+                "Speak only the translation. Never answer the preacher, acknowledge the preacher, "
+                "say filler such as 'okay' or 'mm-hmm', summarize, explain, comment, add application, "
+                "or add doctrinal material that was not spoken. "
+                "Listen while you are speaking and keep interpreting as new source audio arrives. "
+                "Do not treat continued sermon speech as an interruption. "
+                "Begin translating as soon as a short coherent phrase is understood; do not wait for "
+                "a complete paragraph or long thought. Aim to stay within a few seconds of the source. "
                 "Preserve names, Scripture references, quotations, numbers, negation, theological terms, "
-                "and doctrinal meaning. Translate complete thoughts rather than fragments. "
-                "When the speaker pauses briefly inside a sentence, preserve the unfinished thought and "
-                "finish the sentence naturally once enough context arrives. "
-                "Keep the translation concise enough to stay close to the sermon without dropping content. "
-                "Use natural pastoral language appropriate for a church service. "
-                "Do not react to audience noise or side speech because your linked participant is the "
-                "church's dedicated sermon feed."
+                "and doctrinal meaning. Use concise, natural pastoral language. "
+                "If keeping pace requires compression, remove only disfluencies or repeated filler; "
+                "never omit substantive meaning. "
+                "Your linked participant is the church's dedicated sermon feed, so ignore side conversation "
+                "and perform interpretation only."
             )
         )
 
@@ -72,6 +75,8 @@ async def sermon_translator(ctx: JobContext) -> None:
     }
 
     session = AgentSession(
+        # Keep a dedicated STT stream so SOLAPATH can continue showing the
+        # original sermon captions in realtime.
         stt=inference.STT(
             model="openai/gpt-live-transcribe",
             language=source_language,
@@ -79,48 +84,42 @@ async def sermon_translator(ctx: JobContext) -> None:
         ),
         vad=inference.VAD(
             model="silero",
-            activation_threshold=0.68,
-            min_speech_duration=0.12,
-            min_silence_duration=0.45,
-            prefix_padding_duration=0.35,
+            activation_threshold=0.60,
+            min_speech_duration=0.08,
+            min_silence_duration=0.28,
+            prefix_padding_duration=0.25,
             max_buffered_speech=90.0,
         ),
-        llm=inference.LLM(
-            model="openai/gpt-5.4-mini",
+        # Full-duplex speech-to-speech interpretation. Unlike the previous
+        # STT -> LLM -> TTS conversational pipeline, GPT-Live can listen while
+        # it speaks, so continuous sermon audio does not cause later phrases
+        # to be skipped while translated audio is playing.
+        llm=inference.DuplexModel(
+            model="openai/gpt-live-1",
+            voice="cedar",
             extra_kwargs={
-                "reasoning_effort": "minimal",
+                "responses_options": {
+                    "model": "gpt-5.6-luna",
+                    "instructions": (
+                        f"If any sermon translation work is delegated, translate faithfully "
+                        f"from {source_name} into {target_name}. Return only the translation, "
+                        "with no explanation, commentary, or added doctrine."
+                    ),
+                    "tool_choice": "none",
+                    "reasoning": {"effort": "none"},
+                    "text": {"verbosity": "low"},
+                },
             },
         ),
-        tts=inference.TTS(
-            model="inworld/inworld-tts-2",
-            voice="Diego",
-            language=target_voice_language,
-            extra_kwargs={
-                "speaking_rate": 1.08,
-                "delivery_mode": "STABLE",
-            },
-        ),
+        # We need VAD for the parallel caption STT, but source sermon speech
+        # must never cut off the interpreter's output.
         turn_handling=TurnHandlingOptions(
-            turn_detection=inference.TurnDetector(),
-            endpointing={
-                "mode": "fixed",
-                "min_delay": 0.75,
-                "max_delay": 3.0,
-            },
             interruption={
                 "enabled": False,
                 "discard_audio_if_uninterruptible": False,
             },
-            preemptive_generation={
-                "enabled": False,
-            },
         ),
     )
-
-    # RoomOptions pins the session to a specific ingress participant. Connect
-    # explicitly first so LiveKit can resolve the agent's local participant before
-    # RoomIO initializes transcription/output state.
-    await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
     @session.on("user_input_transcribed")
     def on_source_transcript(event) -> None:
