@@ -223,7 +223,7 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
                     : 'bg-ink-800/40 border-ink-700/40 text-ivory-400'
                 }`}
               >
-                {area}
+                {t(area)}
               </button>
             ))}
           </div>
@@ -270,7 +270,7 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
                     : 'bg-ink-800/40 border-ink-700/40 text-ivory-400'
                 }`}
               >
-                {f.label}
+                {t(f.label)}
                 {reformedFamiliarity === f.value && <Check size={16} className="text-gold-300" />}
               </button>
             ))}
@@ -346,7 +346,7 @@ export default function ProfileEditor({ profile, onClose, onSaved }: ProfileEdit
                     : 'bg-ink-800/40 border-ink-700/40 text-ivory-400'
                 }`}
               >
-                {s}
+                {t(s)}
                 {currentStudy === s && <Check size={16} className="text-gold-300" />}
               </button>
             ))}
