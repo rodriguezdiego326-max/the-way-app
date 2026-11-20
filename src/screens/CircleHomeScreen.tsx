@@ -13,6 +13,7 @@ import InvitePeopleSheet from '@/components/circle/InvitePeopleSheet';
 import PendingInvitationsList from '@/components/circle/PendingInvitationsList';
 import CircleMemberList from '@/components/circle/CircleMemberList';
 import CircleConfirmDialog from '@/components/circle/CircleConfirmDialog';
+import { useLanguage } from '@/lib/i18n';
 
 interface Props {
   profile: Profile;
@@ -27,10 +28,10 @@ interface Props {
   onOpenSermonDiscussions: (circle: Circle) => void;
 }
 
-function discussionSummary(discussions: CircleSermonDiscussion[] | null): string {
-  if (discussions === null) return 'Open to view shared discussions';
-  if (discussions.length === 0) return 'No sermon discussions yet';
-  return `${discussions.length} shared · latest ${formatRelative(discussions[0].created_at)}`;
+function discussionSummary(discussions: CircleSermonDiscussion[] | null, t: (english: string) => string): string {
+  if (discussions === null) return t('Open to view shared discussions');
+  if (discussions.length === 0) return t('No sermon discussions yet');
+  return `${discussions.length} ${t('shared')} · ${t('latest')} ${formatRelative(discussions[0].created_at)}`;
 }
 
 export default function CircleHomeScreen({
@@ -56,6 +57,7 @@ export default function CircleHomeScreen({
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [leaveError, setLeaveError] = useState<string | null>(null);
+  const { t } = useLanguage();
 
   const loadMembers = useCallback(async () => {
     setMembersFailed(false);
@@ -155,7 +157,7 @@ export default function CircleHomeScreen({
     <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28 flex flex-col">
       <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
         <button onClick={onBack} className="btn-ghost" aria-label="Close"><X size={20} /></button>
-        <p className="ui-label">{circle.circle_type}</p>
+        <p className="ui-label">{t(circle.circle_type)}</p>
         <button
           onClick={handleLeaveTap}
           disabled={leaving || deletingCircle}
@@ -175,7 +177,7 @@ export default function CircleHomeScreen({
             <div className="flex-1">
               <h2 className="font-serif text-2xl text-ivory-50">{circle.name}</h2>
               <p className="text-ivory-500 text-sm mt-1">
-                {circle.circle_type} · {memberCount === undefined ? 'Members loading' : `${memberCount} member${memberCount !== 1 ? 's' : ''}`} · {circle.privacy}
+                {t(circle.circle_type)} · {memberCount === undefined ? t('Members loading') : `${memberCount} ${t(memberCount === 1 ? 'member' : 'members')}`} · {t(circle.privacy)}
               </p>
               {circle.description && <p className="text-ivory-400 text-xs mt-2 leading-relaxed">{circle.description}</p>}
             </div>
@@ -188,11 +190,11 @@ export default function CircleHomeScreen({
             <>
               <p className="ui-label mb-3">This Week</p>
               <div className="flex flex-col gap-2 mb-6">
-                <CircleActionCard icon={BookOpen} label="Scripture" desc={studies.length > 0 ? `${studies[0].passage_reference}` : 'No study assigned'} onClick={() => onOpenScripture(circle)} />
-                <CircleActionCard icon={MessageSquare} label="Sermon Discussions" desc={discussionSummary(discussions)} onClick={() => onOpenSermonDiscussions(circle)} />
-                <CircleActionCard icon={Heart} label="Prayer" desc={sharedPrayerCount > 0 ? `${sharedPrayerCount} shared prayer request${sharedPrayerCount !== 1 ? 's' : ''}` : 'No prayers shared yet'} onClick={() => onOpenPrayer(circle)} />
-                <CircleActionCard icon={CheckCircle} label="Check-In" desc={recentCheckIns.length > 0 ? `${recentCheckIns.length} recent check-in${recentCheckIns.length !== 1 ? 's' : ''}` : 'How is everyone arriving?'} onClick={() => onOpenCheckIn(circle)} />
-                <CircleActionCard icon={HandHeart} label="Encouragement" desc="Encourage someone intentionally" onClick={() => onOpenEncouragement(circle)} />
+                <CircleActionCard icon={BookOpen} label="Scripture" desc={studies.length > 0 ? `${studies[0].passage_reference}` : t('No study assigned')} onClick={() => onOpenScripture(circle)} />
+                <CircleActionCard icon={MessageSquare} label="Sermon Discussions" desc={discussionSummary(discussions, t)} onClick={() => onOpenSermonDiscussions(circle)} />
+                <CircleActionCard icon={Heart} label="Prayer" desc={sharedPrayerCount > 0 ? `${sharedPrayerCount} ${t(sharedPrayerCount === 1 ? 'shared prayer request' : 'shared prayer requests')}` : t('No prayers shared yet')} onClick={() => onOpenPrayer(circle)} />
+                <CircleActionCard icon={CheckCircle} label="Check-In" desc={recentCheckIns.length > 0 ? `${recentCheckIns.length} ${t(recentCheckIns.length === 1 ? 'recent check-in' : 'recent check-ins')}` : t('How is everyone arriving?')} onClick={() => onOpenCheckIn(circle)} />
+                <CircleActionCard icon={HandHeart} label="Encouragement" desc={t('Encourage someone intentionally')} onClick={() => onOpenEncouragement(circle)} />
                 <CircleActionCard icon={Shield} label="Accountability" desc="Private · Opt-in" onClick={() => onOpenAccountability(circle)} />
               </div>
 
@@ -278,14 +280,15 @@ export default function CircleHomeScreen({
 }
 
 function CircleActionCard({ icon: Icon, label, desc, onClick }: { icon: typeof Heart; label: string; desc: string; onClick: () => void }) {
+  const { t } = useLanguage();
   return (
     <button onClick={() => { vibrate(8); onClick(); }} className="premium-card p-4 flex items-center gap-3 text-left no-tap-highlight hover:border-gold-500/30 transition-all duration-300 group">
       <div className="w-9 h-9 rounded-lg bg-ink-700/50 flex items-center justify-center shrink-0">
         <Icon size={16} className="text-ivory-400 group-hover:text-gold-300 transition-colors" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-ivory-100 font-medium text-sm">{label}</p>
-        <p className="text-ivory-600 text-xs">{desc}</p>
+        <p className="text-ivory-100 font-medium text-sm">{t(label)}</p>
+        <p className="text-ivory-600 text-xs">{t(desc)}</p>
       </div>
       <ChevronRight size={16} className="text-ivory-600 shrink-0" />
     </button>
