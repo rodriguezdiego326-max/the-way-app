@@ -6,6 +6,7 @@ import { getLegacyEvents } from '@/lib/legacyEngine';
 import { SOURCE_LABELS } from '@/lib/legacyTypes';
 import type { Profile } from '@/lib/types';
 import type { LegacyEvent } from '@/lib/legacyTypes';
+import { useLanguage } from '@/lib/i18n';
 
 interface Props {
   profile: Profile;
@@ -17,6 +18,7 @@ export default function MyJourneyScreen({ profile, onBack, onOpenBuildLegacy }: 
   const [events, setEvents] = useState<LegacyEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useLanguage();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -25,11 +27,11 @@ export default function MyJourneyScreen({ profile, onBack, onOpenBuildLegacy }: 
       const data = await getLegacyEvents(profile.id);
       setEvents(data);
     } catch {
-      setError('Could not load your journey.');
+      setError(t('Could not load your journey.'));
     } finally {
       setLoading(false);
     }
-  }, [profile.id]);
+  }, [profile.id, t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -37,7 +39,7 @@ export default function MyJourneyScreen({ profile, onBack, onOpenBuildLegacy }: 
     <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28 flex flex-col">
       <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
         <button onClick={onBack} className="btn-ghost"><X size={20} /></button>
-        <p className="ui-label">My Journey</p><span className="w-10" />
+        <p className="ui-label">{t('My Journey')}</p><span className="w-10" />
       </header>
 
       <div className="flex-1 overflow-y-auto px-6 mt-4">
@@ -47,20 +49,20 @@ export default function MyJourneyScreen({ profile, onBack, onOpenBuildLegacy }: 
               <Clock size={18} className="text-gold-300" />
             </div>
             <div>
-              <h2 className="font-serif text-2xl text-ivory-50">MY JOURNEY</h2>
-              <p className="text-ivory-500 text-sm mt-1 leading-relaxed">A chronological record of your walk.</p>
+              <h2 className="font-serif text-2xl text-ivory-50">{t('MY JOURNEY')}</h2>
+              <p className="text-ivory-500 text-sm mt-1 leading-relaxed">{t('A chronological record of your walk.')}</p>
             </div>
           </div>
 
-          {loading && <LoadingState message="Loading your journey..." />}
+          {loading && <LoadingState message={t("Loading your journey...")} />}
           {error && <ErrorState message={error} onRetry={load} />}
 
           {!loading && !error && events.length === 0 && (
             <div className="premium-card p-6 text-center mb-4">
-              <p className="text-ivory-400 text-sm">Your journey is empty.</p>
-              <p className="text-ivory-600 text-xs mt-2 leading-relaxed">Add a record to begin building your Legacy.</p>
+              <p className="text-ivory-400 text-sm">{t('Your journey is empty.')}</p>
+              <p className="text-ivory-600 text-xs mt-2 leading-relaxed">{t('Add a record to begin building your Legacy.')}</p>
               <button onClick={() => { vibrate(10); onOpenBuildLegacy(); }} className="btn-primary mt-4">
-                <Plus size={16} /> Add a Record
+                <Plus size={16} /> {t('Add a Record')}
               </button>
             </div>
           )}
@@ -71,16 +73,16 @@ export default function MyJourneyScreen({ profile, onBack, onOpenBuildLegacy }: 
                 <div key={event.id} className="premium-card p-4">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex-1 min-w-0">
-                      <p className="text-ivory-100 font-medium text-sm">{event.title}</p>
+                      <p className="text-ivory-100 font-medium text-sm">{event.event_type === 'answered_prayer' && event.title.startsWith('Answered: ') ? `${t('Answered:')} ${event.title.slice('Answered: '.length)}` : event.title}</p>
                       <p className="text-ivory-600 text-xs mt-0.5">{formatDate(event.event_date)}</p>
                     </div>
                     <span className="px-2 py-1 rounded-md bg-ink-700/40 text-ivory-500 text-[10px] font-medium tracking-wider shrink-0">
-                      {SOURCE_LABELS[event.source_type] || event.source_type}
+                      {t(SOURCE_LABELS[event.source_type] || event.source_type)}
                     </span>
                   </div>
                   {(event.event_type === 'prayer' || event.event_type === 'answered_prayer') && (
                     <p className="text-ivory-300 text-xs mt-2 leading-relaxed">
-                      {event.event_type === 'answered_prayer' ? 'Marked answered.' : 'A prayer was added to your journey.'}
+                      {t(event.event_type === 'answered_prayer' ? 'Marked answered.' : 'A prayer was added to your journey.')}
                     </p>
                   )}
                   {event.event_type !== 'prayer' && event.event_type !== 'answered_prayer' && event.user_text && (
@@ -91,7 +93,7 @@ export default function MyJourneyScreen({ profile, onBack, onOpenBuildLegacy }: 
                   )}
                   {event.ai_summary && (
                     <div className="mt-2 pt-2 border-t border-ink-700/40">
-                      <p className="text-gold-400/60 text-[10px] uppercase tracking-wider font-medium mb-1">SOLAPATH Summary</p>
+                      <p className="text-gold-400/60 text-[10px] uppercase tracking-wider font-medium mb-1">{t('SOLAPATH Summary')}</p>
                       <p className="text-ivory-500 text-xs leading-relaxed">{event.ai_summary}</p>
                     </div>
                   )}
@@ -110,7 +112,7 @@ export default function MyJourneyScreen({ profile, onBack, onOpenBuildLegacy }: 
           <div className="flex items-start gap-2 mt-5 px-1">
             <Sparkles size={13} className="text-gold-400/60 shrink-0 mt-0.5" />
             <p className="text-ivory-600 text-xs leading-relaxed font-medium">
-              Every record shows its actual source. AI organizes. It does not invent.
+              {t('Every record shows its actual source. AI organizes. It does not invent.')}
             </p>
           </div>
         </div>
