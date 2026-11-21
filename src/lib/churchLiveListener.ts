@@ -2,6 +2,7 @@ import {
   Room,
   RoomEvent,
   Track,
+  type Participant,
   type RemoteParticipant,
   type RemoteTrack,
   type RemoteTrackPublication,
@@ -83,7 +84,7 @@ export async function startChurchLiveListener(
     callbacks.onError?.(message || DEFAULT_TRANSLATION_SERVICE_ERROR);
   };
 
-  const handleAgentTranslationStatus = (participant: RemoteParticipant) => {
+  const handleAgentTranslationStatus = (participant: Participant) => {
     if (!participant.isAgent) return;
     const status = participant.attributes[TRANSLATION_STATUS_KEY];
     if (status !== 'error') return;
@@ -213,7 +214,7 @@ export async function startChurchLiveListener(
 
   room.on(
     RoomEvent.ParticipantAttributesChanged,
-    (_changed: Record<string, string>, participant: RemoteParticipant) => {
+    (_changed: Record<string, string>, participant: Participant) => {
       handleAgentTranslationStatus(participant);
     },
   );
@@ -222,7 +223,7 @@ export async function startChurchLiveListener(
     RoomEvent.DataReceived,
     (
       payload: Uint8Array,
-      participant: RemoteParticipant | undefined,
+      participant: Participant | undefined,
       _kind,
       topic?: string,
     ) => {
