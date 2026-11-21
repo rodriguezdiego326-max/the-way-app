@@ -34,7 +34,16 @@ jobs:
           lk room list --json "$ROOM" || true
 
           echo "=== PARTICIPANTS ==="
-          lk room participants list "$ROOM" || true
+          lk room participants list "$ROOM" | tee /tmp/participants.txt || true
+
+          echo "=== PARTICIPANT DETAILS ==="
+          if [ -s /tmp/participants.txt ]; then
+            awk '{print $1}' /tmp/participants.txt | while read -r IDENTITY; do
+              [ -z "$IDENTITY" ] && continue
+              echo "--- $IDENTITY ---"
+              lk room participants get --room "$ROOM" "$IDENTITY" || true
+            done
+          fi
 
           echo "=== DISPATCH ==="
           lk dispatch list --json "$ROOM" || true
