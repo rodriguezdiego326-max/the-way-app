@@ -56,6 +56,67 @@ jobs:
             fi
           fi
 
+          echo "=== AUDIO PCM PROBE ==="
+          python -m pip install --quiet "livekit==1.2.1"
+          PROBE_TOKEN="$(lk token create --join --room "$ROOM" --identity audio-probe --grant '{"canPublish":false,"canPublishData":false}' --token-only)"
+          export PROBE_TOKEN
+          python - <<'PY'
+          import asyncio
+          import os
+          from livekit import rtc
+
+          async def main():
+              room = rtc.Room()
+              done = asyncio.Event()
+              stats = {"frames": 0, "samples": 0, "peak": 0, "nonzero_frames": 0}
+
+              @room.on("track_subscribed")
+              def on_track_subscribed(track, publication, participant):
+                  if not participant.identity.startswith("agent-"):
+                      return
+                  if track.kind != rtc.TrackKind.KIND_AUDIO:
+                      return
+
+                  async def consume():
+                      stream = rtc.AudioStream(track, sample_rate=48000, num_channels=1)
+                      loop = asyncio.get_running_loop()
+                      deadline = loop.time() + 5.0
+                      try:
+                          async for event in stream:
+                              values = event.frame.data
+                              peak = max((abs(int(v)) for v in values), default=0)
+                              stats["frames"] += 1
+                              stats["samples"] += len(values)
+                              stats["peak"] = max(stats["peak"], peak)
+                              if peak > 100:
+                                  stats["nonzero_frames"] += 1
+                              if loop.time() >= deadline:
+                                  break
+                      finally:
+                          await stream.aclose()
+                          done.set()
+
+                  asyncio.create_task(consume())
+
+              await room.connect(os.environ["LIVEKIT_URL"], os.environ["PROBE_TOKEN"])
+              try:
+                  await asyncio.wait_for(done.wait(), timeout=8.0)
+              except asyncio.TimeoutError:
+                  pass
+              finally:
+                  await room.disconnect()
+
+              print("AUDIO_PROBE", stats)
+              if stats["frames"] == 0:
+                  print("AUDIO_PROBE_RESULT=no_frames")
+              elif stats["peak"] <= 100 or stats["nonzero_frames"] == 0:
+                  print("AUDIO_PROBE_RESULT=silent")
+              else:
+                  print("AUDIO_PROBE_RESULT=audible_pcm")
+
+          asyncio.run(main())
+          PY
+
           echo "=== DISPATCH ==="
           lk dispatch list --json "$ROOM" || true
 
