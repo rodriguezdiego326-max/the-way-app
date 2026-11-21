@@ -45,6 +45,17 @@ jobs:
             done
           fi
 
+          echo "=== FORCE LISTENER AUDIO SUBSCRIPTION ==="
+          LISTENER_ID="$(awk '{print $1}' /tmp/participants.txt | grep -v '^church-feed-' | grep -v '^agent-' | head -n 1 || true)"
+          AGENT_ID="$(awk '{print $1}' /tmp/participants.txt | grep '^agent-' | head -n 1 || true)"
+          if [ -n "$LISTENER_ID" ] && [ -n "$AGENT_ID" ]; then
+            AGENT_TRACK="$(lk room participants get --room "$ROOM" "$AGENT_ID" | jq -r '.tracks[]? | select(.mimeType | startswith("audio/")) | .sid' | head -n 1)"
+            if [ -n "$AGENT_TRACK" ] && [ "$AGENT_TRACK" != "null" ]; then
+              echo "Subscribing listener $LISTENER_ID to agent audio track $AGENT_TRACK"
+              lk room update-subscriptions --room "$ROOM" --identity "$LISTENER_ID" --subscribe "$AGENT_TRACK" || true
+            fi
+          fi
+
           echo "=== DISPATCH ==="
           lk dispatch list --json "$ROOM" || true
 
