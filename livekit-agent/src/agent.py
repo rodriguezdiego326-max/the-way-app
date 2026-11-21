@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 
@@ -12,11 +13,41 @@ from livekit.agents import (
     inference,
     room_io,
 )
+from livekit.plugins import openai
 
 logger = logging.getLogger("solapath-sermon-translator")
 logging.basicConfig(level=logging.INFO)
 
 AGENT_NAME = "solapath-sermon-translator"
+TRANSLATION_STATUS_TOPIC = "solapath.translation.status"
+TRANSLATION_STATUS_KEY = "solapath.translation.status"
+TRANSLATION_MESSAGE_KEY = "solapath.translation.message"
+TRANSLATION_ERROR_MESSAGE = (
+    "The church feed is connected, but the translation service could not start. "
+    "Please try again shortly."
+)
+
+
+async def publish_translation_status(
+    ctx: JobContext,
+    status: str,
+    message: str = "",
+) -> None:
+    payload = json.dumps({"status": status, "message": message})
+    try:
+        await ctx.room.local_participant.set_attributes(
+            {
+                TRANSLATION_STATUS_KEY: status,
+                TRANSLATION_MESSAGE_KEY: message,
+            }
+        )
+        await ctx.room.local_participant.publish_data(
+            payload,
+            reliable=True,
+            topic=TRANSLATION_STATUS_TOPIC,
+        )
+    except Exception:
+        logger.exception("failed to publish translation service status")
 
 
 class SermonInterpreter(Agent):
@@ -81,42 +112,52 @@ async def sermon_translator(ctx: JobContext) -> None:
         "source_participant": source_identity,
     }
 
+    # Keep VAD local so the church translator does not consume LiveKit Inference
+    # credits for voice activity detection.
+    session_vad = inference.VAD(
+        model="silero",
+        activation_threshold=0.60,
+        min_speech_duration=0.08,
+        min_silence_duration=0.28,
+        prefix_padding_duration=0.25,
+        max_buffered_speech=90.0,
+    )
+    transcription_vad = inference.VAD(
+        model="silero",
+        activation_threshold=0.60,
+        min_speech_duration=0.08,
+        min_silence_duration=0.28,
+        prefix_padding_duration=0.25,
+        max_buffered_speech=90.0,
+    )
+
     session = AgentSession(
-        # Keep a dedicated STT stream so SOLAPATH can continue showing the
-        # original sermon captions in realtime.
-        stt=inference.STT(
-            model="openai/gpt-live-transcribe",
+        # Direct OpenAI plugin: OpenAI bills this transcription stream directly
+        # instead of routing it through LiveKit Inference credits.
+        stt=openai.STT(
+            model="gpt-live-transcribe",
             language=source_language,
-            sample_rate=24000,
+            use_realtime=True,
+            vad=transcription_vad,
         ),
-        vad=inference.VAD(
-            model="silero",
-            activation_threshold=0.60,
-            min_speech_duration=0.08,
-            min_silence_duration=0.28,
-            prefix_padding_duration=0.25,
-            max_buffered_speech=90.0,
-        ),
-        # Full-duplex speech-to-speech interpretation. Unlike the previous
-        # STT -> LLM -> TTS conversational pipeline, GPT-Live can listen while
-        # it speaks, so continuous sermon audio does not cause later phrases
-        # to be skipped while translated audio is playing.
-        llm=inference.DuplexModel(
-            model="openai/gpt-live-1",
+        vad=session_vad,
+        # Direct OpenAI GPT-Live plugin. This preserves the full-duplex behavior
+        # that lets the interpreter listen while it speaks, but usage is billed
+        # to OPENAI_API_KEY rather than the LiveKit Inference allowance.
+        llm=openai.realtime.GPTLiveModel(
+            model="gpt-live-1",
             voice="cedar",
-            extra_kwargs={
-                "responses_options": {
-                    "model": "gpt-5.6-luna",
-                    "instructions": (
-                        f"The voice model should normally translate the sermon directly from "
-                        f"{source_name} into {target_name} without delegating. If delegation still "
-                        "occurs, return only a very short faithful translation of the pending clause "
-                        "immediately, with no explanation, commentary, or added doctrine."
-                    ),
-                    "tool_choice": "none",
-                    "reasoning": {"effort": "none"},
-                    "text": {"verbosity": "low"},
-                },
+            responses_options={
+                "model": "gpt-5.6-luna",
+                "instructions": (
+                    f"The voice model should normally translate the sermon directly from "
+                    f"{source_name} into {target_name} without delegating. If delegation still "
+                    "occurs, return only a very short faithful translation of the pending clause "
+                    "immediately, with no explanation, commentary, or added doctrine."
+                ),
+                "tool_choice": "none",
+                "reasoning": {"effort": "none"},
+                "text": {"verbosity": "low"},
             },
         ),
     )
@@ -124,6 +165,20 @@ async def sermon_translator(ctx: JobContext) -> None:
     # RoomOptions pins this session to the church ingress participant.
     # Connect first so RoomIO can safely resolve the agent's local participant.
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
+    await publish_translation_status(ctx, "starting")
+
+    @session.on("error")
+    def on_session_error(event) -> None:
+        if getattr(event.error, "recoverable", False):
+            return
+        logger.error("unrecoverable translation service error: %s", event.error)
+        asyncio.create_task(
+            publish_translation_status(
+                ctx,
+                "error",
+                TRANSLATION_ERROR_MESSAGE,
+            )
+        )
 
     @session.on("user_input_transcribed")
     def on_source_transcript(event) -> None:
@@ -152,6 +207,8 @@ async def sermon_translator(ctx: JobContext) -> None:
             audio_output=True,
         ),
     )
+
+    await publish_translation_status(ctx, "ready")
 
 
 if __name__ == "__main__":

@@ -227,11 +227,17 @@ export default function ChurchLiveTranslationScreen({
     }
   }
 
-  const statusDot = settings?.provider_status === 'live'
-    ? 'bg-error animate-pulse'
-    : feedAvailable
-      ? 'bg-sage-400'
-      : 'bg-ivory-700';
+  const displayedFeedStatus = listenerError
+    ? 'Needs attention'
+    : statusLabel(settings?.provider_status);
+
+  const statusDot = listenerError
+    ? 'bg-error'
+    : settings?.provider_status === 'live'
+      ? 'bg-error animate-pulse'
+      : feedAvailable
+        ? 'bg-sage-400'
+        : 'bg-ivory-700';
 
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28 flex flex-col text-ivory-100">
@@ -270,7 +276,7 @@ export default function ChurchLiveTranslationScreen({
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <div>
                     <p className="ui-label">{t('Church Feed Status')}</p>
-                    <p className="text-ivory-100 text-sm mt-1">{t(statusLabel(settings?.provider_status))}</p>
+                    <p className="text-ivory-100 text-sm mt-1">{t(displayedFeedStatus)}</p>
                   </div>
                   <span className={'w-3 h-3 rounded-full ' + statusDot} />
                 </div>
@@ -290,13 +296,15 @@ export default function ChurchLiveTranslationScreen({
                     <div className="flex items-center gap-2">
                       <Headphones size={15} className="text-gold-300" />
                       <p className="text-gold-200 text-sm font-medium">
-                        {listenerState === 'connecting'
-                          ? t('Connecting to church feed...')
-                          : listenerState === 'waiting'
-                            ? t('Waiting for sermon audio...')
-                            : listenerState === 'listening'
-                              ? t('Translated audio is live')
-                              : t('Church feed prepared')}
+                        {listenerError
+                          ? t('Translation service unavailable')
+                          : listenerState === 'connecting'
+                            ? t('Connecting to church feed...')
+                            : listenerState === 'waiting'
+                              ? t('Waiting for sermon audio...')
+                              : listenerState === 'listening'
+                                ? t('Translated audio is live')
+                                : t('Church feed prepared')}
                       </p>
                     </div>
                     <p className="text-ivory-500 text-xs mt-2 leading-relaxed">

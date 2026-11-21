@@ -2834,6 +2834,8 @@ const ES: Record<string, string> = {
   'Connecting to church feed...': 'Conectando con la transmisión de la iglesia...',
   'Waiting for sermon audio...': 'Esperando el audio del sermón...',
   'Translated audio is live': 'El audio traducido está en vivo',
+  'Translation service unavailable': 'Servicio de traducción no disponible',
+  'The church feed is connected, but the translation service could not start. Please try again shortly.': 'La transmisión de la iglesia está conectada, pero el servicio de traducción no pudo iniciarse. Inténtalo de nuevo en breve.',
   'Listen to the translated sermon from your church’s clean audio feed. Your microphone stays off.': 'Escucha el sermón traducido desde la señal limpia de audio de tu iglesia. Tu micrófono permanece apagado.',
   'Listen to Translation': 'Escuchar traducción',
   'Stop Listening': 'Dejar de escuchar',

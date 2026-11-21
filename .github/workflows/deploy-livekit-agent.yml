@@ -63,6 +63,16 @@ jobs:
             echo "config_created=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Require direct OpenAI billing key
+        shell: bash
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
+            echo "::error::Missing OPENAI_API_KEY repository secret. Add the same paid OpenAI API key used by SOLAPATH, then re-run this workflow."
+            exit 1
+          fi
+
       - name: Validate agent Python syntax
         run: python -m py_compile livekit-agent/src/agent.py
 
@@ -72,7 +82,7 @@ jobs:
           LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
           LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
           LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
-          SECRET_LIST: ""
+          SECRET_LIST: OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           OPERATION: ${{ steps.mode.outputs.operation }}

@@ -29,6 +29,11 @@ type TranscriptTurn = {
 };
 
 const MAX_TRANSCRIPT_TURNS = 120;
+const TRANSLATION_STATUS_TOPIC = 'solapath.translation.status';
+const TRANSLATION_STATUS_KEY = 'solapath.translation.status';
+const TRANSLATION_MESSAGE_KEY = 'solapath.translation.message';
+const DEFAULT_TRANSLATION_SERVICE_ERROR =
+  'The church feed is connected, but the translation service could not start. Please try again shortly.';
 
 function transcriptFromTurns(turns: Map<string, TranscriptTurn>): string {
   return Array.from(turns.values())
@@ -69,6 +74,23 @@ export async function startChurchLiveListener(
   let nextTranslationOrder = 0;
   const attachedAudio = new Set<HTMLMediaElement>();
   let stopped = false;
+  let translationServiceFailed = false;
+
+  const reportTranslationServiceError = (message?: string) => {
+    if (translationServiceFailed) return;
+    translationServiceFailed = true;
+    callbacks.onStateChange?.('waiting');
+    callbacks.onError?.(message || DEFAULT_TRANSLATION_SERVICE_ERROR);
+  };
+
+  const handleAgentTranslationStatus = (participant: RemoteParticipant) => {
+    if (!participant.isAgent) return;
+    const status = participant.attributes[TRANSLATION_STATUS_KEY];
+    if (status !== 'error') return;
+    reportTranslationServiceError(
+      participant.attributes[TRANSLATION_MESSAGE_KEY] || DEFAULT_TRANSLATION_SERVICE_ERROR,
+    );
+  };
 
   const publishTranscript = (
     turns: Map<string, TranscriptTurn>,
@@ -144,7 +166,9 @@ export async function startChurchLiveListener(
       callbacks.onNeedsAudioStart?.(true);
     });
 
-    callbacks.onStateChange?.('listening');
+    if (!translationServiceFailed) {
+      callbacks.onStateChange?.('listening');
+    }
   };
 
   room.on(
@@ -187,8 +211,40 @@ export async function startChurchLiveListener(
     callbacks.onNeedsAudioStart?.(!room.canPlaybackAudio);
   });
 
+  room.on(
+    RoomEvent.ParticipantAttributesChanged,
+    (_changed: Record<string, string>, participant: RemoteParticipant) => {
+      handleAgentTranslationStatus(participant);
+    },
+  );
+
+  room.on(
+    RoomEvent.DataReceived,
+    (
+      payload: Uint8Array,
+      participant: RemoteParticipant | undefined,
+      _kind,
+      topic?: string,
+    ) => {
+      if (topic !== TRANSLATION_STATUS_TOPIC || !participant?.isAgent) return;
+      try {
+        const event = JSON.parse(new TextDecoder().decode(payload)) as {
+          status?: string;
+          message?: string;
+        };
+        if (event.status === 'error') {
+          reportTranslationServiceError(event.message);
+        }
+      } catch {
+        // Ignore malformed status packets; participant attributes provide a
+        // second synchronized source of truth for late-joining listeners.
+      }
+    },
+  );
+
   room.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
     subscribeAgentAudio(participant);
+    handleAgentTranslationStatus(participant);
   });
 
   room.on(RoomEvent.Disconnected, () => {
@@ -205,6 +261,7 @@ export async function startChurchLiveListener(
 
     room.remoteParticipants.forEach((participant) => {
       subscribeAgentAudio(participant);
+      handleAgentTranslationStatus(participant);
     });
 
     callbacks.onStateChange?.('waiting');
