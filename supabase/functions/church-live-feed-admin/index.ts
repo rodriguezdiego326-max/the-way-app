@@ -34,21 +34,34 @@ async function ensureTranslationAgent(
   targetLanguage: "en" | "es",
 ) {
   try {
+    const desiredMetadata = JSON.stringify({
+      churchId,
+      sourceLanguage,
+      targetLanguage,
+      sourceParticipantIdentity: `church-feed-${churchId}`,
+    });
+
     const existing = await api.agentDispatch.listDispatch(roomName);
-    const active = existing.find((item) => item.agentName === TRANSLATION_AGENT_NAME);
-    if (active) return { status: "ready", dispatchId: active.id };
+    const translators = existing.filter(
+      (item) => item.agentName === TRANSLATION_AGENT_NAME,
+    );
+    const matching = translators.find(
+      (item) => item.metadata === desiredMetadata,
+    );
+
+    for (const dispatch of translators) {
+      if (matching && dispatch.id === matching.id) continue;
+      await api.agentDispatch.deleteDispatch(dispatch.id, roomName);
+    }
+
+    if (matching) {
+      return { status: "ready", dispatchId: matching.id };
+    }
 
     const dispatch = await api.agentDispatch.createDispatch(
       roomName,
       TRANSLATION_AGENT_NAME,
-      {
-        metadata: JSON.stringify({
-          churchId,
-          sourceLanguage,
-          targetLanguage,
-          sourceParticipantIdentity: `church-feed-${churchId}`,
-        }),
-      },
+      { metadata: desiredMetadata },
     );
     return { status: "ready", dispatchId: dispatch.id };
   } catch (cause) {
