@@ -98,7 +98,7 @@ workflows:
         EXPECTED_ANDROID_VERSION_CODE: "167"
         EXPECTED_ANDROID_VERSION_NAME: "0.3.0"
       node: latest
-      java: 17
+      java: 21
     cache:
       cache_paths:
         - $HOME/.npm
