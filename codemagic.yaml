@@ -140,6 +140,7 @@ workflows:
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
       - name: Build Android release bundle
         script: |
+          chmod +x android/gradlew
           cd android
           ./gradlew bundleRelease
     artifacts:
