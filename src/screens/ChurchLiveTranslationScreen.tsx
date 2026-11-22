@@ -17,9 +17,15 @@ import {
 } from '@/lib/churchLiveTranslationEngine';
 import {
   startChurchLiveListener,
+  startChurchLiveListenerFromConnection,
   type ChurchLiveListenerSession,
   type ChurchLiveListenerState,
 } from '@/lib/churchLiveListener';
+import {
+  startChurchYouTubeLiveSource,
+  stopChurchYouTubeLiveSource,
+  type ChurchYouTubeLiveSession,
+} from '@/lib/churchYouTubeLiveEngine';
 
 interface Props {
   profileId: string;
@@ -71,12 +77,15 @@ export default function ChurchLiveTranslationScreen({
   const [needsAudioStart, setNeedsAudioStart] = useState(false);
   const [sourceTranscript, setSourceTranscript] = useState('');
   const [translatedTranscript, setTranslatedTranscript] = useState('');
+  const [streamUrl, setStreamUrl] = useState('');
+  const [streamSession, setStreamSession] = useState<ChurchYouTubeLiveSession | null>(null);
   const listenerSessionRef = useRef<ChurchLiveListenerSession | null>(null);
 
   const isLeadership = isVerifiedChurchLeadership(membership?.verified_church_role);
   const isAppOwner = appAdminRole === 'APP_OWNER';
   const canManageFeed = isLeadership || isAppOwner;
-  const feedAvailable = !!settings?.enabled && ['ready', 'live', 'offline'].includes(settings.provider_status);
+  const directFeedAvailable = !!settings?.enabled && ['ready', 'live', 'offline'].includes(settings.provider_status);
+  const feedAvailable = !!streamSession || directFeedAvailable;
 
   const directionLabel = useMemo(
     () => sourceLanguage === 'en'
@@ -172,6 +181,64 @@ export default function ChurchLiveTranslationScreen({
     setCredentials(result.credentials);
   }
 
+  async function handleConnectStreamUrl() {
+    if (!churchId || !canManageFeed || busy) return;
+
+    const url = streamUrl.trim();
+    if (!url) {
+      setError(t('Paste a stream URL first.'));
+      return;
+    }
+
+    vibrate(10);
+    setBusy(true);
+    setError(null);
+    setListenerError(null);
+
+    const result = await startChurchYouTubeLiveSource(
+      churchId,
+      url,
+      sourceLanguage,
+      targetLanguage,
+    );
+
+    setBusy(false);
+
+    if (result.error || !result.session) {
+      if (result.error === 'invalid_youtube_url') {
+        setError(t('Enter a valid YouTube Live URL.'));
+      } else if (
+        result.error === 'youtube_playback_manifest_unavailable'
+        || result.error === 'youtube_live_hls_unavailable'
+      ) {
+        setError(t('YouTube is not providing a playable live stream to SOLAPATH. Make sure the broadcast is live and public.'));
+      } else {
+        setError(t('SOLAPATH could not connect to this stream URL. Please try again.'));
+      }
+      return;
+    }
+
+    setStreamSession(result.session);
+  }
+
+  async function handleDisconnectStreamUrl() {
+    if (!churchId || !streamSession || busy) return;
+
+    await handleStopListening();
+    setBusy(true);
+    setError(null);
+
+    const stopped = await stopChurchYouTubeLiveSource(churchId, streamSession);
+    setBusy(false);
+
+    if (!stopped) {
+      setError(t('SOLAPATH could not disconnect this stream cleanly. Please try again.'));
+      return;
+    }
+
+    setStreamSession(null);
+  }
+
   async function copyValue(kind: 'server' | 'key', value: string) {
     try {
       await navigator.clipboard.writeText(value);
@@ -192,14 +259,22 @@ export default function ChurchLiveTranslationScreen({
     setNeedsAudioStart(false);
     setListenerState('connecting');
 
+    const callbacks = {
+      onStateChange: setListenerState,
+      onSourceTranscript: setSourceTranscript,
+      onTranslationTranscript: setTranslatedTranscript,
+      onNeedsAudioStart: setNeedsAudioStart,
+      onError: (message: string) => setListenerError(t(message)),
+    };
+
     try {
-      const session = await startChurchLiveListener(churchId, {
-        onStateChange: setListenerState,
-        onSourceTranscript: setSourceTranscript,
-        onTranslationTranscript: setTranslatedTranscript,
-        onNeedsAudioStart: setNeedsAudioStart,
-        onError: (message) => setListenerError(t(message)),
-      });
+      const session = streamSession
+        ? await startChurchLiveListenerFromConnection(
+            streamSession.listener,
+            streamSession.sourceParticipantIdentity,
+            callbacks,
+          )
+        : await startChurchLiveListener(churchId, callbacks);
       listenerSessionRef.current = session;
     } catch {
       listenerSessionRef.current = null;
@@ -229,11 +304,13 @@ export default function ChurchLiveTranslationScreen({
 
   const displayedFeedStatus = listenerError
     ? 'Needs attention'
-    : statusLabel(settings?.provider_status);
+    : streamSession
+      ? 'Live'
+      : statusLabel(settings?.provider_status);
 
   const statusDot = listenerError
     ? 'bg-error'
-    : settings?.provider_status === 'live'
+    : streamSession || settings?.provider_status === 'live'
       ? 'bg-error animate-pulse'
       : feedAvailable
         ? 'bg-sage-400'
@@ -283,11 +360,15 @@ export default function ChurchLiveTranslationScreen({
                 <div className="flex items-center gap-2 text-xs text-ivory-500">
                   <Languages size={13} className="text-gold-300" />
                   <span>
-                    {settings
-                      ? settings.source_language === 'en'
+                    {streamSession
+                      ? streamSession.sourceLanguage === 'en'
                         ? t('English') + ' → ' + t('Spanish')
                         : t('Spanish') + ' → ' + t('English')
-                      : directionLabel}
+                      : settings
+                        ? settings.source_language === 'en'
+                          ? t('English') + ' → ' + t('Spanish')
+                          : t('Spanish') + ' → ' + t('English')
+                        : directionLabel}
                   </span>
                 </div>
 
@@ -398,6 +479,57 @@ export default function ChurchLiveTranslationScreen({
                       ? 'SOLAPATH App Owner access is active for development. Your church membership remains unchanged.'
                       : 'Verified church leadership can connect the church mixer or OBS encoder. Stream keys are never shown to regular members.')}
                   </p>
+
+                  <div className="rounded-xl border border-gold-500/20 bg-gold-500/5 p-4 mb-5">
+                    <p className="ui-label mb-2">{t('Stream URL')}</p>
+                    <p className="text-ivory-500 text-xs leading-relaxed mb-3">
+                      {t('Paste the YouTube Live URL for the sermon. SOLAPATH will connect that live stream to the translation room.')}
+                    </p>
+                    <input
+                      type="url"
+                      inputMode="url"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      placeholder={t('https://www.youtube.com/live/...')}
+                      value={streamUrl}
+                      disabled={busy || !!streamSession}
+                      onChange={(event) => setStreamUrl(event.target.value)}
+                      className="input-field w-full text-xs mb-3"
+                    />
+                    {streamSession ? (
+                      <>
+                        <div className="rounded-lg border border-sage-500/20 bg-sage-500/5 p-3 mb-3">
+                          <p className="text-sage-300 text-xs font-medium">{t('Stream connected')}</p>
+                          {streamSession.title && (
+                            <p className="text-ivory-500 text-[11px] mt-1 line-clamp-2">{streamSession.title}</p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void handleDisconnectStreamUrl()}
+                          className="btn-secondary w-full disabled:opacity-40"
+                        >
+                          <Square size={14} /> {busy ? t('Disconnecting...') : t('Disconnect Stream')}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={busy || !streamUrl.trim()}
+                        onClick={() => void handleConnectStreamUrl()}
+                        className="btn-primary w-full disabled:opacity-40"
+                      >
+                        <Cable size={16} /> {busy ? t('Connecting...') : t('Connect Stream')}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="h-px flex-1 bg-ink-700/40" />
+                    <span className="text-[10px] uppercase tracking-[0.16em] text-ivory-600">{t('Or connect an encoder')}</span>
+                    <span className="h-px flex-1 bg-ink-700/40" />
+                  </div>
 
                   <p className="ui-label mb-2">{t('Encoder Type')}</p>
                   <div className="grid grid-cols-2 gap-2 mb-4">
