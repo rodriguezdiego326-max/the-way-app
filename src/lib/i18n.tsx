@@ -70,7 +70,6 @@ const ES: Record<string, string> = {
   'Disconnect Stream': 'Desconectar transmisión',
   'Disconnecting...': 'Desconectando...',
   'Connect Stream': 'Conectar transmisión',
-  'Connecting...': 'Conectando...',
   'Or connect an encoder': 'O conecta un codificador',
   'Paste a stream URL first.': 'Pega primero una URL de transmisión.',
   'Enter a valid YouTube Live URL.': 'Ingresa una URL válida de YouTube Live.',
