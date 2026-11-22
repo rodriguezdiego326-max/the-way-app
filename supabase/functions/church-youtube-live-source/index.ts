@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { AccessToken, IngressInput, LiveKitAPI } from "npm:livekit-server-sdk@2.20.0";
-import { Innertube } from "npm:youtubei.js@18.1.0";
+import { Innertube } from "npm:youtubei.js@18.3.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -83,7 +83,9 @@ async function resolveYouTubeLiveHls(youtubeUrl: string) {
   const info = await innertube.getInfo(videoId, { client: "TV" });
   const hlsUrl = info.streaming_data?.hls_manifest_url;
 
-  if (!hlsUrl) throw new Error("youtube_live_hls_unavailable");
+  if (!hlsUrl) {
+    throw new Error("youtube_playback_manifest_unavailable");
+  }
 
   const parsed = new URL(hlsUrl);
   const host = parsed.hostname.toLowerCase();
