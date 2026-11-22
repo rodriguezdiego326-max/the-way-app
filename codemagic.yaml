@@ -138,12 +138,13 @@ workflows:
       - name: Set Android SDK location
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
-      - name: Build Android release bundle
+      - name: Build Android release bundle and test APK
         script: |
           chmod +x android/gradlew
           cd android
-          ./gradlew bundleRelease
+          ./gradlew bundleRelease assembleDebug
     artifacts:
       - android/app/build/outputs/**/*.aab
+      - android/app/build/outputs/**/*.apk
       - android/app/build/reports/**/*
 
