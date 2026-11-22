@@ -80,7 +80,7 @@ async function resolveYouTubeLiveHls(youtubeUrl: string) {
     location: "US",
   });
 
-  const info = await innertube.getInfo(videoId, { client: "TV" });
+  const info = await innertube.getBasicInfo(videoId, { client: "TV" });
   const hlsUrl = info.streaming_data?.hls_manifest_url;
 
   if (!hlsUrl) {
