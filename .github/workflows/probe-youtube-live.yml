@@ -1,0 +1,25 @@
+name: Probe SOLAPATH YouTube Live Source
+
+on:
+  push:
+    branches:
+      - feature/youtube-live-translation
+    paths:
+      - "scripts/probe-youtube-live.mjs"
+      - ".github/workflows/probe-youtube-live.yml"
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      TEST_YOUTUBE_URL: "https://www.youtube.com/live/hNGObmydgcE?feature=shared"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install YouTube resolver
+        run: npm install --no-save --ignore-scripts youtubei.js@18.1.0
+      - name: Probe live HLS
+        run: node scripts/probe-youtube-live.mjs
