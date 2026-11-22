@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "669633040926",
+    "project_id": "solapath",
+    "storage_bucket": "solapath.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:669633040926:android:c7bcd403ccdb09a374940f",
+        "android_client_info": {
+          "package_name": "com.rfgforge.solapath"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA38p0EoQR5Ap6fSrz3qW7i41Rv8wWl1SA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
