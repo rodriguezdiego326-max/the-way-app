@@ -1,23 +1,28 @@
+import { readFileSync } from 'node:fs';
+import ts from 'typescript';
 import { Innertube } from 'youtubei.js';
 
-const input = process.env.TEST_YOUTUBE_URL || '';
-const match = input.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|live\/|embed\/|shorts\/))([A-Za-z0-9_-]{11})/);
-const videoId = match?.[1] || (/^[A-Za-z0-9_-]{11}$/.test(input) ? input : null);
+// Use the same resolver as the Edge Function; a different client can hide its failure.
+const source = readFileSync('supabase/functions/church-youtube-live-source/youtubeSource.ts', 'utf8');
+const { outputText } = ts.transpileModule(source, {
+  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
+});
+const { resolveYouTubeLiveHls } = await import(
+  'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
+);
 
-if (!videoId) {
-  console.error('PROBE_RESULT=invalid_youtube_url');
-  process.exit(2);
+try {
+  const result = await resolveYouTubeLiveHls(process.env.TEST_YOUTUBE_URL || '', (signal) => Innertube.create({
+    lang: 'en',
+    location: 'US',
+    fetch: (input, init) => fetch(input, { ...init, signal }),
+  }));
+  console.log('VIDEO_ID=' + result.videoId);
+  console.log('TITLE=' + (result.title ?? ''));
+  console.log('HLS_HOST=' + new URL(result.hlsUrl).hostname);
+  console.log('PROBE_RESULT=resolvable_live_hls');
+  // Resolving a URL does not prove that LiveKit can play it or translate its audio.
+} catch (error) {
+  console.error('PROBE_RESULT=' + error.message);
+  process.exitCode = 3;
 }
-
-const youtube = await Innertube.create({ lang: 'en', location: 'US' });
-const info = await youtube.getInfo(videoId, { client: 'TV' });
-const hls = info.streaming_data?.hls_manifest_url ?? null;
-
-console.log('VIDEO_ID=' + videoId);
-console.log('TITLE=' + (info.basic_info?.title ?? ''));
-console.log('IS_LIVE=' + String(info.basic_info?.is_live ?? false));
-console.log('HAS_HLS=' + String(Boolean(hls)));
-console.log('HLS_HOST=' + (hls ? new URL(hls).hostname : ''));
-console.log('PROBE_RESULT=' + (hls ? 'resolvable_live_hls' : 'no_live_hls'));
-
-if (!hls) process.exit(3);

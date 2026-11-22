@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { churchStreamErrorCode, withStreamDeadline } from '@/lib/churchStreamErrors';
 import type { ChurchLiveLanguage } from '@/lib/churchLiveTranslationEngine';
 
 export interface ChurchYouTubeResolveResult {
@@ -32,12 +33,6 @@ interface FunctionErrorShape {
   error?: string;
 }
 
-function functionErrorCode(error: unknown): string | null {
-  const response = (error as { context?: unknown } | null)?.context;
-  if (!(response instanceof Response)) return null;
-  return response.headers.get('x-solapath-error');
-}
-
 export async function resolveChurchYouTubeLiveSource(
   churchId: string,
   youtubeUrl: string,
@@ -56,7 +51,7 @@ export async function resolveChurchYouTubeLiveSource(
   if (error) {
     return {
       source: null,
-      error: functionErrorCode(error) || error.message || 'youtube_resolve_failed',
+      error: (await churchStreamErrorCode(error)) || error.message || 'youtube_resolve_failed',
     };
   }
 
@@ -70,28 +65,33 @@ export async function startChurchYouTubeLiveSource(
   sourceLanguage: ChurchLiveLanguage,
   targetLanguage: ChurchLiveLanguage,
 ): Promise<{ session: ChurchYouTubeLiveSession | null; error: string | null }> {
-  const { data, error } = await supabase.functions.invoke<ChurchYouTubeLiveSession & FunctionErrorShape>(
-    'church-youtube-live-source',
-    {
-      body: {
-        action: 'start',
-        churchId,
-        youtubeUrl,
-        sourceLanguage,
-        targetLanguage,
+  try {
+    const { data, error } = await withStreamDeadline(
+      supabase.functions.invoke<ChurchYouTubeLiveSession & FunctionErrorShape>(
+        'church-youtube-live-source',
+        { body: { action: 'start', churchId, youtubeUrl, sourceLanguage, targetLanguage } },
+      ),
+      async ({ data, error }) => {
+        if (!error && data && !data.error && data.roomName && data.ingressId) {
+          await stopChurchYouTubeLiveSource(churchId, data);
+        }
       },
-    },
-  );
-
-  if (error) {
+    );
+    if (error) {
+      return {
+        session: null,
+        error: (await churchStreamErrorCode(error)) || error.message || 'youtube_start_failed',
+      };
+    }
+    if (data?.error) return { session: null, error: data.error };
+    return { session: data as ChurchYouTubeLiveSession, error: null };
+  } catch (cause) {
     return {
       session: null,
-      error: functionErrorCode(error) || error.message || 'youtube_start_failed',
+      error: cause instanceof Error && cause.message === 'youtube_connection_timeout'
+        ? cause.message : 'youtube_start_failed',
     };
   }
-
-  if (data?.error) return { session: null, error: data.error };
-  return { session: data as ChurchYouTubeLiveSession, error: null };
 }
 
 export async function getChurchYouTubeListenerToken(

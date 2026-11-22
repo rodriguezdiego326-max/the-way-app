@@ -44,5 +44,8 @@ jobs:
       - name: Language contract
         run: npm run test:language
 
+      - name: Church stream failures and timeout recovery
+        run: npm run test:church-stream
+
       - name: Production web build
         run: npm run build:web

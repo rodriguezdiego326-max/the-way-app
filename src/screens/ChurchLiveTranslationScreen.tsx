@@ -195,30 +195,44 @@ export default function ChurchLiveTranslationScreen({
     setError(null);
     setListenerError(null);
 
-    const result = await startChurchYouTubeLiveSource(
-      churchId,
-      url,
-      sourceLanguage,
-      targetLanguage,
-    );
-
-    setBusy(false);
-
-    if (result.error || !result.session) {
-      if (result.error === 'invalid_youtube_url') {
-        setError(t('Enter a valid YouTube Live URL.'));
-      } else if (
-        result.error === 'youtube_playback_manifest_unavailable'
-        || result.error === 'youtube_live_hls_unavailable'
-      ) {
-        setError(t('YouTube is not providing a playable live stream to SOLAPATH. Make sure the broadcast is live and public.'));
-      } else {
-        setError(t('SOLAPATH could not connect to this stream URL. Please try again.'));
+    try {
+      const result = await startChurchYouTubeLiveSource(
+        churchId, url, sourceLanguage, targetLanguage,
+      );
+      if (result.error || !result.session) {
+        switch (result.error) {
+          case 'invalid_youtube_url':
+            setError(t('Enter a valid YouTube Live URL.'));
+            break;
+          case 'youtube_not_live':
+            setError(t('This broadcast is not live. Start the broadcast before connecting.'));
+            break;
+          case 'youtube_access_denied':
+          case 'youtube_client_unsupported':
+            setError(t('YouTube is refusing access to this stream from SOLAPATH. Retrying this URL will not fix that restriction.'));
+            break;
+          case 'youtube_playback_manifest_unavailable':
+          case 'youtube_live_hls_unavailable':
+            setError(t('YouTube has not provided the live audio feed SOLAPATH needs. A video playing on YouTube does not guarantee it can connect here.'));
+            break;
+          case 'youtube_resolve_timeout':
+          case 'youtube_connection_timeout':
+            setError(t('The stream connection timed out. Check your connection before trying again.'));
+            break;
+          case 'youtube_unavailable':
+            setError(t('This broadcast is unavailable to SOLAPATH. Check its visibility and live status on YouTube.'));
+            break;
+          default:
+            setError(t('SOLAPATH could not connect to this stream URL. Please try again.'));
+        }
+        return;
       }
-      return;
+      setStreamSession(result.session);
+    } catch {
+      setError(t('SOLAPATH could not connect to this stream URL. Please try again.'));
+    } finally {
+      setBusy(false);
     }
-
-    setStreamSession(result.session);
   }
 
   async function handleDisconnectStreamUrl() {
@@ -483,7 +497,7 @@ export default function ChurchLiveTranslationScreen({
                   <div className="rounded-xl border border-gold-500/20 bg-gold-500/5 p-4 mb-5">
                     <p className="ui-label mb-2">{t('Stream URL')}</p>
                     <p className="text-ivory-500 text-xs leading-relaxed mb-3">
-                      {t('Paste the YouTube Live URL for the sermon. SOLAPATH will connect that live stream to the translation room.')}
+                      {t('YouTube URL connection is experimental. Some broadcasts cannot provide the audio feed needed for translation.')}
                     </p>
                     <input
                       type="url"

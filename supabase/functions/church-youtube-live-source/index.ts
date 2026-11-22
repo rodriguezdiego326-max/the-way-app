@@ -3,23 +3,13 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { AccessToken, IngressInput, LiveKitAPI } from "npm:livekit-server-sdk@2.20.0";
 import { Innertube } from "npm:youtubei.js@18.3.0";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
-};
+import { corsHeaders, json } from "./response.ts";
+import { resolveYouTubeLiveHls as resolveSource, youtubeErrorCode } from "./youtubeSource.ts";
 
 const LEADERSHIP_ROLES = new Set(["PASTOR", "CHURCH_ADMIN", "ELDER", "LEADER"]);
 const TRANSLATION_AGENT_NAME = "solapath-sermon-translator";
 const YOUTUBE_ROOM_PREFIX = "church-youtube-";
 const YOUTUBE_SOURCE_PREFIX = "church-youtube-feed-";
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
 
 function serverHost(url: string) {
   return url.replace(/^wss:/i, "https:").replace(/^ws:/i, "http:");
@@ -27,40 +17,6 @@ function serverHost(url: string) {
 
 function clientHost(url: string) {
   return url.replace(/^https:/i, "wss:").replace(/^http:/i, "ws:");
-}
-
-function extractYouTubeVideoId(input: string): string | null {
-  const raw = input.trim();
-  if (/^[A-Za-z0-9_-]{11}$/.test(raw)) return raw;
-
-  let url: URL;
-  try {
-    url = new URL(raw);
-  } catch {
-    return null;
-  }
-
-  const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
-  let candidate = "";
-
-  if (hostname === "youtu.be") {
-    candidate = url.pathname.split("/").filter(Boolean)[0] ?? "";
-  } else if (
-    hostname === "youtube.com" ||
-    hostname === "m.youtube.com" ||
-    hostname === "music.youtube.com"
-  ) {
-    if (url.pathname === "/watch") {
-      candidate = url.searchParams.get("v") ?? "";
-    } else {
-      const parts = url.pathname.split("/").filter(Boolean);
-      if (parts[0] === "live" || parts[0] === "embed" || parts[0] === "shorts") {
-        candidate = parts[1] ?? "";
-      }
-    }
-  }
-
-  return /^[A-Za-z0-9_-]{11}$/.test(candidate) ? candidate : null;
 }
 
 function assertYouTubeRoom(churchId: string, roomName: string) {
@@ -71,33 +27,19 @@ function assertYouTubeSource(churchId: string, sourceIdentity: string) {
   return sourceIdentity.startsWith(`${YOUTUBE_SOURCE_PREFIX}${churchId}-`);
 }
 
-async function resolveYouTubeLiveHls(youtubeUrl: string) {
-  const videoId = extractYouTubeVideoId(youtubeUrl);
-  if (!videoId) throw new Error("invalid_youtube_url");
-
-  const innertube = await Innertube.create({
+function resolveYouTubeLiveHls(youtubeUrl: string) {
+  return resolveSource(youtubeUrl, (signal) => Innertube.create({
     lang: "en",
     location: "US",
-  });
+    fetch: (input, init) => fetch(input, { ...init, signal }),
+  }));
+}
 
-  const info = await innertube.getBasicInfo(videoId, { client: "TV_EMBEDDED" });
-  const hlsUrl = info.streaming_data?.hls_manifest_url;
-
-  if (!hlsUrl) {
-    throw new Error("youtube_playback_manifest_unavailable");
-  }
-
-  const parsed = new URL(hlsUrl);
-  const host = parsed.hostname.toLowerCase();
-  if (parsed.protocol !== "https:" || !(host === "googlevideo.com" || host.endsWith(".googlevideo.com"))) {
-    throw new Error("youtube_manifest_host_rejected");
-  }
-
-  return {
-    videoId,
-    title: info.basic_info?.title ?? null,
-    hlsUrl,
-  };
+function sourceFailure(cause: unknown) {
+  const code = youtubeErrorCode(cause);
+  // Do not log signed media URLs, auth headers, or the full provider response.
+  console.warn(JSON.stringify({ event: "youtube_source_failed", code }));
+  return json({ error: code }, code === "youtube_resolve_timeout" ? 504 : 422);
 }
 
 async function ensureTranslationAgent(
@@ -235,8 +177,7 @@ Deno.serve(async (req: Request) => {
         resolvable: true,
       });
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : "youtube_resolve_failed";
-      return json({ error: message }, 422);
+      return sourceFailure(cause);
     }
   }
 
@@ -259,8 +200,7 @@ Deno.serve(async (req: Request) => {
     try {
       source = await resolveYouTubeLiveHls(youtubeUrl);
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : "youtube_resolve_failed";
-      return json({ error: message }, 422);
+      return sourceFailure(cause);
     }
 
     const suffix = crypto.randomUUID().replaceAll("-", "").slice(0, 10);

@@ -35,6 +35,32 @@ ATEM Mini Pro -> YouTube Live -> YouTube HLS -> LiveKit URL ingress -> SOLAPATH 
 - YouTube sessions use separate room/source identity prefixes and never overwrite the existing RTMP/WHIP provider configuration.
 - No existing database row or live-feed configuration is modified.
 
-## Client staging
+## Experimental client and verified blocker (2026-11-22)
 
-`src/lib/churchYouTubeLiveEngine.ts` contains the future client API, but it is not imported by any current screen. A later app update can add the YouTube URL field without changing the current release.
+The feature branch's Build 181 includes the Stream URL field in Church Live Feed.
+It is not a verified release candidate. The approved main branch remains separate.
+
+The tested broadcast was `hNGObmydgcE`, Sovereign Grace Church Pearland (November 22nd 2026).
+The deployed v4 connector returned HTTP 422 before creating a LiveKit ingress.
+A local reproduction with the same pinned YouTube.js version returned an explicit
+unsupported-application error from the `TV_EMBEDDED` client. Normal web and iOS
+player requests identified the broadcast as live but returned no HLS manifest.
+These local probes do not prove playback from the Supabase or LiveKit servers.
+
+The resolver now uses the regular player request, limits resolution to 20 seconds,
+and reports access restrictions, offline broadcasts, missing manifests and timeouts
+with stable error codes. It does not cycle through clients to evade access restrictions.
+Errors are logged without auth tokens or signed media URLs. Error codes are exposed
+through CORS for the existing client's header reader; updated clients also read the
+JSON body from Supabase's HTTP error response.
+
+The updated client releases its Connecting state after failures or a 45-second
+deadline. A session returned after that deadline is cleaned up. New messages are
+localized in English and Spanish, and the URL connection is labeled experimental.
+Client changes need a future app build; no new TestFlight build is required merely
+to diagnose the source failure, and no app version bump is included in this patch.
+
+Run `npm run test:church-stream` for regression tests. A successful mocked HLS
+response verifies the resolver contract, not real playback. This feature remains
+blocked until the actual source delivers playable audio to LiveKit and translation
+is verified on a device. An error-handling patch is not evidence of a connected feed.

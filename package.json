@@ -17,7 +17,8 @@
     "cap:open:android": "npx cap open android",
     "cap:run:ios": "npx cap run ios",
     "cap:run:android": "npx cap run android",
-    "test:language": "node scripts/test-language-contract.mjs"
+    "test:language": "node scripts/test-language-contract.mjs",
+    "test:church-stream": "node --test scripts/test-church-stream.mjs"
   },
   "dependencies": {
     "@aparajita/capacitor-secure-storage": "^8.0.0",
