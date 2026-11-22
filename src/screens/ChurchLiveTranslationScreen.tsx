@@ -17,15 +17,10 @@ import {
 } from '@/lib/churchLiveTranslationEngine';
 import {
   startChurchLiveListener,
-  startChurchLiveListenerFromConnection,
   type ChurchLiveListenerSession,
   type ChurchLiveListenerState,
 } from '@/lib/churchLiveListener';
-import {
-  startChurchYouTubeLiveSource,
-  stopChurchYouTubeLiveSource,
-  type ChurchYouTubeLiveSession,
-} from '@/lib/churchYouTubeLiveEngine';
+import ChurchStreamSourcePanel from '@/components/ChurchStreamSourcePanel';
 
 interface Props {
   profileId: string;
@@ -77,15 +72,15 @@ export default function ChurchLiveTranslationScreen({
   const [needsAudioStart, setNeedsAudioStart] = useState(false);
   const [sourceTranscript, setSourceTranscript] = useState('');
   const [translatedTranscript, setTranslatedTranscript] = useState('');
-  const [streamUrl, setStreamUrl] = useState('');
-  const [streamSession, setStreamSession] = useState<ChurchYouTubeLiveSession | null>(null);
+  const [connectionMode, setConnectionMode] = useState<'link' | 'equipment'>('link');
   const listenerSessionRef = useRef<ChurchLiveListenerSession | null>(null);
+  const listenerGeneration = useRef(0);
 
   const isLeadership = isVerifiedChurchLeadership(membership?.verified_church_role);
   const isAppOwner = appAdminRole === 'APP_OWNER';
   const canManageFeed = isLeadership || isAppOwner;
   const directFeedAvailable = !!settings?.enabled && ['ready', 'live', 'offline'].includes(settings.provider_status);
-  const feedAvailable = !!streamSession || directFeedAvailable;
+  const feedAvailable = directFeedAvailable;
 
   const directionLabel = useMemo(
     () => sourceLanguage === 'en'
@@ -128,7 +123,7 @@ export default function ChurchLiveTranslationScreen({
 
       if (canManage && next && ['ready', 'live', 'offline'].includes(next.provider_status)) {
         const saved = await getChurchLiveFeedCredentials(churchId);
-        if (!cancelled) setCredentials(saved);
+        if (!cancelled) { setCredentials(saved); if (saved) setInputType(saved.inputType); }
       }
 
       if (!cancelled) setLoading(false);
@@ -139,7 +134,9 @@ export default function ChurchLiveTranslationScreen({
   }, [churchId, profileId]);
 
   useEffect(() => {
+    const invalidate = () => { listenerGeneration.current++; };
     return () => {
+      invalidate();
       const activeSession = listenerSessionRef.current;
       listenerSessionRef.current = null;
       if (activeSession) void activeSession.stop();
@@ -179,78 +176,7 @@ export default function ChurchLiveTranslationScreen({
     }
 
     setCredentials(result.credentials);
-  }
-
-  async function handleConnectStreamUrl() {
-    if (!churchId || !canManageFeed || busy) return;
-
-    const url = streamUrl.trim();
-    if (!url) {
-      setError(t('Paste a stream URL first.'));
-      return;
-    }
-
-    vibrate(10);
-    setBusy(true);
-    setError(null);
-    setListenerError(null);
-
-    try {
-      const result = await startChurchYouTubeLiveSource(
-        churchId, url, sourceLanguage, targetLanguage,
-      );
-      if (result.error || !result.session) {
-        switch (result.error) {
-          case 'invalid_youtube_url':
-            setError(t('Enter a valid YouTube Live URL.'));
-            break;
-          case 'youtube_not_live':
-            setError(t('This broadcast is not live. Start the broadcast before connecting.'));
-            break;
-          case 'youtube_access_denied':
-          case 'youtube_client_unsupported':
-            setError(t('YouTube is refusing access to this stream from SOLAPATH. Retrying this URL will not fix that restriction.'));
-            break;
-          case 'youtube_playback_manifest_unavailable':
-          case 'youtube_live_hls_unavailable':
-            setError(t('YouTube has not provided the live audio feed SOLAPATH needs. A video playing on YouTube does not guarantee it can connect here.'));
-            break;
-          case 'youtube_resolve_timeout':
-          case 'youtube_connection_timeout':
-            setError(t('The stream connection timed out. Check your connection before trying again.'));
-            break;
-          case 'youtube_unavailable':
-            setError(t('This broadcast is unavailable to SOLAPATH. Check its visibility and live status on YouTube.'));
-            break;
-          default:
-            setError(t('SOLAPATH could not connect to this stream URL. Please try again.'));
-        }
-        return;
-      }
-      setStreamSession(result.session);
-    } catch {
-      setError(t('SOLAPATH could not connect to this stream URL. Please try again.'));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleDisconnectStreamUrl() {
-    if (!churchId || !streamSession || busy) return;
-
-    await handleStopListening();
-    setBusy(true);
-    setError(null);
-
-    const stopped = await stopChurchYouTubeLiveSource(churchId, streamSession);
-    setBusy(false);
-
-    if (!stopped) {
-      setError(t('SOLAPATH could not disconnect this stream cleanly. Please try again.'));
-      return;
-    }
-
-    setStreamSession(null);
+    setInputType(result.credentials.inputType);
   }
 
   async function copyValue(kind: 'server' | 'key', value: string) {
@@ -264,7 +190,7 @@ export default function ChurchLiveTranslationScreen({
   }
 
   async function handleStartListening() {
-    if (!churchId || !feedAvailable || listenerSessionRef.current) return;
+    if (!churchId || !feedAvailable || listenerSessionRef.current || listenerState !== 'closed') return;
 
     vibrate(10);
     setListenerError(null);
@@ -272,25 +198,23 @@ export default function ChurchLiveTranslationScreen({
     setTranslatedTranscript('');
     setNeedsAudioStart(false);
     setListenerState('connecting');
+    const generation = ++listenerGeneration.current;
+    const current = () => generation === listenerGeneration.current;
 
     const callbacks = {
-      onStateChange: setListenerState,
-      onSourceTranscript: setSourceTranscript,
-      onTranslationTranscript: setTranslatedTranscript,
-      onNeedsAudioStart: setNeedsAudioStart,
-      onError: (message: string) => setListenerError(t(message)),
+      onStateChange: (state: ChurchLiveListenerState) => { if (current()) setListenerState(state); },
+      onSourceTranscript: (text: string) => { if (current()) setSourceTranscript(text); },
+      onTranslationTranscript: (text: string) => { if (current()) setTranslatedTranscript(text); },
+      onNeedsAudioStart: (needed: boolean) => { if (current()) setNeedsAudioStart(needed); },
+      onError: (message: string) => { if (current()) setListenerError(t(message)); },
     };
 
     try {
-      const session = streamSession
-        ? await startChurchLiveListenerFromConnection(
-            streamSession.listener,
-            streamSession.sourceParticipantIdentity,
-            callbacks,
-          )
-        : await startChurchLiveListener(churchId, callbacks);
+      const session = await startChurchLiveListener(churchId, callbacks);
+      if (!current()) { await session.stop(); return; }
       listenerSessionRef.current = session;
     } catch {
+      if (!current()) return;
       listenerSessionRef.current = null;
       setListenerState('closed');
       setListenerError(t('Could not connect to the church translation feed.'));
@@ -298,6 +222,7 @@ export default function ChurchLiveTranslationScreen({
   }
 
   async function handleStopListening() {
+    listenerGeneration.current++;
     const session = listenerSessionRef.current;
     listenerSessionRef.current = null;
     if (session) await session.stop().catch(() => undefined);
@@ -316,15 +241,11 @@ export default function ChurchLiveTranslationScreen({
     }
   }
 
-  const displayedFeedStatus = listenerError
-    ? 'Needs attention'
-    : streamSession
-      ? 'Live'
-      : statusLabel(settings?.provider_status);
+  const displayedFeedStatus = listenerError ? 'Needs attention' : statusLabel(settings?.provider_status);
 
   const statusDot = listenerError
     ? 'bg-error'
-    : streamSession || settings?.provider_status === 'live'
+    : settings?.provider_status === 'live'
       ? 'bg-error animate-pulse'
       : feedAvailable
         ? 'bg-sage-400'
@@ -348,7 +269,7 @@ export default function ChurchLiveTranslationScreen({
             </div>
             <h2 className="font-serif text-2xl text-ivory-50 mb-2">{t('Church Live Feed')}</h2>
             <p className="text-ivory-400 text-sm leading-relaxed">
-              {t('Translate the clean sermon feed from the church sound system instead of relying on each listener’s microphone.')}
+              {t('Connect your church’s stream link or audio equipment, then listen to translation when source audio is available.')}
             </p>
             {churchName && <p className="text-gold-300 text-xs mt-3">{churchName}</p>}
           </div>
@@ -363,6 +284,11 @@ export default function ChurchLiveTranslationScreen({
             </div>
           ) : (
             <>
+              <div className="grid grid-cols-2 gap-2 mb-4" role="group" aria-label={t('Connection method')}>
+                <button type="button" className={selectedButton(connectionMode === 'link')} onClick={() => { void handleStopListening(); setConnectionMode('link'); }}>{t('Stream link')}</button>
+                <button type="button" className={selectedButton(connectionMode === 'equipment')} onClick={() => setConnectionMode('equipment')}>{t('Church equipment')}</button>
+              </div>
+              {connectionMode === 'link' ? <ChurchStreamSourcePanel key={churchId} churchId={churchId} /> : <>
               <div className="premium-card p-5 mb-4">
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <div>
@@ -374,15 +300,11 @@ export default function ChurchLiveTranslationScreen({
                 <div className="flex items-center gap-2 text-xs text-ivory-500">
                   <Languages size={13} className="text-gold-300" />
                   <span>
-                    {streamSession
-                      ? streamSession.sourceLanguage === 'en'
+                    {settings
+                      ? settings.source_language === 'en'
                         ? t('English') + ' → ' + t('Spanish')
                         : t('Spanish') + ' → ' + t('English')
-                      : settings
-                        ? settings.source_language === 'en'
-                          ? t('English') + ' → ' + t('Spanish')
-                          : t('Spanish') + ' → ' + t('English')
-                        : directionLabel}
+                      : directionLabel}
                   </span>
                 </div>
 
@@ -426,12 +348,11 @@ export default function ChurchLiveTranslationScreen({
                         <button
                           type="button"
                           className="btn-secondary w-full"
-                          disabled={listenerState === 'connecting'}
                           onClick={() => void handleStopListening()}
                         >
                           <Square size={14} /> {
                             listenerState === 'connecting'
-                              ? t('Connecting...')
+                              ? t('Cancel connection')
                               : t('Stop Listening')
                           }
                         </button>
@@ -472,16 +393,6 @@ export default function ChurchLiveTranslationScreen({
                 )}
               </div>
 
-              <div className="premium-card p-5 mb-4">
-                <p className="ui-label mb-2">{t('Fallback')}</p>
-                <p className="text-ivory-500 text-xs leading-relaxed mb-4">
-                  {t('Use the phone microphone when your church does not have a direct feed available.')}
-                </p>
-                <button type="button" onClick={onOpenMicrophoneTranslator} className="btn-secondary w-full">
-                  <Mic size={16} /> {t('Use My Microphone')}
-                </button>
-              </div>
-
               {canManageFeed && (
                 <div className="premium-card p-5 mb-4 border-gold-500/20">
                   <div className="flex items-center gap-2 mb-2">
@@ -491,67 +402,17 @@ export default function ChurchLiveTranslationScreen({
                   <p className="text-ivory-500 text-xs leading-relaxed mb-4">
                     {t(isAppOwner
                       ? 'SOLAPATH App Owner access is active for development. Your church membership remains unchanged.'
-                      : 'Verified church leadership can connect the church mixer or OBS encoder. Stream keys are never shown to regular members.')}
+                      : 'Authorized church leaders can connect compatible hardware, streaming software or a restreaming service. Stream keys stay private.')}
                   </p>
 
-                  <div className="rounded-xl border border-gold-500/20 bg-gold-500/5 p-4 mb-5">
-                    <p className="ui-label mb-2">{t('Stream URL')}</p>
-                    <p className="text-ivory-500 text-xs leading-relaxed mb-3">
-                      {t('YouTube URL connection is experimental. Some broadcasts cannot provide the audio feed needed for translation.')}
-                    </p>
-                    <input
-                      type="url"
-                      inputMode="url"
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                      placeholder={t('https://www.youtube.com/live/...')}
-                      value={streamUrl}
-                      disabled={busy || !!streamSession}
-                      onChange={(event) => setStreamUrl(event.target.value)}
-                      className="input-field w-full text-xs mb-3"
-                    />
-                    {streamSession ? (
-                      <>
-                        <div className="rounded-lg border border-sage-500/20 bg-sage-500/5 p-3 mb-3">
-                          <p className="text-sage-300 text-xs font-medium">{t('Stream connected')}</p>
-                          {streamSession.title && (
-                            <p className="text-ivory-500 text-[11px] mt-1 line-clamp-2">{streamSession.title}</p>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => void handleDisconnectStreamUrl()}
-                          className="btn-secondary w-full disabled:opacity-40"
-                        >
-                          <Square size={14} /> {busy ? t('Disconnecting...') : t('Disconnect Stream')}
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={busy || !streamUrl.trim()}
-                        onClick={() => void handleConnectStreamUrl()}
-                        className="btn-primary w-full disabled:opacity-40"
-                      >
-                        <Cable size={16} /> {busy ? t('Connecting...') : t('Connect Stream')}
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="h-px flex-1 bg-ink-700/40" />
-                    <span className="text-[10px] uppercase tracking-[0.16em] text-ivory-600">{t('Or connect an encoder')}</span>
-                    <span className="h-px flex-1 bg-ink-700/40" />
-                  </div>
-
+                  <p className="text-xs text-ivory-400 mb-4">{t('RTMP supports compatible hardware encoders such as ATEM Mini Pro, streaming applications such as OBS or vMix, and restreaming services with a custom RTMP destination. WHIP requires a compatible sender.')}</p>
                   <p className="ui-label mb-2">{t('Encoder Type')}</p>
                   <div className="grid grid-cols-2 gap-2 mb-4">
                     {(['rtmp', 'whip'] as ChurchLiveInputType[]).map((type) => (
                       <button
                         type="button"
                         key={type}
-                        disabled={busy}
+                        disabled={busy || (!!credentials && credentials.inputType !== type)}
                         onClick={() => setInputType(type)}
                         className={selectedButton(inputType === type)}
                       >
@@ -560,6 +421,7 @@ export default function ChurchLiveTranslationScreen({
                     ))}
                   </div>
 
+                  {credentials && <p className="text-xs text-ivory-500 mb-4">{t('This church already has encoder credentials. Its existing connection type is retained.')}</p>}
                   <p className="ui-label mb-2">{t('Translation Direction')}</p>
                   <div className="grid grid-cols-2 gap-2 mb-4">
                     <button
@@ -621,17 +483,28 @@ export default function ChurchLiveTranslationScreen({
                       )}
 
                       <p className="text-ivory-600 text-[11px] mt-3 leading-relaxed">
-                        {t('In OBS, choose Custom service, paste the Server URL, then paste the Stream Key. Send the pastor or sermon audio bus to this output.')}
+                        {t('For RTMP, enter the Server URL and Stream Key in your encoder or restreaming service. For WHIP, use the endpoint and token fields required by your compatible sender.')}
                       </p>
                     </div>
                   )}
                 </div>
               )}
 
+              </>}
+              <div className="premium-card p-5 mb-4">
+                <p className="ui-label mb-2">{t('Fallback')}</p>
+                <p className="text-ivory-500 text-xs leading-relaxed mb-4">
+                  {t('Use the phone microphone when your church does not have a direct feed available.')}
+                </p>
+                <button type="button" onClick={onOpenMicrophoneTranslator} className="btn-secondary w-full">
+                  <Mic size={16} /> {t('Use My Microphone')}
+                </button>
+              </div>
+
               <div className="premium-card p-5 mb-8">
                 <p className="ui-label mb-2">{t('How it works')}</p>
                 <p className="text-ivory-500 text-xs leading-relaxed">
-                  {t('Church mixer or OBS → private SOLAPATH media room → live translation → church listeners. YouTube can remain a separate destination from the same church encoder.')}
+                  {t('Use a saved viewing link, an accessible direct media URL, or compatible RTMP/WHIP equipment. Translation begins only when SOLAPATH receives source audio. OBS is one option, not a requirement.')}
                 </p>
               </div>
             </>

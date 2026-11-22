@@ -8,6 +8,9 @@ on:
       - feature/youtube-live-translation
     paths:
       - "src/**"
+      - "shared/**"
+      - "supabase/functions/church-stream-source/**"
+      - "supabase/functions/church-youtube-live-source/**"
       - "scripts/**"
       - "package.json"
       - "package-lock.json"

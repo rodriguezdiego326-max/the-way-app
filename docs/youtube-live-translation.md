@@ -4,6 +4,11 @@ Branch: `feature/youtube-live-translation`
 
 This feature is intentionally isolated from the current SOLAPATH release.
 
+Build 182 supersedes the Build 181 screen with the shared source setup described in
+[Universal church live feed](universal-church-live-feed.md). The earlier isolated
+YouTube endpoint remains deployed for older feature builds; the new screen uses
+`church-stream-source`. The historical diagnosis below still applies.
+
 ## Current production behavior
 
 The existing church RTMP/WHIP path and `church-live-feed-admin` function are unchanged.
