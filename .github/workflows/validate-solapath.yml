@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - feature/youtube-live-translation
     paths:
       - "src/**"
       - "scripts/**"
