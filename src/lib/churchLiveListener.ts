@@ -52,23 +52,24 @@ function trimTurns(turns: Map<string, TranscriptTurn>) {
   oldest.forEach(([key]) => turns.delete(key));
 }
 
-export async function startChurchLiveListener(
-  churchId: string,
+export interface ChurchLiveListenerConnection {
+  url: string;
+  token: string;
+  roomName: string;
+}
+
+async function startChurchLiveListenerWithConnection(
+  connection: ChurchLiveListenerConnection,
+  sourceIdentity: string,
   callbacks: ChurchLiveListenerCallbacks,
 ): Promise<ChurchLiveListenerSession> {
   callbacks.onStateChange?.('connecting');
-
-  const connection = await getChurchLiveListenerToken(churchId);
-  if (!connection) {
-    throw new Error('Could not connect to the church translation feed.');
-  }
 
   const room = new Room({
     adaptiveStream: false,
     dynacast: false,
   });
 
-  const sourceIdentity = `church-feed-${churchId}`;
   const sourceTurns = new Map<string, TranscriptTurn>();
   const translationTurns = new Map<string, TranscriptTurn>();
   let nextSourceOrder = 0;
@@ -298,4 +299,29 @@ export async function startChurchLiveListener(
       callbacks.onStateChange?.('closed');
     },
   };
+}
+
+
+export async function startChurchLiveListener(
+  churchId: string,
+  callbacks: ChurchLiveListenerCallbacks,
+): Promise<ChurchLiveListenerSession> {
+  const connection = await getChurchLiveListenerToken(churchId);
+  if (!connection) {
+    throw new Error('Could not connect to the church translation feed.');
+  }
+
+  return startChurchLiveListenerWithConnection(
+    connection,
+    `church-feed-${churchId}`,
+    callbacks,
+  );
+}
+
+export async function startChurchLiveListenerFromConnection(
+  connection: ChurchLiveListenerConnection,
+  sourceIdentity: string,
+  callbacks: ChurchLiveListenerCallbacks,
+): Promise<ChurchLiveListenerSession> {
+  return startChurchLiveListenerWithConnection(connection, sourceIdentity, callbacks);
 }
