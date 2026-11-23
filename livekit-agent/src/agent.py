@@ -218,6 +218,8 @@ async def sermon_translator(ctx: JobContext) -> None:
         room=ctx.room,
         room_options=room_io.RoomOptions(
             participant_identity=source_identity,
+            # Paired senders can stop/restart; their watchdog owns room shutdown.
+            close_on_disconnect=not paired_source,
             participant_kinds=[
                 rtc.ParticipantKind.PARTICIPANT_KIND_STANDARD
                 if paired_source else rtc.ParticipantKind.PARTICIPANT_KIND_INGRESS,
