@@ -50,7 +50,11 @@ const ES: Record<string, string> = {
   "Could not load your churches. Please sign in again.": "No se pudieron cargar tus iglesias. Vuelve a iniciar sesión.",
   "Sign-in failed. Check your email and password.": "No se pudo iniciar sesión. Revisa tu correo electrónico y contraseña.",
   "Join your church in the SOLAPATH app before using the sender.": "Únete a tu iglesia en la aplicación SOLAPATH antes de usar el emisor.",
-  "Open this test sender address on your computer:": "Abre esta dirección del emisor de prueba en tu computadora:",
+  "Open this audio sender address on your computer:": "Abre esta dirección del emisor de audio en tu computadora:",
+  "Open Audio Sender": "Abrir emisor de audio",
+  "Copy Computer Link": "Copiar enlace para la computadora",
+  "Link copied": "Enlace copiado",
+  "Could not open the audio sender. Copy the link and open it in your browser.": "No se pudo abrir el emisor de audio. Copia el enlace y ábrelo en tu navegador.",
   // Shared church stream links and equipment setup.
   "Stream link": "Enlace de transmisión",
   "Church equipment": "Equipo de la iglesia",

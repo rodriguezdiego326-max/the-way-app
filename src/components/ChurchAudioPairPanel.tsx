@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
+
+const AUDIO_SENDER_URL = "https://solapath-audio.vercel.app";
 import { useLanguage } from "@/lib/i18n";
 import {
   audioPairRequest,
@@ -23,6 +26,7 @@ export default function ChurchAudioPairPanel({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [code, setCode] = useState("");
+  const [linkCopied, setLinkCopied] = useState(false);
   const [generated, setGenerated] = useState("");
   const [language, setLanguage] = useState<"en" | "es">("en");
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
@@ -263,13 +267,20 @@ export default function ChurchAudioPairPanel({
         )}
       </p>
       {!isWeb && (
-        <p className="text-sm mb-4 break-all">
-          {t("Open this test sender address on your computer:")}
-          <br />
-          <span className="select-all">
-            https://solapath-audio-sender-test.rodriguezdiego326.chatgpt.site
-          </span>
-        </p>
+        <div className="text-sm mb-4">
+          <p>{t("Open this audio sender address on your computer:")}</p>
+          <p className="select-all break-all mb-3">{AUDIO_SENDER_URL}</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="btn-secondary" onClick={() => {
+              void Browser.open({ url: AUDIO_SENDER_URL }).catch(() =>
+                setError(t("Could not open the audio sender. Copy the link and open it in your browser.")));
+            }}>{t("Open Audio Sender")}</button>
+            <button type="button" className="btn-secondary" onClick={() => {
+              void navigator.clipboard.writeText(AUDIO_SENDER_URL).then(() => setLinkCopied(true)).catch(() =>
+                setError(t("Could not copy this value. Press and hold to copy it manually.")));
+            }}>{t(linkCopied ? "Link copied" : "Copy Computer Link")}</button>
+          </div>
+        </div>
       )}
       {!status ? (
         <p>{t("Loading...")}</p>

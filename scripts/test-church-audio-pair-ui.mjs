@@ -63,6 +63,9 @@ const bundled = await build({
           path: "listener",
           namespace: "fixture",
         }));
+        b.onResolve({ filter: /^@capacitor\/browser$/ }, () => ({
+          path: "browserPlugin", namespace: "fixture",
+        }));
         b.onResolve({ filter: /^@capacitor\/core$/ }, () => ({
           path: "browser",
           namespace: "fixture",
@@ -74,7 +77,9 @@ const bundled = await build({
         b.onLoad({ filter: /.*/, namespace: "fixture" }, ({ path }) => ({
           resolveDir: cwd,
           contents:
-            path === "engine"
+            path === "browserPlugin"
+              ? "export const Browser={open:async()=>{}};"
+              : path === "engine"
               ? `export const pairingMessage = code => code; export const audioPairRequest = (...args) => globalThis.streamUi.request(...args);`
               : path === "listener"
                 ? "export const startChurchLiveListenerFromConnection = (...args) => globalThis.streamUi.listen(...args);"

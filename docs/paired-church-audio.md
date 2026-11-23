@@ -1,6 +1,6 @@
-# Paired church audio — Build 183
+# Paired church audio — Build 184
 
-Version 0.3.1 (183), feature/youtube-live-translation. The main branch is unchanged.
+Version 0.3.1 (184), feature/youtube-live-translation. The main branch is unchanged.
 
 A church leader can send live microphone or USB mixer audio from a computer browser
 straight to the existing LiveKit translation service, using a code entered in the
@@ -11,11 +11,11 @@ Existing saved stream links and encoder setup are retained separately.
 ## Test procedure
 
 1. Run the existing iOS workflow in Codemagic on `feature/youtube-live-translation`.
-   Confirm version **0.3.1 (183)**, then install it from TestFlight.
-2. On Windows, open https://solapath-audio-sender-test.rodriguezdiego326.chatgpt.site
-   in a current Chrome or Edge browser. This initial sender host is owner-private:
-   sign in to ChatGPT with the account that owns the test site if prompted, then
-   sign in to SOLAPATH with your church leader account.
+   Confirm version **0.3.1 (184)**, then install it from TestFlight.
+2. On Windows, open https://solapath-audio.vercel.app/ in Chrome or Edge.
+   Sign in with your SOLAPATH church leader account. No ChatGPT or Vercel login
+   is required. The iPhone app includes Open Audio Sender and Copy Computer Link.
+   Build 183 can also pair with this address; Build 184 updates the in-app link.
 3. Select the same church as on your phone. Choose the translation direction and
    **Generate pairing code**. Leave that browser tab open.
 4. In the phone app, open My Church → Church Live Feed → Pair church audio.
@@ -73,5 +73,24 @@ clients have no table access.
 
 Mocked media tests do not prove end-to-end audio. Physical Windows microphone,
 USB mixer, iPhone playback and actual latency require the procedure above.
-The signed iOS archive/TestFlight upload still requires Codemagic. Public access
-for other churches has not been enabled on the private test sender host.
+The signed iOS archive/TestFlight upload still requires Codemagic. The standalone sender is publicly accessible; church authorization remains enforced by SOLAPATH.
+
+
+## Standalone hosting — November 23, 2026
+
+Production URL: https://solapath-audio.vercel.app/.
+Vercel project: `solapath-audio` (`prj_YNF99mNZGxB6BIv7v3mCWhoVpNVO`),
+team `team_8HR2JSdy9DzuUIoKuq3U8Lcs`. Static sender-only build; no app repository
+source, server secrets, or service-role keys are included. Browser configuration
+uses the existing public Supabase URL and anon key. Deployment protection is off
+for this public sign-in page; SOLAPATH account and church authorization remain.
+
+Deploy the `.html`, `.js`, and `.css` files produced by `npm run build:sender`
+from `out/` to this project. The sender does not use the app's public image assets.
+This is a manually deployed static build, not an automatic Git deployment.
+
+The public English and Spanish sign-in screens were verified in a browser.
+Recheck paired audio from this new origin on a church computer; microphone permission
+must be granted separately for the new website. Previously confirmed two-second
+audio was from the earlier test host, not a measurement of this deployment.
+Build 184 requires a new Codemagic/TestFlight build for the in-app buttons.
