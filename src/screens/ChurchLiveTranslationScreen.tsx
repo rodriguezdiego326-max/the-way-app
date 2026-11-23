@@ -21,6 +21,7 @@ import {
   type ChurchLiveListenerState,
 } from '@/lib/churchLiveListener';
 import ChurchStreamSourcePanel from '@/components/ChurchStreamSourcePanel';
+import ChurchAudioPairPanel from '@/components/ChurchAudioPairPanel';
 
 interface Props {
   profileId: string;
@@ -72,7 +73,7 @@ export default function ChurchLiveTranslationScreen({
   const [needsAudioStart, setNeedsAudioStart] = useState(false);
   const [sourceTranscript, setSourceTranscript] = useState('');
   const [translatedTranscript, setTranslatedTranscript] = useState('');
-  const [connectionMode, setConnectionMode] = useState<'link' | 'equipment'>('link');
+  const [connectionMode, setConnectionMode] = useState<'link' | 'equipment' | 'pair'>('link');
   const listenerSessionRef = useRef<ChurchLiveListenerSession | null>(null);
   const listenerGeneration = useRef(0);
 
@@ -284,11 +285,12 @@ export default function ChurchLiveTranslationScreen({
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-2 mb-4" role="group" aria-label={t('Connection method')}>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4" role="group" aria-label={t('Connection method')}>
                 <button type="button" className={selectedButton(connectionMode === 'link')} onClick={() => { void handleStopListening(); setConnectionMode('link'); }}>{t('Stream link')}</button>
+                <button type="button" className={selectedButton(connectionMode === 'pair')} onClick={() => { void handleStopListening(); setConnectionMode('pair'); }}>{t('Pair church audio')}</button>
                 <button type="button" className={selectedButton(connectionMode === 'equipment')} onClick={() => setConnectionMode('equipment')}>{t('Church equipment')}</button>
               </div>
-              {connectionMode === 'link' ? <ChurchStreamSourcePanel key={churchId} churchId={churchId} /> : <>
+              {connectionMode === 'pair' ? <ChurchAudioPairPanel key={churchId} churchId={churchId} /> : connectionMode === 'link' ? <ChurchStreamSourcePanel key={churchId} churchId={churchId} /> : <>
               <div className="premium-card p-5 mb-4">
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <div>

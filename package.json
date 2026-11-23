@@ -18,7 +18,8 @@
     "cap:run:ios": "npx cap run ios",
     "cap:run:android": "npx cap run android",
     "test:language": "node scripts/test-language-contract.mjs",
-    "test:church-stream": "node --test scripts/test-church-stream.mjs scripts/test-church-stream-source.mjs scripts/test-church-stream-ui.mjs"
+    "test:church-stream": "node --test scripts/test-church-stream.mjs scripts/test-church-stream-source.mjs scripts/test-church-stream-ui.mjs scripts/test-church-audio-pair.mjs scripts/test-church-audio-sender.mjs scripts/test-church-audio-pair-ui.mjs",
+    "build:sender": "vite build --config vite.sender.config.ts && node scripts/finalize-sender.mjs"
   },
   "dependencies": {
     "@aparajita/capacitor-secure-storage": "^8.0.0",

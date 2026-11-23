@@ -10,6 +10,9 @@ on:
       - "src/**"
       - "shared/**"
       - "supabase/functions/church-stream-source/**"
+      - "supabase/functions/church-audio-pair/**"
+      - "sender.html"
+      - "vite.sender.config.ts"
       - "supabase/functions/church-youtube-live-source/**"
       - "scripts/**"
       - "package.json"
@@ -52,3 +55,6 @@ jobs:
 
       - name: Production web build
         run: npm run build:web
+
+      - name: Computer audio sender build
+        run: npm run build:sender

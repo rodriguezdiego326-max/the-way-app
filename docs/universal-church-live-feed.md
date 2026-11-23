@@ -1,3 +1,5 @@
+> Build 182 reference. The newer Build 183 paired computer sender is documented in [paired-church-audio.md](paired-church-audio.md).
+
 # Universal church live feed — Build 182
 
 Branch: `feature/youtube-live-translation`. Marketing version: **0.3.1**.

@@ -21,3 +21,7 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+out/
+supabase/.temp/
+__pycache__/

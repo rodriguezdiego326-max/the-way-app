@@ -2,7 +2,8 @@ import asyncio
 import json
 import logging
 
-from livekit import rtc
+from livekit import rtc, api
+from pair_lifecycle import watch_pair
 from livekit.agents import (
     Agent,
     AgentServer,
@@ -93,6 +94,7 @@ async def sermon_translator(ctx: JobContext) -> None:
     source_language = metadata.get("sourceLanguage", "en")
     target_language = metadata.get("targetLanguage", "es")
     source_identity = metadata.get("sourceParticipantIdentity")
+    paired_source = metadata.get("sourceKind") == "paired"
 
     if source_language not in {"en", "es"}:
         source_language = "en"
@@ -167,6 +169,26 @@ async def sermon_translator(ctx: JobContext) -> None:
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
     await publish_translation_status(ctx, "starting")
 
+    if paired_source:
+        # A browser source may leave without an HTTP Stop request. Close abandoned
+        # paired rooms after three minutes and bound every paired service to four hours.
+        async def close_pair() -> None:
+            try:
+                await ctx.api.room.delete_room(api.DeleteRoomRequest(room=ctx.room.name))
+            finally:
+                ctx.shutdown(reason="paired sender ended or expired")
+
+        watchdog = asyncio.create_task(watch_pair(
+            lambda: source_identity in ctx.room.remote_participants,
+            close_pair,
+        ))
+
+        async def cancel_pair_watchdog() -> None:
+            watchdog.cancel()
+
+        ctx.add_shutdown_callback(cancel_pair_watchdog)
+
+
     @session.on("error")
     def on_session_error(event) -> None:
         if getattr(event.error, "recoverable", False):
@@ -197,7 +219,8 @@ async def sermon_translator(ctx: JobContext) -> None:
         room_options=room_io.RoomOptions(
             participant_identity=source_identity,
             participant_kinds=[
-                rtc.ParticipantKind.PARTICIPANT_KIND_INGRESS,
+                rtc.ParticipantKind.PARTICIPANT_KIND_STANDARD
+                if paired_source else rtc.ParticipantKind.PARTICIPANT_KIND_INGRESS,
             ],
             text_input=False,
             video_input=False,

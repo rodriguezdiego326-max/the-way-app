@@ -232,11 +232,11 @@ test('all shared stream messages and static panel labels have Spanish translatio
   const visitDictionary = node => { if (ts.isPropertyAssignment(node) && ts.isStringLiteral(node.name)) keys.add(node.name.text); ts.forEachChild(node, visitDictionary); };
   visitDictionary(dictionary);
   const messages = new Set();
-  for (const file of ['src/components/ChurchStreamSourcePanel.tsx','src/screens/ChurchLiveTranslationScreen.tsx','shared/churchStreamSource.ts']) {
+  for (const file of ['src/components/ChurchStreamSourcePanel.tsx','src/screens/ChurchLiveTranslationScreen.tsx','shared/churchStreamSource.ts','src/components/ChurchAudioPairPanel.tsx','src/lib/churchAudioPair.ts','src/sender.tsx']) {
     const source = ts.createSourceFile(file, readFileSync(file,'utf8'), ts.ScriptTarget.Latest, true, file.endsWith('tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
     const visit = node => {
       if (ts.isCallExpression(node) && node.expression.getText(source) === 't' && node.arguments[0] && ts.isStringLiteral(node.arguments[0])) messages.add(node.arguments[0].text);
-      if (file.startsWith('shared') && ts.isReturnStatement(node) && node.expression && ts.isStringLiteral(node.expression)) messages.add(node.expression.text);
+      if ((file.startsWith('shared')||file.endsWith('churchAudioPair.ts')) && ts.isReturnStatement(node) && node.expression && ts.isStringLiteral(node.expression)) messages.add(node.expression.text);
       ts.forEachChild(node, visit);
     }; visit(source);
   }
