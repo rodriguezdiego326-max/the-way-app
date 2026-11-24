@@ -87,10 +87,12 @@ workflows:
         submit_to_app_store: false
 
   solapath-android-verify:
-    name: SOLAPATH — Android 0.3.0 Verification
+    name: SOLAPATH — Android Signed Bundle
     instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
+      android_signing:
+        - solapath_upload
       groups:
         - solapath_client
       vars:
@@ -105,6 +107,14 @@ workflows:
         - $HOME/.gradle/caches
         - $HOME/.gradle/wrapper
     scripts:
+      - name: Check Android signing credentials
+        script: |
+          set -eu
+          : "${CM_KEYSTORE_PATH:?Missing Android keystore: solapath_upload}"
+          : "${CM_KEYSTORE_PASSWORD:?Missing keystore password}"
+          : "${CM_KEY_ALIAS:?Missing key alias}"
+          : "${CM_KEY_PASSWORD:?Missing key password}"
+          test -f "$CM_KEYSTORE_PATH"
       - name: Install dependencies
         script: |
           npm ci
@@ -143,6 +153,20 @@ workflows:
           chmod +x android/gradlew
           cd android
           ./gradlew bundleRelease assembleDebug
+      - name: Verify signed Android bundle
+        script: |
+          set -eu
+          AAB="android/app/build/outputs/bundle/release/app-release.aab"
+          test -s "$AAB"
+          if ! unzip -Z1 "$AAB" | grep -Eq '^META-INF/[^/]+\.(RSA|DSA|EC)$'; then
+            echo "Android bundle is unsigned. Check solapath_upload in Code signing identities."
+            exit 1
+          fi
+          VERIFY_LOG=$(mktemp)
+          LC_ALL=C jarsigner -verify "$AAB" > "$VERIFY_LOG" 2>&1
+          cat "$VERIFY_LOG"
+          grep -q 'jar verified.' "$VERIFY_LOG"
+          rm -f "$VERIFY_LOG"
     artifacts:
       - android/app/build/outputs/**/*.aab
       - android/app/build/outputs/**/*.apk
