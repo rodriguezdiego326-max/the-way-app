@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n';
 import { vibrate } from '@/lib/utils';
-import PurposeFilmPlayer from '@/components/PurposeFilmPlayer';
+import PurposeFilmPlayer, { PURPOSE_FILM_SOURCES } from '@/components/PurposeFilmPlayer';
 
 type GuideId =
   | 'overview'
@@ -73,7 +73,7 @@ const GUIDES: HelpGuide[] = [
     icon: Volume2,
     title: c('What is SOLAPATH?', '¿Qué es SOLAPATH?'),
     summary: c('A cinematic introduction to why SOLAPATH exists and how Scripture, family, church, prayer, and discipleship work together.', 'Una introducción cinematográfica sobre por qué existe SOLAPATH y cómo la Escritura, la familia, la iglesia, la oración y el discipulado trabajan juntos.'),
-    videoSrc: c('https://tmdozaxdvammarxsxjai.supabase.co/storage/v1/object/public/help-media/solapath-purpose-en-v165-sync.mp4', 'https://tmdozaxdvammarxsxjai.supabase.co/storage/v1/object/public/help-media/solapath-purpose-es-v165-sync.mp4'),
+    videoSrc: PURPOSE_FILM_SOURCES,
     frames: [
       {
         title: c('Scripture at the center', 'La Escritura en el centro'),

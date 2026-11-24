@@ -28,6 +28,7 @@ import InviteRoutePreview from '@/components/invite/InviteRoutePreview';
 import { clearPendingInvite, loadInviteRoute, startInviteLinkListener, type InviteRoute } from '@/lib/inviteRouter';
 import { LanguageProvider, useLanguage } from '@/lib/i18n';
 import AppGuideScreen from '@/screens/AppGuideScreen';
+import PurposeFilmPlayer, { PURPOSE_FILM_SOURCES } from '@/components/PurposeFilmPlayer';
 
 const DevOverlayRenderer = import.meta.env.DEV
   ? lazy(() => import('@/components/DevOverlayRenderer'))
@@ -153,6 +154,7 @@ export type Overlay =
   | { type: 'manage_church_studies' }
   | { type: 'small_groups' }
   | { type: 'church_prayer' }
+  | { type: 'purpose_film' }
   | { type: 'app_guide' }
   | { type: 'phase8_tests' }
   // Phase 9 overlays
@@ -446,7 +448,7 @@ function AppContent() {
     setLanguage(data.app_language);
     setProfile(created as Profile);
     setAppState('app');
-    setOverlay({ type: 'app_guide' });
+    setOverlay({ type: 'purpose_film' });
     setOnboardingSaving(false);
   }
 
@@ -556,6 +558,27 @@ function AppContent() {
 
   if (appState === 'onboarding') {
     return <Onboarding onComplete={handleOnboardingComplete} saving={onboardingSaving} error={onboardingError} />;
+  }
+
+  // Only the successful initial profile save opens the film. Returning users
+  // retain the existing guide-resume behavior and can replay the film in Help.
+  if (overlay.type === 'purpose_film' && profile) {
+    const filmLanguage = profile.app_language === 'es' ? 'es' : 'en';
+    const continueToGuide = () => setOverlay({ type: 'app_guide' });
+    return (
+      <ErrorBoundary>
+        <div className="app-container bg-ink-950 bg-parchment h-[100dvh] flex flex-col safe-top safe-bottom">
+          <PurposeFilmPlayer
+            src={PURPOSE_FILM_SOURCES[filmLanguage]}
+            title={filmLanguage === 'es' ? '¿Qué es SOLAPATH?' : 'What is SOLAPATH?'}
+            autoPlay
+            onEnded={continueToGuide}
+            onBack={continueToGuide}
+            backLabel={filmLanguage === 'es' ? 'Omitir' : 'Skip'}
+          />
+        </div>
+      </ErrorBoundary>
+    );
   }
 
   if (overlay.type === 'app_guide' && profile) {
