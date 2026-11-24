@@ -8,6 +8,55 @@ export const PURPOSE_FILM_SOURCES = {
   es: 'https://tmdozaxdvammarxsxjai.supabase.co/storage/v1/object/public/help-media/solapath-purpose-es-v165-sync.mp4',
 };
 
+// Timings follow the narration in the v165-sync films. Keep these tied to
+// PURPOSE_FILM_SOURCES; replacing a film requires checking its cue timings.
+const FEATURE_CAPTIONS: Record<'en' | 'es', ReadonlyArray<readonly [number, number, string]>> = {
+  "en": [
+    [
+      24.94,
+      26.84,
+      "TODAY"
+    ],
+    [
+      27.48,
+      33.04,
+      "BIBLE"
+    ],
+    [
+      33.56,
+      40.4,
+      "ASK"
+    ],
+    [
+      40.86,
+      44.72,
+      "PRAYER"
+    ]
+  ],
+  "es": [
+    [
+      27.22,
+      29.06,
+      "HOY"
+    ],
+    [
+      29.06,
+      36.32,
+      "BIBLIA"
+    ],
+    [
+      36.68,
+      44.68,
+      "PREGUNTAR"
+    ],
+    [
+      45.08,
+      50.5,
+      "ORACIÓN"
+    ]
+  ]
+};
+
 interface Props {
   src: string;
   title: string;
@@ -36,6 +85,34 @@ export default function PurposeFilmPlayer({ src, title, onBack, autoPlay = false
       video?.pause();
     };
   }, [src, autoPlay]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    const filmLanguage = src === PURPOSE_FILM_SOURCES.en ? 'en'
+      : src === PURPOSE_FILM_SOURCES.es ? 'es' : null;
+    if (!video || !filmLanguage) return;
+
+    // Native timed cues follow the media clock, including seeking, pausing and
+    // full-screen playback. Reuse the track during React effect re-runs.
+    const label = filmLanguage === 'es' ? 'Funciones de SOLAPATH' : 'SOLAPATH features';
+    const track = Array.from(video.textTracks).find((item) => item.label === label)
+      ?? video.addTextTrack('captions', label, filmLanguage);
+    const cues = FEATURE_CAPTIONS[filmLanguage].map(([start, end, text]) => {
+      const cue = new VTTCue(start, end, text);
+      cue.snapToLines = false;
+      cue.line = 80;
+      cue.position = 50;
+      cue.align = 'center';
+      cue.size = 90;
+      track.addCue(cue);
+      return cue;
+    });
+    track.mode = 'showing';
+    return () => {
+      for (const cue of cues) track.removeCue(cue);
+      track.mode = 'disabled';
+    };
+  }, [src]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
