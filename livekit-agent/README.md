@@ -5,15 +5,13 @@ This LiveKit Agent listens only to the church's dedicated Ingress participant an
 ## Pipeline
 
 - Source: church mixer / OBS via LiveKit Ingress
-- STT: LiveKit Inference `openai/gpt-live-transcribe`
-- Turn detection: Silero VAD + LiveKit semantic turn detector
-- Translation: LiveKit Inference `openai/gpt-5.4-mini`
-- TTS: LiveKit Inference `inworld/inworld-tts-2`
-- Voice: `Diego` (stable male voice)
-- Interruptions: disabled so translated sentences finish
-- Preemptive generation: disabled so incomplete sermon thoughts are not spoken early
+- STT: direct OpenAI `gpt-live-transcribe`.
+- Translation/audio: direct OpenAI `gpt-live-1`, voice `cedar`.
+- Optional delegation backend: `gpt-5.6-luna`.
 
-The agent uses LiveKit Inference, so no separate OpenAI or Inworld API key is required.
+The agent requires `OPENAI_API_KEY` in its deployment secrets. OpenAI bills these calls directly; LiveKit Inference credits do not cover them. LiveKit hosting and transport are separate.
+
+Content-free `translation_measurement` JSON logs record agent-instance runtime and available SDK metric counters. These are measurement-only diagnostics, not invoices; reconcile them against provider usage before pricing. A missing close log indicates incomplete telemetry. No audio, transcript, source URL, token, or API key is included.
 
 ## Dispatch metadata
 

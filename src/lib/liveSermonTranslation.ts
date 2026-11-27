@@ -1,3 +1,4 @@
+import { startTranslationMeasurement } from '@/lib/translationMeasurement';
 import { supabase } from '@/lib/supabase';
 
 export type LiveTranslationLanguage = 'en' | 'es';
@@ -16,6 +17,7 @@ export interface LiveTranslationSession {
 }
 
 interface TranslationSecretResponse {
+  measurementId?: string | null;
   translation_value?: string;
   caption_value?: string;
 }
@@ -109,6 +111,7 @@ export async function startLiveSermonTranslation(
     throw new Error('Live translation could not start. Please try again.');
   }
 
+  const measurement = startTranslationMeasurement(data?.measurementId);
   let sourceStream: MediaStream;
   try {
     sourceStream = await navigator.mediaDevices.getUserMedia({
@@ -120,12 +123,14 @@ export async function startLiveSermonTranslation(
       },
     });
   } catch {
+    measurement.stop();
     throw new Error('Microphone access is required for live sermon translation.');
   }
 
   const sourceTrack = sourceStream.getAudioTracks()[0];
   if (!sourceTrack) {
     sourceStream.getTracks().forEach((track) => track.stop());
+    measurement.stop();
     throw new Error('No microphone audio track was available.');
   }
 
@@ -148,6 +153,7 @@ export async function startLiveSermonTranslation(
   let stopped = false;
 
   const updateConnectedState = () => {
+    measurement.setState(translationConnected && captionConnected ? 'connected' : 'waiting');
     if (!stopped && translationConnected && captionConnected) {
       callbacks.onStateChange?.('connected');
     }
@@ -163,6 +169,7 @@ export async function startLiveSermonTranslation(
   const cleanup = () => {
     if (stopped) return;
     stopped = true;
+    measurement.stop();
     clearResponseWatchdog();
     sourceStream.getTracks().forEach((track) => track.stop());
     captionTrack.stop();

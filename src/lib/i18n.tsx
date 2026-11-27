@@ -244,6 +244,7 @@ const ES: Record<string, string> = {
   'Approve': 'Aprobar',
   'Reject': 'Rechazar',
   'Revoke': 'Revocar',
+  'Translation usage & free access': 'Uso de traducción y acceso gratuito',
   'Admin Approval Center': 'Centro de aprobación administrativa',
   'Together': 'Juntos',
   'TOGETHER': 'JUNTOS',

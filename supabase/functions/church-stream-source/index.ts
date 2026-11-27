@@ -1,3 +1,4 @@
+import { registerTranslationMeasurement } from '../_shared/translationMeasurement.ts';
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { AccessToken, IngressInput, LiveKitAPI } from 'npm:livekit-server-sdk@2.20.0';
@@ -118,7 +119,8 @@ Deno.serve(async (req: Request) => {
       const access = new AccessToken(apiKey, secret, { identity: `${auth.user.id}-${crypto.randomUUID().slice(0,8)}`, ttl: '1h' });
       access.addGrant({ roomJoin: true, room: row.session.roomName, canSubscribe: true, canPublish: false, canPublishData: false });
       return json({ connection: { url: livekitUrl.replace(/^https:/, 'wss:'), token: await access.toJwt(),
-        roomName: row.session.roomName, sourceIdentity: row.session.sourceIdentity } });
+        roomName: row.session.roomName, sourceIdentity: row.session.sourceIdentity,
+        measurementId: await registerTranslationMeasurement(auth.user.id, churchId, row.session.roomName) } });
     }
     if (!Number.isSafeInteger(body.revision) || Number(body.revision) < 0) return json({ error: 'source_changed' }, 409);
     const operation = crypto.randomUUID();

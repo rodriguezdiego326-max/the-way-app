@@ -37,6 +37,7 @@ export interface ChurchLiveListenerToken {
   url: string;
   token: string;
   roomName: string;
+  measurementId?: string | null;
 }
 
 interface FunctionErrorShape {

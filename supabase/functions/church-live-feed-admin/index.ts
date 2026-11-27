@@ -1,3 +1,4 @@
+import { registerTranslationMeasurement } from '../_shared/translationMeasurement.ts';
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { AccessToken, IngressInput, LiveKitAPI } from "npm:livekit-server-sdk@2.20.0";
@@ -377,6 +378,7 @@ Deno.serve(async (req: Request) => {
       token: await access.toJwt(),
       roomName: config.room_name,
       agentStatus: agent.status,
+      measurementId: await registerTranslationMeasurement(userData.user.id, churchId, config.room_name),
     });
   }
 

@@ -1,3 +1,4 @@
+import { startTranslationMeasurement } from '@/lib/translationMeasurement';
 import {
   Room,
   RoomEvent,
@@ -56,6 +57,7 @@ export interface ChurchLiveListenerConnection {
   url: string;
   token: string;
   roomName: string;
+  measurementId?: string | null;
 }
 
 async function startChurchLiveListenerWithConnection(
@@ -75,12 +77,23 @@ async function startChurchLiveListenerWithConnection(
   let nextSourceOrder = 0;
   let nextTranslationOrder = 0;
   const attachedAudio = new Set<HTMLMediaElement>();
+  const stalledAudio = new Set<HTMLMediaElement>();
+  const measurement = startTranslationMeasurement(connection.measurementId);
+  let connected = false;
   let stopped = false;
   let translationServiceFailed = false;
+
+  const updateMeasurement = () => {
+    if (stopped) return;
+    const playing = connected && !translationServiceFailed && room.canPlaybackAudio
+      && [...attachedAudio].some(audio => !stalledAudio.has(audio) && !audio.paused && !audio.muted && !audio.ended && audio.readyState >= 2);
+    measurement.setState(translationServiceFailed ? 'failed' : playing ? 'playing' : connected ? 'connected' : 'waiting');
+  };
 
   const reportTranslationServiceError = (message?: string) => {
     if (translationServiceFailed) return;
     translationServiceFailed = true;
+    updateMeasurement();
     callbacks.onStateChange?.('waiting');
     callbacks.onError?.(message || DEFAULT_TRANSLATION_SERVICE_ERROR);
   };
@@ -163,6 +176,13 @@ async function startChurchLiveListenerWithConnection(
     element.setAttribute('aria-hidden', 'true');
     document.body.appendChild(element);
     attachedAudio.add(element);
+    for (const event of ['playing', 'pause', 'waiting', 'ended', 'volumechange']) {
+      element.addEventListener(event, () => {
+        if (event === 'waiting') stalledAudio.add(element);
+        if (event === 'playing') stalledAudio.delete(element);
+        updateMeasurement();
+      });
+    }
 
     void element.play().catch(() => {
       callbacks.onNeedsAudioStart?.(true);
@@ -203,14 +223,17 @@ async function startChurchLiveListenerWithConnection(
       if (!participant.isAgent) return;
       track.detach().forEach((element) => {
         attachedAudio.delete(element as HTMLMediaElement);
+        stalledAudio.delete(element as HTMLMediaElement);
         element.remove();
       });
       callbacks.onStateChange?.('waiting');
+      updateMeasurement();
     },
   );
 
   room.on(RoomEvent.AudioPlaybackStatusChanged, () => {
     callbacks.onNeedsAudioStart?.(!room.canPlaybackAudio);
+    updateMeasurement();
   });
 
   room.on(
@@ -249,7 +272,11 @@ async function startChurchLiveListenerWithConnection(
     handleAgentTranslationStatus(participant);
   });
 
+  room.on(RoomEvent.Reconnecting, () => { connected = false; updateMeasurement(); });
+  room.on(RoomEvent.Reconnected, () => { connected = true; updateMeasurement(); });
   room.on(RoomEvent.Disconnected, () => {
+    connected = false;
+    measurement.stop();
     if (!stopped) {
       callbacks.onStateChange?.('closed');
       callbacks.onError?.('Church translation audio stopped.');
@@ -261,6 +288,8 @@ async function startChurchLiveListenerWithConnection(
       autoSubscribe: false,
     });
 
+    connected = true;
+    updateMeasurement();
     room.remoteParticipants.forEach((participant) => {
       subscribeAgentAudio(participant);
       handleAgentTranslationStatus(participant);
@@ -275,6 +304,7 @@ async function startChurchLiveListenerWithConnection(
       callbacks.onNeedsAudioStart?.(true);
     }
   } catch (cause) {
+    measurement.stop();
     await room.disconnect().catch(() => undefined);
     callbacks.onStateChange?.('closed');
     throw cause;
@@ -292,9 +322,11 @@ async function startChurchLiveListenerWithConnection(
     async stop() {
       if (stopped) return;
       stopped = true;
+      measurement.stop();
       room.unregisterTextStreamHandler('lk.transcription');
       attachedAudio.forEach((element) => element.remove());
       attachedAudio.clear();
+      stalledAudio.clear();
       await room.disconnect();
       callbacks.onStateChange?.('closed');
     },
