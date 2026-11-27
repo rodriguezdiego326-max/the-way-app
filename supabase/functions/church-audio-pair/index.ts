@@ -1,3 +1,4 @@
+import { registerTranslationMeasurement } from '../_shared/translationMeasurement.ts';
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import {
@@ -235,6 +236,7 @@ Deno.serve(async (req) => {
           token: await access.toJwt(),
           roomName: row.session.roomName,
           sourceIdentity: row.session.sourceIdentity,
+          measurementId: publish ? null : await registerTranslationMeasurement(auth.user.id, churchId, row.session.roomName),
         },
       });
     }

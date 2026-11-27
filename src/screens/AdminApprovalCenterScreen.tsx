@@ -1,3 +1,4 @@
+import TranslationUsageAdmin from '@/components/TranslationUsageAdmin';
 import { useCallback, useEffect, useState } from 'react';
 import { Ban, BookOpen, Check, History, RefreshCw, ShieldCheck, Trash2, UserCheck, X, XCircle } from 'lucide-react';
 import { EmptyState, ErrorState, LoadingState } from '@/components/States';
@@ -28,7 +29,7 @@ interface Props {
   onBack: () => void;
 }
 
-type Tab = 'pending' | 'access' | 'studies' | 'audit';
+type Tab = 'pending' | 'access' | 'studies' | 'audit' | 'translation';
 
 type PendingAction =
   | { kind: 'approve'; id: string; title: string; body: string }
@@ -198,6 +199,12 @@ export default function AdminApprovalCenterScreen({ currentProfileId, onBack }: 
           ))}
         </div>
 
+        {adminRole === 'APP_OWNER' && (
+          <button type="button" className="btn-secondary w-full mb-5" onClick={() => setTab('translation')}>
+            Translation usage & free access
+          </button>
+        )}
+
         {loading ? (
           <LoadingState message="Loading administration requests..." />
         ) : error && !adminRole ? (
@@ -205,6 +212,8 @@ export default function AdminApprovalCenterScreen({ currentProfileId, onBack }: 
         ) : (
           <>
             {error && <div className="premium-card p-3 mb-4 border-error/30"><p className="text-error text-xs">{error}</p></div>}
+
+            {tab === 'translation' && adminRole === 'APP_OWNER' && <TranslationUsageAdmin />}
 
             {tab === 'pending' && (
               <section>

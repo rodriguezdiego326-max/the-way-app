@@ -4,6 +4,7 @@ import logging
 
 from livekit import rtc, api
 from pair_lifecycle import watch_pair
+from measurement import TranslationMeasurement
 from livekit.agents import (
     Agent,
     AgentServer,
@@ -167,6 +168,29 @@ async def sermon_translator(ctx: JobContext) -> None:
     # RoomOptions pins this session to the church ingress participant.
     # Connect first so RoomIO can safely resolve the agent's local participant.
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
+    measurement = TranslationMeasurement(
+        lambda sample: logger.info(json.dumps(sample)),
+        ctx.room.name, metadata.get("churchId"),
+    )
+    measurement.event("started")
+
+    async def sample_runtime():
+        while True:
+            await asyncio.sleep(60)
+            measurement.event("runtime")
+
+    sampling = asyncio.create_task(sample_runtime())
+
+    async def close_measurement():
+        sampling.cancel()
+        measurement.event("closed")
+
+    ctx.add_shutdown_callback(close_measurement)
+
+    @session.on("metrics_collected")
+    def on_translation_metrics(event):
+        measurement.event("metrics", event.metrics)
+
     await publish_translation_status(ctx, "starting")
 
     if paired_source:
@@ -193,6 +217,7 @@ async def sermon_translator(ctx: JobContext) -> None:
     def on_session_error(event) -> None:
         if getattr(event.error, "recoverable", False):
             return
+        measurement.event("failed")
         logger.error("unrecoverable translation service error: %s", event.error)
         asyncio.create_task(
             publish_translation_status(
@@ -233,6 +258,7 @@ async def sermon_translator(ctx: JobContext) -> None:
         ),
     )
 
+    measurement.event("ready")
     await publish_translation_status(ctx, "ready")
 
 

@@ -1,3 +1,4 @@
+import { registerTranslationMeasurement } from '../_shared/translationMeasurement.ts';
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -224,6 +225,7 @@ Deno.serve(async (req: Request) => {
     return json({
       translation_value: translationValue,
       caption_value: captionValue,
+      measurementId: await registerTranslationMeasurement(data.user.id, null, null),
     });
   } catch (cause) {
     console.error("live-sermon-translation-session: unhandled error", cause);

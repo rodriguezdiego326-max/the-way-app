@@ -4,7 +4,7 @@ import type { ChurchStreamResult } from '../../shared/churchStreamSource';
 export type { ChurchStreamResult, ChurchStreamSource, StreamHint } from '../../shared/churchStreamSource';
 export { churchStreamMessage } from '../../shared/churchStreamSource';
 
-export interface StreamConnection { url: string; token: string; roomName: string; sourceIdentity: string }
+export interface StreamConnection { url: string; token: string; roomName: string; sourceIdentity: string; measurementId?: string | null }
 export async function churchStreamRequest(
   churchId: string,
   action: 'get' | 'save' | 'start' | 'stop' | 'remove' | 'listener_token',
