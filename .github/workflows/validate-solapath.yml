@@ -53,6 +53,9 @@ jobs:
       - name: Church stream failures and timeout recovery
         run: npm run test:church-stream
 
+      - name: Translation measurements and owner grants
+        run: npm run test:translation-measurement
+
       - name: Production web build
         run: npm run build:web
 

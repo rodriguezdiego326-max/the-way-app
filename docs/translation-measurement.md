@@ -63,7 +63,7 @@ still required; it is not implemented by this change.
 
 ## Deployment order
 
-1. Review and apply `20261127160000_translation_measurement_and_grants.sql`.
+1. Review and apply `20261127222022_translation_measurement_and_grants.sql`.
    Verify an existing App Owner account is active; no owner UUID is embedded here.
 2. Deploy `church-stream-source`, `church-audio-pair`, `church-live-feed-admin`,
    and `live-sermon-translation-session`, including the new shared helper.
@@ -115,3 +115,24 @@ passed. Lint passed with five existing warnings and no errors. Python compilatio
 and git whitespace checks passed. A full Deno edge-function check was attempted
 but canceled after dependency downloads stalled; it remains unverified. The SQL
 was exercised in isolated PostgreSQL fixtures, not against a deployed project.
+
+## Hosted rollout — November 27, 2026
+
+The migration is applied to the existing SOLAPATH project using the recorded
+server migration version above. Four Edge Functions are active with JWT checks
+enabled: church-stream-source v3, church-audio-pair v2, church-live-feed-admin v9,
+and live-sermon-translation-session v9. Transactional database smoke tests passed
+for recording, reporting, grants, revocation and rejection of non-owner admin access;
+test rows were rolled back. Raw table access is denied to authenticated users and
+RLS is enabled on all four new private tables. Daily 90-day telemetry cleanup is
+scheduled at 05:17 UTC.
+
+Security advisors report the expected private-table/no-policy notices and
+authenticated SECURITY DEFINER RPC warnings. These RPCs deliberately use checked
+owner/session access; the tables have no direct client grants. See
+https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable
+for the advisory.
+
+iOS configuration targets 0.3.1 build 186; native sync passed. A successful
+Codemagic build and TestFlight upload still need verification. The agent deploy
+workflow runs on merge to main. No recipients or charges were enabled.

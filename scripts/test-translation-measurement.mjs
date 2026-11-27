@@ -21,7 +21,7 @@ insert into auth.users values ('${listener}','pastor@example.test');
 insert into public.church_profiles values ('${church}','Test Church','Houston');
 insert into private.app_admins values ('${owner}','APP_OWNER',true),('${admin}','APP_ADMIN',true);
 `);
-await db.exec(readFileSync('supabase/migrations/20261127160000_translation_measurement_and_grants.sql','utf8'));
+await db.exec(readFileSync('supabase/migrations/20261127222022_translation_measurement_and_grants.sql','utf8'));
 const asUser = async (id, sql, params=[]) => {
   await db.exec('set role authenticated');
   await db.query("select set_config('test.uid',$1,false)",[id]);
