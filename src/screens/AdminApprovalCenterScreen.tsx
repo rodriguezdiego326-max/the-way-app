@@ -1,4 +1,6 @@
 import TranslationUsageAdmin from '@/components/TranslationUsageAdmin';
+import AppleSubscriptionTesting from '@/components/AppleSubscriptionTesting';
+import { useLanguage } from '@/lib/i18n';
 import { useCallback, useEffect, useState } from 'react';
 import { Ban, BookOpen, Check, History, RefreshCw, ShieldCheck, Trash2, UserCheck, X, XCircle } from 'lucide-react';
 import { EmptyState, ErrorState, LoadingState } from '@/components/States';
@@ -29,7 +31,7 @@ interface Props {
   onBack: () => void;
 }
 
-type Tab = 'pending' | 'access' | 'studies' | 'audit' | 'translation';
+type Tab = 'pending' | 'access' | 'studies' | 'audit' | 'translation' | 'subscriptions';
 
 type PendingAction =
   | { kind: 'approve'; id: string; title: string; body: string }
@@ -42,6 +44,7 @@ function roleLabel(role: VerifiedChurchRole | null | undefined): string {
 }
 
 export default function AdminApprovalCenterScreen({ currentProfileId, onBack }: Props) {
+  const { language } = useLanguage();
   const [adminRole, setAdminRole] = useState<AppAdminRole | null>(null);
   const [claims, setClaims] = useState<ChurchAdminReviewItem[]>([]);
   const [access, setAccess] = useState<ChurchAdminAccessItem[]>([]);
@@ -214,6 +217,8 @@ export default function AdminApprovalCenterScreen({ currentProfileId, onBack }: 
             {error && <div className="premium-card p-3 mb-4 border-error/30"><p className="text-error text-xs">{error}</p></div>}
 
             {tab === 'translation' && adminRole === 'APP_OWNER' && <TranslationUsageAdmin />}
+            {adminRole === 'APP_OWNER' && <button className="btn-secondary w-full mb-5" onClick={() => setTab('subscriptions')}>{language === 'es' ? 'Pruebas de suscripción de Apple' : 'Apple subscription testing'}</button>}
+            {tab === 'subscriptions' && adminRole === 'APP_OWNER' && <AppleSubscriptionTesting />}
 
             {tab === 'pending' && (
               <section>

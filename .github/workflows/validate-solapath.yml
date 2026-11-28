@@ -8,6 +8,8 @@ on:
       - feature/youtube-live-translation
     paths:
       - "src/**"
+      - "plugins/apple-subscriptions/**"
+      - "supabase/functions/apple-subscription-sandbox/**"
       - "shared/**"
       - "supabase/functions/church-stream-source/**"
       - "supabase/functions/church-audio-pair/**"
@@ -64,6 +66,9 @@ jobs:
 
       - name: Founding church subscription discount permissions
         run: npm run test:founding-churches
+
+      - name: Apple sandbox receipt policy and signature rejection
+        run: npm run test:apple-sandbox
 
       - name: Production web build
         run: npm run build:web
