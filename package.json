@@ -21,7 +21,8 @@
     "test:church-stream": "node --test scripts/test-church-stream.mjs scripts/test-church-stream-source.mjs scripts/test-church-stream-ui.mjs scripts/test-church-audio-pair.mjs scripts/test-church-audio-sender.mjs scripts/test-church-audio-pair-ui.mjs",
     "build:sender": "vite build --config vite.sender.config.ts && node scripts/finalize-sender.mjs",
     "test:translation-measurement": "node --test scripts/test-translation-measurement.mjs",
-    "test:church-choices": "node --test scripts/test-church-choices.mjs"
+    "test:church-choices": "node --test scripts/test-church-choices.mjs",
+    "test:church-membership": "node --test scripts/test-church-membership.mjs"
   },
   "dependencies": {
     "@aparajita/capacitor-secure-storage": "^8.0.0",

@@ -59,6 +59,9 @@ jobs:
       - name: Church directory identity and personal hiding
         run: npm run test:church-choices
 
+      - name: Church visitor permissions and invitations
+        run: npm run test:church-membership
+
       - name: Production web build
         run: npm run build:web
 

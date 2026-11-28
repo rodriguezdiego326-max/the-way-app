@@ -31,6 +31,7 @@ export default function SmallGroupModeScreen({ profile, activeChurchId, onBack }
   const [groups, setGroups] = useState<ChurchGroup[]>([]);
   const [churchId, setChurchId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [memberOnly, setMemberOnly] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeGroup, setActiveGroup] = useState<ChurchGroup | null>(null);
   const [discussions, setDiscussions] = useState<GroupDiscussion[]>([]);
@@ -56,6 +57,7 @@ export default function SmallGroupModeScreen({ profile, activeChurchId, onBack }
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setMemberOnly(false);
     try {
       let cid = activeChurchId;
       if (!cid) {
@@ -63,6 +65,15 @@ export default function SmallGroupModeScreen({ profile, activeChurchId, onBack }
         cid = membership?.church_id || null;
       }
       setChurchId(cid);
+      if (cid) {
+        const access = await getChurchMembershipForChurch(profile.id, cid);
+        if (access?.membership_status !== 'member') {
+          setMemberOnly(true);
+          setCanManage(false);
+          setLoading(false);
+          return;
+        }
+      }
       if (!cid) {
         setGroups([]);
         setCanManage(false);
@@ -185,6 +196,11 @@ export default function SmallGroupModeScreen({ profile, activeChurchId, onBack }
     }
   }
 
+  if (memberOnly) return <div className="app-container bg-parchment min-h-screen px-6 pt-14 safe-top">
+    <button className="btn-secondary mb-4" onClick={onBack}>Back</button>
+    <EmptyState message="Accept a membership invitation from your pastor or church admin in My Church to access this area." />
+  </div>;
+
   if (activeGroup) {
     const isCreator = activeGroup.leader_profile_id === profile.id;
     const canShareInvite = canManage || isCreator;
@@ -290,6 +306,7 @@ export default function SmallGroupModeScreen({ profile, activeChurchId, onBack }
       </div>
     );
   }
+
 
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28 flex flex-col">

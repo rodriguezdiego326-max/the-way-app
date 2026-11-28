@@ -102,31 +102,17 @@ export async function searchChurchDirectory(query: string): Promise<Omit<ChurchP
 export async function joinChurch(
   profile: Profile,
   churchId: string,
-  personalRole: string,
 ): Promise<ChurchMembership | null> {
   const { data: existing } = await supabase
-    .from('church_memberships')
-    .select('id')
-    .eq('profile_id', profile.id)
-    .eq('church_id', churchId)
-    .maybeSingle();
-
-  if (existing) {
-    const { data } = await supabase
-      .from('church_memberships')
-      .update({ personal_role: personalRole })
-      .eq('id', (existing as { id: string }).id)
-      .select('*')
-      .single();
-    return (data as ChurchMembership) || null;
-  }
-
+    .from('church_memberships').select('*')
+    .eq('profile_id', profile.id).eq('church_id', churchId).maybeSingle();
+  if (existing) return existing as ChurchMembership;
   const { data } = await supabase
     .from('church_memberships')
     .insert({
       profile_id: profile.id,
       church_id: churchId,
-      personal_role: personalRole,
+      personal_role: 'Visitor',
     })
     .select('*')
     .single();

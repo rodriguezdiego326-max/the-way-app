@@ -16,6 +16,7 @@ interface Props {
 export default function ChurchPrayerScreen({ profile, activeChurchId, onBack }: Props) {
   const [items, setItems] = useState<ChurchPrayerItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [memberOnly, setMemberOnly] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [canManage, setCanManage] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
@@ -39,6 +40,7 @@ export default function ChurchPrayerScreen({ profile, activeChurchId, onBack }: 
     const version = ++requestVersionRef.current;
     setLoading(true);
     setError(null);
+    setMemberOnly(false);
     setItems([]);
     setCanManage(false);
     setChurchId(null);
@@ -47,6 +49,16 @@ export default function ChurchPrayerScreen({ profile, activeChurchId, onBack }: 
       if (!cid) {
         const membership = await getMyChurchMembership(profile.id);
         cid = membership?.church_id || null;
+      }
+      if (cid) {
+        const access = await getChurchMembershipForChurch(profile.id, cid);
+        if (version !== requestVersionRef.current) return;
+        if (access?.membership_status !== 'member') {
+          setMemberOnly(true);
+          setCanManage(false);
+          setLoading(false);
+          return;
+        }
       }
       if (!cid) {
         setLoading(false);
@@ -147,6 +159,11 @@ export default function ChurchPrayerScreen({ profile, activeChurchId, onBack }: 
     setItems((prev) => prev.filter((it) => it.id !== deletingItem.id));
     setDeletingItem(null);
   }
+
+  if (memberOnly) return <div className="app-container bg-parchment min-h-screen px-6 pt-14 safe-top">
+    <button className="btn-secondary mb-4" onClick={onBack}>Back</button>
+    <EmptyState message="Accept a membership invitation from your pastor or church admin in My Church to access this area." />
+  </div>;
 
   return (
     <div className="app-container bg-ink-950 bg-parchment min-h-screen pb-28 flex flex-col">

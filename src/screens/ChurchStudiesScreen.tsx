@@ -32,7 +32,7 @@ export default function ChurchStudiesScreen({ profile, churchId, onBack, onOpenB
     setLoadState('loading');
     try {
       const membership = await getChurchMembershipForChurch(profile.id, churchId);
-      if (!membership) {
+      if (membership?.membership_status !== 'member') {
         setLoadState('not_member');
         return;
       }
@@ -171,7 +171,7 @@ export default function ChurchStudiesScreen({ profile, churchId, onBack, onOpenB
             <EmptyState message="Choose a church in My Church to see its studies." />
           )}
           {loadState === 'not_member' && (
-            <EmptyState message="You are not a member of this church, so its studies are not shown." />
+            <EmptyState message="Accept a membership invitation from your pastor or church admin in My Church to access this area." />
           )}
 
           {loadState === 'ready' && studies.length === 0 && (

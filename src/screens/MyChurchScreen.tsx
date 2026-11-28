@@ -2,21 +2,20 @@ import ChurchSourceBadge from '@/components/ChurchSourceBadge';
 import HiddenChurches from '@/components/HiddenChurches';
 import { getChurchChoices, setChurchHidden } from '@/lib/churchChoices';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { X, Church, Plus, ChevronRight, Search, MapPin, Globe, BookOpen, Heart, Users, Sun, LogOut, Check, Pencil, Mic, Radio } from 'lucide-react';
+import { X, Church, Plus, ChevronRight, Search, MapPin, Globe, BookOpen, Heart, Users, Sun, LogOut, Check, Mic, Radio } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import { LoadingState, ErrorState } from '@/components/States';
 import PullToRefresh from '@/components/PullToRefresh';
 import ChurchSearchResults, { type AppleSearchStatus, type ChurchSearchStatus } from '@/components/ChurchSearchResults';
-import ChurchRoleSheet from '@/components/ChurchRoleSheet';
+import ChurchMembershipCard from '@/components/church/ChurchMembershipCard';
 import ChurchAdministrationCard from '@/components/church/ChurchAdministrationCard';
 import {
   createChurch, searchChurchDirectory, joinChurch, getAllChurchMemberships, getChurch, updateChurch,
-  leaveChurch, isChurchOwner, importChurchDirectoryEntry, releaseChurchOwnershipAndLeave, updateChurchMembershipRole,
+  leaveChurch, isChurchOwner, importChurchDirectoryEntry, releaseChurchOwnershipAndLeave,
   getChurchStudies, getChurchPrayerItems, getChurchGroups, getSermonNotes,
 } from '@/lib/churchEngine';
 import type { Profile } from '@/lib/types';
 import type { ChurchProfile, ChurchMembership, ChurchStudy, ChurchPrayerItem, ChurchGroup } from '@/lib/togetherTypes';
-import { CHURCH_ROLES } from '@/lib/togetherTypes';
 import { isAppleChurchSearchAvailable, searchChurches as searchAppleChurches, type AppleChurchResult } from '@/lib/churchSearchNative';
 import { mergeChurchSearchResults, sameChurch, type ChurchSearchResult } from '@/lib/churchSearchMerge';
 import { useLanguage } from '@/lib/i18n';
@@ -63,14 +62,13 @@ export default function MyChurchScreen({
   const [pendingApple, setPendingApple] = useState<AppleChurchResult | null>(null);
   const [addingApple, setAddingApple] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState<string>('Regular Attender');
+  const selectedRole = 'Visitor';
   const [creating, setCreating] = useState(false);
   const [newChurchName, setNewChurchName] = useState('');
   const [newChurchCity, setNewChurchCity] = useState('');
   const [showLeaveConfirm, setShowLeaveConfirm] = useState<ChurchWithMeta | null>(null);
   const [leaving, setLeaving] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
-  const [showRoleEdit, setShowRoleEdit] = useState(false);
   const [editName, setEditName] = useState('');
   const [editCity, setEditCity] = useState('');
   const [editWebsite, setEditWebsite] = useState('');
@@ -78,7 +76,6 @@ export default function MyChurchScreen({
   const [editError, setEditError] = useState<string | null>(null);
   const [sermonNoteCount, setSermonNoteCount] = useState(0);
 
-  void language;
   const activeChurchIdRef = useRef(activeChurchId);
 
   const fetchChurchData = useCallback(async () => {
@@ -90,11 +87,11 @@ export default function MyChurchScreen({
       const c = await getChurch(m.church_id);
       if (!c || c.canonical_church_id || hidden.has(c.id)) continue;
       const owner = await isChurchOwner(profile.id, c.id);
-      const [studs, prays, grps] = await Promise.all([
+      const [studs, prays, grps] = m.membership_status === 'member' ? await Promise.all([
         getChurchStudies(c.id),
         getChurchPrayerItems(c.id),
         getChurchGroups(c.id),
-      ]);
+      ]) : [[], [], []];
       enriched.push({
         church: c,
         membership: m,
@@ -197,7 +194,7 @@ export default function MyChurchScreen({
         setAddError('Could not add this church. Please try again.');
         return;
       }
-      const joined = await joinChurch(profile, churchId, selectedRole);
+      const joined = await joinChurch(profile, churchId);
       if (!joined) {
         setAddError('Church added but could not join. Please try again.');
         return;
@@ -219,7 +216,7 @@ export default function MyChurchScreen({
   async function handleJoin(churchId: string) {
     vibrate(15);
     try {
-      const result = await joinChurch(profile, churchId, selectedRole);
+      const result = await joinChurch(profile, churchId);
       if (!result) {
         setError('Could not join church. Please try again.');
         return;
@@ -243,7 +240,7 @@ export default function MyChurchScreen({
         setError('Could not create church. Please try again.');
         return;
       }
-      const joined = await joinChurch(profile, c.id, selectedRole);
+      const joined = await joinChurch(profile, c.id);
       if (!joined) {
         setError('Church created but could not join. Please try again.');
         return;
@@ -289,14 +286,6 @@ export default function MyChurchScreen({
     setShowEdit(true);
   }
 
-  async function handleSaveRole(role: string): Promise<boolean> {
-    if (!active) return false;
-    const updated = await updateChurchMembershipRole(active.membership.id, role);
-    if (!updated) return false;
-    setShowRoleEdit(false);
-    await load();
-    return true;
-  }
 
   async function handleLeaveChurch(m: ChurchWithMeta) {
     setLeaving(true);
@@ -342,7 +331,7 @@ export default function MyChurchScreen({
           {!loading && !error && memberships.length === 0 && (
             <div className="premium-card p-6 text-center">
               <p className="text-ivory-400 text-sm">You haven't connected a church yet.</p>
-              <p className="text-ivory-600 text-xs mt-2 leading-relaxed">Join your church to access studies, prayer items, and small groups.</p>
+              <p className="text-ivory-600 text-xs mt-2 leading-relaxed">Add your church as a visitor. Your pastor or church admin can invite you to become a member.</p>
               <button onClick={() => { vibrate(10); setShowJoin(true); }} className="btn-primary mt-4">
                 <Plus size={16} /> Join My Church
               </button>
@@ -388,12 +377,12 @@ export default function MyChurchScreen({
                 <div className="flex flex-wrap gap-3 mt-2 text-xs text-ivory-500">
                   {active.church.city && <span className="flex items-center gap-1"><MapPin size={11} /> {active.church.city}</span>}
                   {active.church.website && <span className="flex items-center gap-1"><Globe size={11} /> {active.church.website}</span>}
-                  <span>· {t('Your role:')} {t(active.membership.personal_role)}</span>
-                  <button type="button" onClick={() => { vibrate(6); setShowRoleEdit(true); }} className="flex items-center gap-1 text-gold-300 hover:text-gold-200 transition-colors">
-                    <Pencil size={11} /> Edit Role
-                  </button>
+                  <span>· {t('Your role:')} {t(active.membership.membership_status === 'member' ? 'Member' : 'Visitor')}</span>
+
                 </div>
               </div>
+
+              <ChurchMembershipCard key={active.membership.id} membership={active.membership} onChange={fetchChurchData} />
 
               {/* Privacy boundary */}
               <div className="premium-card p-4 mb-4 border-clay-500/20">
@@ -408,9 +397,11 @@ export default function MyChurchScreen({
                 <ChurchActionCard icon={BookOpen} label="Sermon Notes" desc={sermonNoteCount === 0 ? t('No studies available') : `${sermonNoteCount} ${t(sermonNoteCount === 1 ? 'study available' : 'studies available')}`} onClick={onOpenSermonNotes} />
                 <ChurchActionCard icon={Mic} label="Sermon Assistant" desc="Record a sermon and build notes as you listen." onClick={onOpenSermonAssistant} />
                 <ChurchActionCard icon={Radio} label={t('Live Sermon Translation')} desc={t('Use your church’s clean sermon feed or microphone fallback.')} onClick={onOpenLiveTranslation} />
+                {active.membership.membership_status === 'member' && <>
                 <ChurchActionCard icon={BookOpen} label="From My Church" desc={`${active.studies.length} ${t(active.studies.length === 1 ? 'church study' : 'church studies')}`} onClick={onOpenChurchStudies} />
                 <ChurchActionCard icon={Heart} label="Church Prayer" desc={`${active.prayerItems.length} ${t(active.prayerItems.length === 1 ? 'prayer item' : 'prayer items')}`} onClick={onOpenChurchPrayer} />
                 <ChurchActionCard icon={Users} label="Small Groups" desc={`${active.groups.length} ${t(active.groups.length === 1 ? 'group' : 'groups')}`} onClick={onOpenSmallGroups} />
+                </>}
               </div>
 
               {active.isOwner && (
@@ -445,13 +436,8 @@ export default function MyChurchScreen({
           </header>
 
           <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6 animate-fade-in">
-            <p className="ui-label mb-2">Your Role</p>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {CHURCH_ROLES.map((r) => (
-                <button type="button" key={r} onClick={() => { vibrate(6); setSelectedRole(r); }} className={`px-3 py-2 rounded-xl border text-xs font-medium ${selectedRole === r ? 'bg-gold-500/10 border-gold-500/40 text-ivory-50' : 'bg-ink-800/40 border-ink-700/40 text-ivory-400'}`}>{r}</button>
-              ))}
-            </div>
-            <p className="text-ivory-600 text-xs mb-4">Selecting "Pastor" does not grant privileged church administration rights.</p>
+            <p className="ui-label mb-2">{language === 'es' ? 'Visitante' : 'Visitor'}</p>
+            <p className="text-ivory-300 text-sm mb-4">{language === 'es' ? 'Agregar una iglesia te conecta como visitante. Para ser miembro, acepta una invitación de su pastor o administrador.' : 'Adding a church connects you as a visitor. To become a member, accept an invitation from its pastor or church admin.'}</p>
 
             <div className="flex gap-2 mb-4">
               <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search churches..." className="input-field flex-1" onKeyDown={(e) => e.key === 'Enter' && handleSearch()} />
@@ -487,14 +473,6 @@ export default function MyChurchScreen({
         </div>
       )}
 
-      {showRoleEdit && active && (
-        <ChurchRoleSheet
-          churchName={active.church.name}
-          currentRole={active.membership.personal_role}
-          onSave={handleSaveRole}
-          onClose={() => setShowRoleEdit(false)}
-        />
-      )}
 
       {/* Edit church modal */}
       {showEdit && active && (
@@ -565,7 +543,7 @@ export default function MyChurchScreen({
             <p className="text-ivory-500 text-sm leading-relaxed mb-4">
               {showLeaveConfirm.isOwner
                 ? 'Ownership will be released. The church stays in the directory with no owner, so no one can edit its details. Other members keep their membership, studies, prayers, and groups.'
-                : "You will no longer have access to this church's studies, prayer items, and small groups. You can rejoin at any time."}
+                : "You will no longer have access to this church's studies, prayer items, and small groups. You can add it again as a visitor. Membership will require a new invitation."}
             </p>
             <div className="flex gap-2">
               <button onClick={() => setShowLeaveConfirm(null)} className="btn-secondary flex-1 text-sm">

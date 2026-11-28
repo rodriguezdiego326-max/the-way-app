@@ -209,6 +209,7 @@ export interface ChurchMembership {
   profile_id: string;
   church_id: string;
   personal_role: ChurchRole | string;
+  membership_status: 'visitor' | 'member';
   verified_church_role: string | null;
   created_at: string;
 }
@@ -265,13 +266,14 @@ export interface ChurchStudyAssignment {
   updated_at: string;
 }
 
-export const VERIFIED_CHURCH_ROLES = ['CHURCH_ADMIN', 'PASTOR', 'ELDER', 'LEADER'] as const;
+export const VERIFIED_CHURCH_ROLES = ['CHURCH_ADMIN', 'PASTOR', 'ELDER', 'DEACON', 'LEADER'] as const;
 export type VerifiedChurchRole = (typeof VERIFIED_CHURCH_ROLES)[number];
 
 export const VERIFIED_CHURCH_ROLE_LABELS: Record<VerifiedChurchRole, string> = {
   CHURCH_ADMIN: 'Church Admin',
   PASTOR: 'Pastor',
   ELDER: 'Elder',
+  DEACON: 'Deacon',
   LEADER: 'Leader',
 };
 

@@ -147,7 +147,7 @@ export default function ChurchAdministrationCard({ churchId, membership, onManag
             <div className="mt-5 pt-5 border-t border-ink-700/40">
               <p className="ui-label mb-2">Leadership Requests</p>
               <p className="text-ivory-600 text-xs mb-3 leading-relaxed">
-                You can authorize Church Admins, Elders, and Leaders for this church. Pastor verification is handled by SOLAPATH App Admin.
+                You can authorize Church Admins, Elders, Deacons, and Leaders for this church. Pastor verification is handled by SOLAPATH App Admin.
               </p>
               {delegatedClaims.length === 0 ? (
                 <p className="text-ivory-600 text-xs">No pending leadership requests.</p>
