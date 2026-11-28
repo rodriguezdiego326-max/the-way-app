@@ -62,6 +62,9 @@ jobs:
       - name: Church visitor permissions and invitations
         run: npm run test:church-membership
 
+      - name: Founding church subscription discount permissions
+        run: npm run test:founding-churches
+
       - name: Production web build
         run: npm run build:web
 

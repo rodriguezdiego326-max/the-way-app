@@ -1,3 +1,4 @@
+import FoundingChurchAdmin from '@/components/FoundingChurchAdmin';
 import ChurchSourceBadge from '@/components/ChurchSourceBadge';
 import HiddenChurches from '@/components/HiddenChurches';
 import { getChurchChoices, setChurchHidden } from '@/lib/churchChoices';
@@ -78,6 +79,7 @@ export default function TranslationUsageAdmin() {
       </div>)}
       <p className="text-xs">{text('Overlapping devices and reconnects are counted once per person and church. Missing heartbeats may undercount. Microphone samples measure connected time only.', 'Los dispositivos simultáneos y las reconexiones se cuentan una vez por persona e iglesia. Las muestras faltantes pueden reducir el total. El micrófono solo mide tiempo conectado.')}</p>
     </div>
+    <FoundingChurchAdmin />
     <form className="premium-card p-4 space-y-3" onSubmit={e => { e.preventDefault(); setConfirm('new'); }}>
       <h3>{text('Give free access', 'Otorgar acceso gratuito')}</h3>
       <p className="text-xs">{text('Church grants cover that church’s plan and shared translation, not members’ personal subscriptions. Full access includes both subscription and translation. No existing Apple subscription is canceled or refunded here.', 'El acceso de una iglesia cubre su plan y traducción compartida, no las suscripciones personales. El acceso completo incluye suscripción y traducción. Aquí no se cancela ni reembolsa ninguna suscripción de Apple.')}</p>

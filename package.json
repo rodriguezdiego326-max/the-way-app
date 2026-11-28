@@ -22,7 +22,8 @@
     "build:sender": "vite build --config vite.sender.config.ts && node scripts/finalize-sender.mjs",
     "test:translation-measurement": "node --test scripts/test-translation-measurement.mjs",
     "test:church-choices": "node --test scripts/test-church-choices.mjs",
-    "test:church-membership": "node --test scripts/test-church-membership.mjs"
+    "test:church-membership": "node --test scripts/test-church-membership.mjs",
+    "test:founding-churches": "node --test scripts/test-founding-churches.mjs"
   },
   "dependencies": {
     "@aparajita/capacitor-secure-storage": "^8.0.0",
