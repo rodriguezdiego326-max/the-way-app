@@ -1,3 +1,5 @@
+import ChurchSourceBadge from '@/components/ChurchSourceBadge';
+import { useLanguage } from '@/lib/i18n';
 import { Church, ChevronRight, Globe, Loader2, MapPin } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
 import type { AppleChurchResult } from '@/lib/churchSearchNative';
@@ -14,6 +16,8 @@ interface Props {
   onJoinChurch: (churchId: string) => void;
   onReviewApple: (church: AppleChurchResult) => void;
   onRetry: () => void;
+  onHide?: (id: string) => void;
+  hiding?: boolean;
 }
 
 function appleLocation(church: AppleChurchResult): string | null {
@@ -27,8 +31,9 @@ function appleNote(appleStatus: AppleSearchStatus): string | null {
 }
 
 export default function ChurchSearchResults({
-  status, query, results, appleStatus, onJoinChurch, onReviewApple, onRetry,
+  status, query, results, appleStatus, onJoinChurch, onReviewApple, onRetry, onHide, hiding,
 }: Props) {
+  const { language } = useLanguage();
   if (status === 'idle') return null;
 
   if (status === 'searching') {
@@ -67,19 +72,22 @@ export default function ChurchSearchResults({
       {results.map((result) => {
         if (result.kind === 'solapath') {
           return (
+            <div key={result.key} className="premium-card p-2">
             <button
               type="button"
-              key={result.key}
               onClick={() => { vibrate(10); onJoinChurch(result.churchId); }}
-              className="premium-card p-3 flex items-center gap-3 text-left no-tap-highlight hover:border-gold-500/30 transition-all"
+              className="w-full p-3 flex items-center gap-3 text-left no-tap-highlight hover:border-gold-500/30 transition-all"
             >
               <Church size={14} className="text-ivory-400 shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-ivory-200 text-sm">{result.name}</p>
+                <ChurchSourceBadge source={result.source} mine={result.isMine} />
                 {result.city && <p className="text-ivory-600 text-xs">{result.city}</p>}
               </div>
               <ChevronRight size={14} className="text-ivory-600 shrink-0" />
             </button>
+            {onHide && <button type="button" disabled={hiding} className="btn-ghost text-sm" onClick={() => onHide(result.churchId)}>{language === 'es' ? 'Ocultar de mi lista' : 'Hide from my list'}</button>}
+            </div>
           );
         }
 
@@ -95,6 +103,7 @@ export default function ChurchSearchResults({
             <MapPin size={14} className="text-ivory-400 shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <p className="text-ivory-200 text-sm">{apple.name}</p>
+              <ChurchSourceBadge source="apple_maps" />
               {location && <p className="text-ivory-600 text-xs">{location}</p>}
               {apple.address && <p className="text-ivory-600 text-xs">{apple.address}</p>}
               {apple.website && (

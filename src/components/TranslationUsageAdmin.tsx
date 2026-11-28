@@ -1,8 +1,11 @@
+import ChurchSourceBadge from '@/components/ChurchSourceBadge';
+import HiddenChurches from '@/components/HiddenChurches';
+import { getChurchChoices, setChurchHidden } from '@/lib/churchChoices';
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/lib/i18n';
 
-type Target = { id: string; label: string; detail: string | null };
+type Target = { id: string; label: string; detail: string | null; source?: string; is_mine?: boolean };
 type Grant = { id: string; target_id: string; kind: 'church' | 'person'; label: string; scope: string; active: boolean; note: string };
 type Summary = { church_id: string | null; church_name: string | null; mode: string; people: number; connected_seconds: number; playback_seconds: number };
 
@@ -11,6 +14,7 @@ export default function TranslationUsageAdmin() {
   const text = (en: string, es: string) => language === 'es' ? es : en;
   const [grants, setGrants] = useState<Grant[]>([]);
   const [summary, setSummary] = useState<Summary[]>([]);
+  const [listVersion, setListVersion] = useState(0);
   const [kind, setKind] = useState<'church' | 'person'>('church');
   const [query, setQuery] = useState('');
   const [targets, setTargets] = useState<Target[]>([]);
@@ -88,13 +92,28 @@ export default function TranslationUsageAdmin() {
       <button type="button" className="btn-secondary" disabled={busy || !!confirm || query.trim().length < 2} onClick={() => void run(async () => {
         const { data, error: err } = await supabase.rpc('search_complimentary_targets', { p_kind: kind, p_query: query.trim() });
         if (err) throw err;
-        setTargets(data || []); setTarget(''); setSearched(true);
+        if (kind === 'church') {
+          const details = await getChurchChoices((data || []).map((c: Target) => c.id));
+          setTargets(details.filter(c => !c.hidden).map(c => ({ id: c.id, label: c.name, detail: c.city, source: c.source, is_mine: c.is_mine })));
+        } else setTargets(data || []);
+        setTarget(''); setSearched(true);
       })}>{text('Search', 'Buscar')}</button>
       {searched && targets.length === 0 && <p>{text('No matching accounts or churches.', 'No hay cuentas ni iglesias coincidentes.')}</p>}
+      {kind === 'church' && <>
+        <HiddenChurches version={listVersion} onRestore={() => { setListVersion(v => v + 1); setTargets([]); setTarget(''); setSearched(false); }} />
+        {targets.map(c => <div key={c.id} className="border border-ink-600 rounded-xl p-3 space-y-2">
+          <p>{c.label}{c.detail ? ` — ${c.detail}` : ''}</p>
+          <ChurchSourceBadge source={c.source} mine={c.is_mine} />
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={busy || !!confirm} onClick={() => setTarget(c.id)} className="btn-secondary text-sm">{target === c.id ? text('Selected', 'Seleccionada') : text('Select', 'Seleccionar')}</button>
+            <button type="button" disabled={busy || !!confirm} className="btn-ghost text-sm" onClick={() => void run(async () => { await setChurchHidden(c.id, true); setTargets(rows => rows.filter(row => row.id !== c.id)); if (target === c.id) setTarget(''); setListVersion(v => v + 1); })}>{text('Hide from my list', 'Ocultar de mi lista')}</button>
+          </div>
+        </div>)}
+      </>}
       <label className="block">{text('Recipient', 'Destinatario')}
         <select required className="complimentary-access-field" value={target} disabled={busy || !!confirm} onChange={e => setTarget(e.target.value)}>
           <option value="">{text('Select a recipient', 'Selecciona un destinatario')}</option>
-          {targets.map(t => <option key={t.id} value={t.id}>{t.label} — {t.detail || t.id.slice(0,8)}</option>)}
+          {targets.map(t => <option key={t.id} value={t.id}>{t.label} — {t.detail || t.id.slice(0,8)}{t.source ? ` · ${t.source === 'apple_maps' ? text('Apple Maps', 'Apple Maps') : t.is_mine ? text('Created by you', 'Creada por ti') : text('Manually added', 'Agregada manualmente')}` : ''}</option>)}
         </select>
       </label>
       <label className="block">{text('Access', 'Acceso')}

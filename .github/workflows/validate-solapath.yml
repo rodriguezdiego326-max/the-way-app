@@ -56,6 +56,9 @@ jobs:
       - name: Translation measurements and owner grants
         run: npm run test:translation-measurement
 
+      - name: Church directory identity and personal hiding
+        run: npm run test:church-choices
+
       - name: Production web build
         run: npm run build:web
 

@@ -1,3 +1,6 @@
+import ChurchSourceBadge from '@/components/ChurchSourceBadge';
+import HiddenChurches from '@/components/HiddenChurches';
+import { getChurchChoices, setChurchHidden } from '@/lib/churchChoices';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Church, Plus, ChevronRight, Search, MapPin, Globe, BookOpen, Heart, Users, Sun, LogOut, Check, Pencil, Mic, Radio } from 'lucide-react';
 import { vibrate } from '@/lib/utils';
@@ -15,7 +18,7 @@ import type { Profile } from '@/lib/types';
 import type { ChurchProfile, ChurchMembership, ChurchStudy, ChurchPrayerItem, ChurchGroup } from '@/lib/togetherTypes';
 import { CHURCH_ROLES } from '@/lib/togetherTypes';
 import { isAppleChurchSearchAvailable, searchChurches as searchAppleChurches, type AppleChurchResult } from '@/lib/churchSearchNative';
-import { mergeChurchSearchResults, type ChurchSearchResult } from '@/lib/churchSearchMerge';
+import { mergeChurchSearchResults, sameChurch, type ChurchSearchResult } from '@/lib/churchSearchMerge';
 import { useLanguage } from '@/lib/i18n';
 
 interface Props {
@@ -46,6 +49,8 @@ export default function MyChurchScreen({
   profile, activeChurchId, onActiveChurchChange, onBack, onOpenSundayMode, onOpenSermonNotes, onOpenSermonAssistant, onOpenLiveTranslation, onOpenChurchStudies, onOpenManageChurchStudies, onOpenChurchPrayer, onOpenSmallGroups,
 }: Props) {
   const { language, t } = useLanguage();
+  const [listVersion, setListVersion] = useState(0);
+  const [hiding, setHiding] = useState(false);
   const [memberships, setMemberships] = useState<ChurchWithMeta[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -79,10 +84,11 @@ export default function MyChurchScreen({
   const fetchChurchData = useCallback(async () => {
     const [mems, ownNotes] = await Promise.all([getAllChurchMemberships(profile.id), getSermonNotes(profile.id)]);
     setSermonNoteCount(ownNotes.length);
+    const hidden = new Set((await getChurchChoices()).map(c => c.id));
     const enriched: ChurchWithMeta[] = [];
     for (const m of mems) {
       const c = await getChurch(m.church_id);
-      if (!c) continue;
+      if (!c || c.canonical_church_id || hidden.has(c.id)) continue;
       const owner = await isChurchOwner(profile.id, c.id);
       const [studs, prays, grps] = await Promise.all([
         getChurchStudies(c.id),
@@ -153,12 +159,27 @@ export default function MyChurchScreen({
         message: apple.reason instanceof Error ? apple.reason.message : 'Unknown error',
       });
     }
-    const merged = mergeChurchSearchResults(solapathChurches, appleChurches);
+    let hidden;
+    try { hidden = await getChurchChoices(); }
+    catch { setSearchStatus('failed'); return; }
+    const merged = mergeChurchSearchResults(solapathChurches, appleChurches.filter(apple => !hidden.some(c => sameChurch(c, apple))));
     setAppleStatus(!isAppleChurchSearchAvailable() ? 'web' : apple.status === 'rejected' ? 'failed' : 'ok');
     setSearchResults(merged);
     if (merged.length > 0) setSearchStatus('results');
     else if (apple.status === 'rejected') setSearchStatus('failed');
     else setSearchStatus('empty');
+  }
+
+  async function hideChurch(id: string) {
+    if (hiding) return;
+    setHiding(true);
+    try {
+      await setChurchHidden(id, true);
+      setSearchResults(rows => rows.filter(row => row.kind !== 'solapath' || row.churchId !== id));
+      setListVersion(v => v + 1);
+      await fetchChurchData();
+    } catch { setError(language === 'es' ? 'No se pudo ocultar la iglesia. Inténtalo de nuevo.' : 'Could not hide this church. Please try again.'); }
+    finally { setHiding(false); }
   }
 
   async function handleAddAppleChurch() {
@@ -314,6 +335,7 @@ export default function MyChurchScreen({
             </div>
           </div>
 
+          <HiddenChurches version={listVersion} onRestore={() => { setListVersion(v => v + 1); void load(); }} />
           {loading && <LoadingState message="Loading..." />}
           {error && <ErrorState message={error} onRetry={load} />}
 
@@ -344,6 +366,7 @@ export default function MyChurchScreen({
                     >
                       {i === activeIndex && <Check size={10} className="inline mr-1" />}
                       {m.church.name}
+                      <span className="block mt-1"><ChurchSourceBadge source={m.church.source} mine={m.isOwner} /></span>
                     </button>
                   ))}
                 </div>
@@ -359,6 +382,9 @@ export default function MyChurchScreen({
                     </button>
                   )}
                 </div>
+                <ChurchSourceBadge source={active.church.source} mine={active.isOwner} />
+                <button type="button" disabled={hiding} onClick={() => void hideChurch(active.church.id)} className="btn-ghost text-sm">{language === 'es' ? 'Ocultar de mi lista' : 'Hide from my list'}</button>
+                <p className="text-xs text-ivory-300">{language === 'es' ? 'Puedes restaurarla en Iglesias ocultas. Tu membresía y los datos se conservan.' : 'You can restore it under Hidden churches. Your membership and data are preserved.'}</p>
                 <div className="flex flex-wrap gap-3 mt-2 text-xs text-ivory-500">
                   {active.church.city && <span className="flex items-center gap-1"><MapPin size={11} /> {active.church.city}</span>}
                   {active.church.website && <span className="flex items-center gap-1"><Globe size={11} /> {active.church.website}</span>}
@@ -432,10 +458,13 @@ export default function MyChurchScreen({
               <button type="button" onClick={handleSearch} disabled={searchStatus === 'searching'} className="btn-secondary disabled:opacity-40"><Search size={16} /></button>
             </div>
 
+            <HiddenChurches version={listVersion} onRestore={() => { setListVersion(v => v + 1); void load(); if (searchQuery.trim()) void handleSearch(); }} />
             <ChurchSearchResults
               status={searchStatus}
               query={searchQuery.trim()}
               results={searchResults}
+              onHide={id => void hideChurch(id)}
+              hiding={hiding}
               appleStatus={appleStatus}
               onJoinChurch={handleJoin}
               onReviewApple={(church) => { setAddError(null); setPendingApple(church); }}

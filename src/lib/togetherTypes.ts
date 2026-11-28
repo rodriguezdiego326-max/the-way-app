@@ -194,6 +194,9 @@ export interface AccountabilityRelationship {
 }
 
 export interface ChurchProfile {
+  source?: string;
+  is_mine?: boolean;
+  canonical_church_id?: string | null;
   id: string;
   name: string;
   city: string | null;

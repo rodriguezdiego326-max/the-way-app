@@ -1,0 +1,55 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { build } from 'esbuild';
+const { PGlite } = await import(process.env.PGLITE_MODULE || '@electric-sql/pglite');
+const db=new PGlite();
+const a='11111111-1111-4111-8111-111111111111', b='22222222-2222-4222-8222-222222222222';
+const c='33333333-3333-4333-8333-333333333333', d='44444444-4444-4444-8444-444444444444';
+await db.exec(`create role anon;create role authenticated; create schema auth;create schema private;
+create function auth.uid() returns uuid language sql as $$select nullif(current_setting('test.uid',true),'')::uuid$$;
+grant usage on schema auth to authenticated,anon;
+create table public.profiles(id uuid primary key,display_name text);
+create table auth.users(id uuid primary key,email text);
+create table public.church_profiles(id uuid primary key default gen_random_uuid(),name text,city text,website text,source text default 'user_created',user_id uuid,created_at timestamptz default now());
+create function private.require_app_owner() returns void language plpgsql as $$begin if auth.uid()<>'${a}' then raise exception 'owner only';end if;end$$;
+insert into public.profiles values('${a}','Owner'),('${b}','Other');
+insert into public.church_profiles(id,name,city,website,source,user_id) values('${c}','Grace','Pearland','https://www.grace.test/','user_created','${a}'),('${d}','Grace Pearland','Pearland','https://grace.test','released',null);`);
+await db.exec(readFileSync('supabase/migrations/20261128043630_church_directory_choices.sql','utf8'));
+const asUser=async(id,sql,params=[])=>{await db.exec('set role authenticated');await db.query("select set_config('test.uid',$1,false)",[id]);try{return await db.query(sql,params);}finally{await db.exec('reset role');}};
+test('hiding is per account, reversible, and preserves church rows',async()=>{
+ await asUser(a,'select public.set_church_hidden($1,true)',[c]);
+ assert.equal((await asUser(a,'select * from public.search_church_directory($1)',['Grace'])).rows.length,1);
+ assert.equal((await asUser(b,'select * from public.search_church_directory($1)',['Grace'])).rows.length,2);
+ assert.equal((await asUser(a,'select * from public.church_choice_details(null)')).rows[0].id,c);
+ assert.equal((await asUser(b,'select * from public.church_choice_details(null)')).rows.length,0);
+ await asUser(a,'select public.set_church_hidden($1,false)',[c]);
+ assert.equal((await asUser(a,'select * from public.search_church_directory($1)',['Grace'])).rows.length,2);
+ assert.equal((await db.query('select count(*)::int as n from church_profiles')).rows[0].n,2);
+});
+test('no anonymous access or direct writes to preferences; owner-only free-access search remains restricted',async()=>{
+ await db.exec('set role anon');await assert.rejects(db.query('select public.set_church_hidden($1,true)',[c]),/permission denied/);await db.exec('reset role');
+ await assert.rejects(asUser(a,'select * from private.church_list_hidden'),/permission denied/);
+ await assert.rejects(asUser(b,"select * from public.search_complimentary_targets('church','Grace')"),/owner only/);
+});
+test('aliases disappear from both searches; imported match reuses canonical ID and preserves owner',async()=>{
+ await db.query('update public.church_profiles set canonical_church_id=$1 where id=$2',[c,d]);
+ assert.equal((await asUser(a,"select * from public.search_church_directory('Grace')")).rows.length,1);
+ assert.equal((await asUser(a,"select * from public.search_complimentary_targets('church','Grace')")).rows.length,1);
+ const imported=(await asUser(a,'select public.import_church_directory_entry($1,$2,$3) as id',['Grace Pearland','Pearland','http://grace.test/'])).rows[0].id;
+ assert.equal(imported,c);
+ const row=(await db.query('select * from church_profiles where id=$1',[c])).rows[0];assert.equal(row.user_id,a);assert.equal(row.source,'apple_maps');
+ assert.equal((await db.query('select count(*)::int as n from church_profiles')).rows[0].n,2);
+});
+const bundle=await build({entryPoints:['src/lib/churchSearchMerge.ts'],bundle:true,write:false,format:'esm',platform:'node'});
+const {mergeChurchSearchResults,sameChurch}=await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
+test('map result replaces manual match, but not another city or an uncertain match',()=>{
+ const manual={id:c,name:'Grace',city:'Pearland',website:'https://www.grace.test/',source:'user_created'};
+ const apple={name:'Grace Pearland',city:'Pearland',website:'http://grace.test',latitude:1,longitude:2};
+ assert.equal(mergeChurchSearchResults([manual],[apple]).length,1);
+ assert.equal(mergeChurchSearchResults([manual],[apple])[0].kind,'apple');
+ assert.equal(mergeChurchSearchResults([{...manual,source:'apple_maps'}],[apple]).length,1);
+ assert.equal(sameChurch(manual,{...apple,city:'Houston'}),false);
+ assert.equal(sameChurch({...manual,city:null},{...apple,city:null}),false);
+ assert.equal(mergeChurchSearchResults([manual],[{...apple,city:'Houston'}]).length,2);
+});

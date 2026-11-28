@@ -1,3 +1,4 @@
+import { getChurchChoices } from '@/lib/churchChoices';
 // Phase 8 — CHURCH Engine
 // Handles church profiles, memberships, sermons, sermon notes,
 // church studies, church prayer items, and church groups.
@@ -83,11 +84,14 @@ export async function searchChurchDirectory(query: string): Promise<Omit<ChurchP
     });
     return [];
   }
-  return ((data as ChurchProfile[]) || []).map((c) => ({
+  const choices = await getChurchChoices(((data as ChurchProfile[]) || []).map(c => c.id));
+  return choices.filter(c => !c.hidden).map((c) => ({
     id: c.id,
     name: c.name,
     city: c.city || null,
     website: c.website || null,
+    source: c.source,
+    is_mine: c.is_mine,
   }));
 }
 
