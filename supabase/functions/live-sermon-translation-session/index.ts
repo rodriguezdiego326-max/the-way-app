@@ -207,12 +207,8 @@ Deno.serve(async (req: Request) => {
             keywords: transcriptionKeywords(sourceLanguage),
           },
           noise_reduction: { type: "far_field", strength: 1 },
-          turn_detection: {
-            type: "server_vad",
-            threshold: 0.72,
-            prefix_padding_ms: 450,
-            silence_duration_ms: 900,
-          },
+          // gpt-live-transcribe handles continuous speech internally and rejects VAD.
+          turn_detection: null,
         },
       },
     };
