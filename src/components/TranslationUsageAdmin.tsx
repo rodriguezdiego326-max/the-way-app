@@ -78,12 +78,12 @@ export default function TranslationUsageAdmin() {
       <h3>{text('Give free access', 'Otorgar acceso gratuito')}</h3>
       <p className="text-xs">{text('Church grants cover that church’s plan and shared translation, not members’ personal subscriptions. Full access includes both subscription and translation. No existing Apple subscription is canceled or refunded here.', 'El acceso de una iglesia cubre su plan y traducción compartida, no las suscripciones personales. El acceso completo incluye suscripción y traducción. Aquí no se cancela ni reembolsa ninguna suscripción de Apple.')}</p>
       <label className="block">{text('Recipient type', 'Tipo de destinatario')}
-        <select className="w-full p-2 rounded bg-ink-800 text-ivory-100" disabled={busy || !!confirm} value={kind} onChange={e => { setKind(e.target.value as 'church' | 'person'); setTargets([]); setTarget(''); setSearched(false); }}>
+        <select className="complimentary-access-field" disabled={busy || !!confirm} value={kind} onChange={e => { setKind(e.target.value as 'church' | 'person'); setTargets([]); setTarget(''); setSearched(false); }}>
           <option value="church">{text('Church', 'Iglesia')}</option><option value="person">{text('Person / pastor', 'Persona / pastor')}</option>
         </select>
       </label>
       <label className="block">{text('Search by name (or email for people)', 'Buscar por nombre (o correo para personas)')}
-        <input className="w-full p-2 rounded bg-ink-800 text-ivory-100" value={query} maxLength={100} disabled={busy || !!confirm} onChange={e => { setQuery(e.target.value); setTargets([]); setTarget(''); setSearched(false); }} />
+        <input className="complimentary-access-field" value={query} maxLength={100} disabled={busy || !!confirm} onChange={e => { setQuery(e.target.value); setTargets([]); setTarget(''); setSearched(false); }} />
       </label>
       <button type="button" className="btn-secondary" disabled={busy || !!confirm || query.trim().length < 2} onClick={() => void run(async () => {
         const { data, error: err } = await supabase.rpc('search_complimentary_targets', { p_kind: kind, p_query: query.trim() });
@@ -92,18 +92,18 @@ export default function TranslationUsageAdmin() {
       })}>{text('Search', 'Buscar')}</button>
       {searched && targets.length === 0 && <p>{text('No matching accounts or churches.', 'No hay cuentas ni iglesias coincidentes.')}</p>}
       <label className="block">{text('Recipient', 'Destinatario')}
-        <select required className="w-full p-2 rounded bg-ink-800 text-ivory-100" value={target} disabled={busy || !!confirm} onChange={e => setTarget(e.target.value)}>
+        <select required className="complimentary-access-field" value={target} disabled={busy || !!confirm} onChange={e => setTarget(e.target.value)}>
           <option value="">{text('Select a recipient', 'Selecciona un destinatario')}</option>
           {targets.map(t => <option key={t.id} value={t.id}>{t.label} — {t.detail || t.id.slice(0,8)}</option>)}
         </select>
       </label>
       <label className="block">{text('Access', 'Acceso')}
-        <select className="w-full p-2 rounded bg-ink-800 text-ivory-100" value={scope} disabled={busy || !!confirm} onChange={e => setScope(e.target.value)}>
+        <select className="complimentary-access-field" value={scope} disabled={busy || !!confirm} onChange={e => setScope(e.target.value)}>
           {['full', 'subscription', 'translation'].map(s => <option key={s} value={s}>{scopeLabel(s)}</option>)}
         </select>
       </label>
       <label className="block">{text('Reason', 'Motivo')}
-        <input required maxLength={300} className="w-full p-2 rounded bg-ink-800 text-ivory-100" value={note} disabled={busy || !!confirm} onChange={e => setNote(e.target.value)} />
+        <input required maxLength={300} className="complimentary-access-field" value={note} disabled={busy || !!confirm} onChange={e => setNote(e.target.value)} />
       </label>
       <button className="btn-primary" disabled={busy || !!confirm || !target || !note.trim()}>{text('Review free access', 'Revisar acceso gratuito')}</button>
     </form>

@@ -86,6 +86,46 @@
            transition-all duration-200;
   }
 
+  /* Explicit native-control colors keep the free-access form readable in iOS. */
+  .complimentary-access-field {
+    width: 100%;
+    min-height: 48px;
+    padding: 12px;
+    border: 1px solid #A99D88;
+    border-radius: 12px;
+    background-color: #FBF8F1;
+    color: #2A241E;
+    -webkit-text-fill-color: #2A241E;
+    color-scheme: light;
+    font-size: 16px;
+    opacity: 1;
+  }
+
+  .complimentary-access-field:focus-visible {
+    outline: 2px solid #8B6B24;
+    outline-offset: 2px;
+  }
+
+  .complimentary-access-field:disabled {
+    background-color: #E7E0D2;
+    color: #2A241E;
+    -webkit-text-fill-color: #2A241E;
+    opacity: 1;
+    cursor: not-allowed;
+  }
+
+  .complimentary-access-field::placeholder {
+    color: #665C4F;
+    -webkit-text-fill-color: #665C4F;
+    opacity: 1;
+  }
+
+  .complimentary-access-field option {
+    background-color: #FBF8F1;
+    color: #2A241E;
+    -webkit-text-fill-color: #2A241E;
+  }
+
   .mood-chip {
     @apply flex flex-col items-center justify-center gap-2 px-3 py-4 rounded-2xl
            bg-ink-800/60 border border-ink-700/40
