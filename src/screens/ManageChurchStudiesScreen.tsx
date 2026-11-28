@@ -1,3 +1,4 @@
+import { getAppAdminRole } from '@/lib/appAdminEngine';
 import { useState, useEffect, useCallback } from 'react';
 import { X, Plus, ChevronRight, BookOpen } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
@@ -41,13 +42,13 @@ export default function ManageChurchStudiesScreen({ profile, churchId, onBack }:
     }
     setScreenState('loading');
     try {
-      const membership = await getChurchMembershipForChurch(profile.id, churchId);
+      const [membership, adminRole] = await Promise.all([getChurchMembershipForChurch(profile.id, churchId), getAppAdminRole()]);
       const role = membership?.verified_church_role;
-      if (!membership || !isVerifiedChurchPublisher(role)) {
+      if (adminRole !== 'APP_OWNER' && (!membership || !isVerifiedChurchPublisher(role))) {
         setScreenState('denied');
         return;
       }
-      setRoleLabel(VERIFIED_CHURCH_ROLE_LABELS[role]);
+      setRoleLabel(adminRole === 'APP_OWNER' ? 'App Owner' : isVerifiedChurchPublisher(role) ? VERIFIED_CHURCH_ROLE_LABELS[role] : null);
       setStudies(await getChurchStudies(churchId));
       setScreenState('ready');
     } catch {

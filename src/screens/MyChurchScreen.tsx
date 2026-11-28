@@ -1,3 +1,4 @@
+import { getAppAdminRole } from '@/lib/appAdminEngine';
 import ChurchSourceBadge from '@/components/ChurchSourceBadge';
 import HiddenChurches from '@/components/HiddenChurches';
 import { getChurchChoices, setChurchHidden } from '@/lib/churchChoices';
@@ -48,6 +49,7 @@ export default function MyChurchScreen({
   profile, activeChurchId, onActiveChurchChange, onBack, onOpenSundayMode, onOpenSermonNotes, onOpenSermonAssistant, onOpenLiveTranslation, onOpenChurchStudies, onOpenManageChurchStudies, onOpenChurchPrayer, onOpenSmallGroups,
 }: Props) {
   const { language, t } = useLanguage();
+  const [isAppOwner, setIsAppOwner] = useState(false);
   const [listVersion, setListVersion] = useState(0);
   const [hiding, setHiding] = useState(false);
   const [memberships, setMemberships] = useState<ChurchWithMeta[]>([]);
@@ -79,7 +81,9 @@ export default function MyChurchScreen({
   const activeChurchIdRef = useRef(activeChurchId);
 
   const fetchChurchData = useCallback(async () => {
-    const [mems, ownNotes] = await Promise.all([getAllChurchMemberships(profile.id), getSermonNotes(profile.id)]);
+    const [mems, ownNotes, adminRole] = await Promise.all([getAllChurchMemberships(profile.id), getSermonNotes(profile.id), getAppAdminRole()]);
+    const ownerAccess = adminRole === 'APP_OWNER';
+    setIsAppOwner(ownerAccess);
     setSermonNoteCount(ownNotes.length);
     const hidden = new Set((await getChurchChoices()).map(c => c.id));
     const enriched: ChurchWithMeta[] = [];
@@ -87,7 +91,7 @@ export default function MyChurchScreen({
       const c = await getChurch(m.church_id);
       if (!c || c.canonical_church_id || hidden.has(c.id)) continue;
       const owner = await isChurchOwner(profile.id, c.id);
-      const [studs, prays, grps] = m.membership_status === 'member' ? await Promise.all([
+      const [studs, prays, grps] = (ownerAccess || m.membership_status === 'member') ? await Promise.all([
         getChurchStudies(c.id),
         getChurchPrayerItems(c.id),
         getChurchGroups(c.id),
@@ -377,12 +381,12 @@ export default function MyChurchScreen({
                 <div className="flex flex-wrap gap-3 mt-2 text-xs text-ivory-500">
                   {active.church.city && <span className="flex items-center gap-1"><MapPin size={11} /> {active.church.city}</span>}
                   {active.church.website && <span className="flex items-center gap-1"><Globe size={11} /> {active.church.website}</span>}
-                  <span>· {t('Your role:')} {t(active.membership.membership_status === 'member' ? 'Member' : 'Visitor')}</span>
+                  <span>· {t('Your role:')} {t(isAppOwner ? 'App Owner' : active.membership.membership_status === 'member' ? 'Member' : 'Visitor')}</span>
 
                 </div>
               </div>
 
-              <ChurchMembershipCard key={active.membership.id} membership={active.membership} onChange={fetchChurchData} />
+              <ChurchMembershipCard key={active.membership.id} membership={active.membership} isAppOwner={isAppOwner} onChange={fetchChurchData} />
 
               {/* Privacy boundary */}
               <div className="premium-card p-4 mb-4 border-clay-500/20">
@@ -397,7 +401,7 @@ export default function MyChurchScreen({
                 <ChurchActionCard icon={BookOpen} label="Sermon Notes" desc={sermonNoteCount === 0 ? t('No studies available') : `${sermonNoteCount} ${t(sermonNoteCount === 1 ? 'study available' : 'studies available')}`} onClick={onOpenSermonNotes} />
                 <ChurchActionCard icon={Mic} label="Sermon Assistant" desc="Record a sermon and build notes as you listen." onClick={onOpenSermonAssistant} />
                 <ChurchActionCard icon={Radio} label={t('Live Sermon Translation')} desc={t('Use your church’s clean sermon feed or microphone fallback.')} onClick={onOpenLiveTranslation} />
-                {active.membership.membership_status === 'member' && <>
+                {(isAppOwner || active.membership.membership_status === 'member') && <>
                 <ChurchActionCard icon={BookOpen} label="From My Church" desc={`${active.studies.length} ${t(active.studies.length === 1 ? 'church study' : 'church studies')}`} onClick={onOpenChurchStudies} />
                 <ChurchActionCard icon={Heart} label="Church Prayer" desc={`${active.prayerItems.length} ${t(active.prayerItems.length === 1 ? 'prayer item' : 'prayer items')}`} onClick={onOpenChurchPrayer} />
                 <ChurchActionCard icon={Users} label="Small Groups" desc={`${active.groups.length} ${t(active.groups.length === 1 ? 'group' : 'groups')}`} onClick={onOpenSmallGroups} />
@@ -413,6 +417,7 @@ export default function MyChurchScreen({
               <ChurchAdministrationCard
                 churchId={active.church.id}
                 membership={active.membership}
+                isAppOwner={isAppOwner}
                 onManageStudies={onOpenManageChurchStudies}
               />
               <button

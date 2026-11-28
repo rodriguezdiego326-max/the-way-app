@@ -10,6 +10,10 @@ await db.query('insert into profiles values ($1,\'Pastor\'),($2,\'Visitor\'),($3
 await db.query('insert into church_profiles(id,name,user_id) values($1,\'Grace\',$2),($3,\'Other\',null)',[church,visitor,otherChurch]);
 await db.query("insert into church_memberships(id,profile_id,church_id,personal_role,verified_church_role) values($1,$1,$5,'Pastor','PASTOR'),($2,$2,$5,'Member',null),($3,$3,$6,'Pastor','PASTOR'),($4,$4,$5,'Deacon',null)",[pastor,visitor,other,deacon,church,otherChurch]);
 await db.exec(readFileSync('supabase/migrations/20261128052211_church_member_invitations.sql','utf8'));
+await db.exec(`create table private.app_admins(profile_id uuid primary key,role text,active boolean default true);
+revoke all on private.app_admins from public,anon,authenticated;`);
+await db.exec(readFileSync('supabase/migrations/20261128053650_app_owner_church_access.sql','utf8'));
+
 await db.query("insert into church_groups values($1,$2,$3,'Group');",[group,church,pastor]);
 await db.query("insert into private.church_group_invites values($1,'TESTCODE',now())",[group]);
 await db.query("insert into church_studies values($1,$2,'published','Study')",[study,church]);
@@ -93,4 +97,42 @@ test('church admins can invite; loss of sender authorization invalidates pending
  await assert.rejects(asUser(visitor,'select respond_church_member_invitation($1,true)',[inv]),/current pastor or church admin/);
  assert.equal(await count(visitor,'church_studies'),0);
  await assert.rejects(asUser(visitor,"insert into church_memberships(profile_id,church_id,personal_role,membership_status) values($1,$2,'Member','member')",[visitor,otherChurch]),/permission denied/);
+});
+
+test('active App Owner has full church access without membership or a pastor title',async()=>{
+ const owner=id(50);
+ await db.query("insert into profiles values($1,'App Owner')",[owner]);
+ await db.query("insert into private.app_admins values($1,'APP_OWNER',true)",[owner]);
+ for(const table of ['church_studies','church_study_assignments','church_groups','group_discussions']) assert.ok(await count(owner,table)>0,table);
+ assert.ok(await count(owner,'church_prayer_items')>0);
+ assert.equal((await asUser(owner,'select private.can_delegate_church_role($1) ok',[church])).rows[0].ok,true);
+ await asUser(owner,"insert into church_studies values($1,$2,'draft','Owner study')",[id(51),church]);
+ await asUser(owner,"insert into church_prayer_items values($1,$2,'Owner prayer')",[id(52),church]);
+ await asUser(owner,"insert into church_groups values($1,$2,$3,'Owner group')",[id(53),church,owner]);
+ await asUser(owner,"update church_prayer_items set title='Updated' where id=$1",[id(52)]);
+ await asUser(owner,"delete from church_prayer_items where id=$1",[id(52)]);
+ const target=(await db.query('select id from church_memberships where profile_id=$1',[visitor])).rows[0].id;
+ await asUser(owner,'select revoke_church_member_invitation($1)',[target]);
+ await asUser(owner,'select invite_church_member($1)',[target]);
+ const inv=(await asUser(visitor,'select * from list_church_membership_connections($1)',[church])).rows[0].invitation_id;
+ await asUser(visitor,'select respond_church_member_invitation($1,true)',[inv]);
+ assert.equal((await asUser(visitor,'select membership_status from church_memberships')).rows[0].membership_status,'member');
+ assert.equal((await db.query('select count(*)::int n from church_memberships where profile_id=$1',[owner])).rows[0].n,0);
+ assert.equal((await asUser(owner,'select get_church_group_invite_code($1) code',[group])).rows[0].code,'TESTCODE');
+ await asUser(owner,'select delete_owned_church_group($1)',[group]);
+ assert.equal((await db.query('select count(*)::int n from church_groups where id=$1',[group])).rows[0].n,0);
+});
+test('App Admin, inactive owner, and self-selected titles cannot acquire the owner exception',async()=>{
+ const admin=id(60),inactive=id(61);
+ await db.query("insert into profiles values($1,'Admin'),($2,'Inactive')",[admin,inactive]);
+ await db.query("insert into private.app_admins values($1,'APP_ADMIN',true),($2,'APP_OWNER',false)",[admin,inactive]);
+ for(const actor of [admin,inactive]) {
+  assert.equal(await count(actor,'church_studies'),0);
+  assert.equal((await asUser(actor,'select private.can_delegate_church_role($1) ok',[church])).rows[0].ok,false);
+  await assert.rejects(asUser(actor,"update private.app_admins set role='APP_OWNER',active=true"),/permission denied/);
+ }
+ await db.query('update private.app_admins set active=false where profile_id=$1',[id(50)]);
+ assert.equal(await count(id(50),'church_studies'),0);
+ const target=(await db.query('select id from church_memberships where profile_id=$1',[deacon])).rows[0].id;
+ await assert.rejects(asUser(id(50),'select invite_church_member($1)',[target]),/pastor or church admin/);
 });

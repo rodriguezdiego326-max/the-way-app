@@ -25,10 +25,11 @@ import {
 interface Props {
   churchId: string;
   membership: ChurchMembership;
+  isAppOwner?: boolean;
   onManageStudies: () => void;
 }
 
-export default function ChurchAdministrationCard({ churchId, membership, onManageStudies }: Props) {
+export default function ChurchAdministrationCard({ churchId, membership, isAppOwner = false, onManageStudies }: Props) {
   const [claims, setClaims] = useState<ChurchAdminClaim[]>([]);
   const [delegatedClaims, setDelegatedClaims] = useState<DelegatableChurchRoleClaim[]>([]);
   const [claimsLoaded, setClaimsLoaded] = useState(false);
@@ -38,12 +39,12 @@ export default function ChurchAdministrationCard({ churchId, membership, onManag
   const [busy, setBusy] = useState(false);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const verifiedRole = membership.verified_church_role;
-  const isLeadership = isVerifiedChurchLeadership(verifiedRole);
-  const isPublisher = isVerifiedChurchPublisher(verifiedRole);
-  const canDelegate = verifiedRole === 'PASTOR' || verifiedRole === 'CHURCH_ADMIN';
+  const isLeadership = isAppOwner || isVerifiedChurchLeadership(verifiedRole);
+  const isPublisher = isAppOwner || isVerifiedChurchPublisher(verifiedRole);
+  const canDelegate = isAppOwner || verifiedRole === 'PASTOR' || verifiedRole === 'CHURCH_ADMIN';
 
   const loadClaims = useCallback(async () => {
     const all = await getMyChurchAdminClaims();
@@ -125,17 +126,19 @@ export default function ChurchAdministrationCard({ churchId, membership, onManag
     <div className="premium-card p-5 mb-4">
       <p className="ui-label mb-3">Church Administration</p>
 
-      {isLeadership && verifiedRole ? (
+      {isLeadership && (verifiedRole || isAppOwner) ? (
         <>
           <div className="flex items-center gap-2 mb-2">
             <ShieldCheck size={16} className="text-gold-300 shrink-0" />
             <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-gold-500/10 text-gold-300">
-              Verified Church Leadership
+              {isAppOwner ? t('App Owner') : t('Verified Church Leadership')}
             </span>
           </div>
-          <p className="text-ivory-200 text-sm">Role: {VERIFIED_CHURCH_ROLE_LABELS[verifiedRole as VerifiedChurchRole]}</p>
+          <p className="text-ivory-200 text-sm">Role: {isAppOwner ? t('App Owner') : VERIFIED_CHURCH_ROLE_LABELS[verifiedRole as VerifiedChurchRole]}</p>
           <p className="text-ivory-600 text-xs mt-2 leading-relaxed">
-            Verified leadership can manage church prayer and small groups for this church. Only a verified Pastor can create or manage Church Studies.
+            {isAppOwner
+              ? (language === 'es' ? 'Como propietario de la app, puedes administrar estudios, oraciones, grupos e invitaciones de la iglesia.' : 'As App Owner, you can manage church studies, prayer, groups, and invitations.')
+              : t('Verified leadership can manage church prayer and small groups for this church. Only a verified Pastor can create or manage Church Studies.')}
           </p>
           {isPublisher && (
             <button type="button" onClick={() => { vibrate(8); onManageStudies(); }} className="btn-secondary w-full text-sm mt-4">

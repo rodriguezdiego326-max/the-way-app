@@ -1,3 +1,4 @@
+import { getAppAdminRole } from '@/lib/appAdminEngine';
 import { useState, useEffect, useCallback } from 'react';
 import { X, Heart, Plus, ChevronRight, Trash2, Copy, RefreshCw, LogOut, KeyRound } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
@@ -28,6 +29,7 @@ interface Props {
 }
 
 export default function SmallGroupModeScreen({ profile, activeChurchId, onBack }: Props) {
+  const [isAppOwner, setIsAppOwner] = useState(false);
   const [groups, setGroups] = useState<ChurchGroup[]>([]);
   const [churchId, setChurchId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,6 +61,8 @@ export default function SmallGroupModeScreen({ profile, activeChurchId, onBack }
     setError(null);
     setMemberOnly(false);
     try {
+      const ownerAccess = (await getAppAdminRole()) === 'APP_OWNER';
+      setIsAppOwner(ownerAccess);
       let cid = activeChurchId;
       if (!cid) {
         const membership = await getMyChurchMembership(profile.id);
@@ -67,7 +71,7 @@ export default function SmallGroupModeScreen({ profile, activeChurchId, onBack }
       setChurchId(cid);
       if (cid) {
         const access = await getChurchMembershipForChurch(profile.id, cid);
-        if (access?.membership_status !== 'member') {
+        if (!ownerAccess && access?.membership_status !== 'member') {
           setMemberOnly(true);
           setCanManage(false);
           setLoading(false);
@@ -93,7 +97,7 @@ export default function SmallGroupModeScreen({ profile, activeChurchId, onBack }
         getChurchMembershipForChurch(profile.id, church.id),
       ]);
       setGroups(grps);
-      setCanManage(isVerifiedChurchLeadership(membership?.verified_church_role));
+      setCanManage(ownerAccess || isVerifiedChurchLeadership(membership?.verified_church_role));
     } catch {
       setError('Could not load groups.');
     } finally {
@@ -203,6 +207,7 @@ export default function SmallGroupModeScreen({ profile, activeChurchId, onBack }
 
   if (activeGroup) {
     const isCreator = activeGroup.leader_profile_id === profile.id;
+    const canDelete = isCreator || isAppOwner;
     const canShareInvite = canManage || isCreator;
 
     return (
@@ -210,7 +215,7 @@ export default function SmallGroupModeScreen({ profile, activeChurchId, onBack }
         <header className="flex items-center justify-between px-6 pt-14 safe-top shrink-0">
           <button onClick={() => setActiveGroup(null)} className="btn-ghost"><X size={20} /></button>
           <p className="ui-label">{activeGroup.name}</p>
-          {isCreator ? (
+          {canDelete ? (
             <button
               type="button"
               className="btn-ghost text-clay-400"

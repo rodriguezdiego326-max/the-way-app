@@ -1,3 +1,4 @@
+import { getAppAdminRole } from '@/lib/appAdminEngine';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Heart, Plus, Pencil, Trash2 } from 'lucide-react';
 import { vibrate, formatRelative } from '@/lib/utils';
@@ -45,6 +46,7 @@ export default function ChurchPrayerScreen({ profile, activeChurchId, onBack }: 
     setCanManage(false);
     setChurchId(null);
     try {
+      const ownerAccess = (await getAppAdminRole()) === 'APP_OWNER';
       let cid = activeChurchId;
       if (!cid) {
         const membership = await getMyChurchMembership(profile.id);
@@ -53,7 +55,7 @@ export default function ChurchPrayerScreen({ profile, activeChurchId, onBack }: 
       if (cid) {
         const access = await getChurchMembershipForChurch(profile.id, cid);
         if (version !== requestVersionRef.current) return;
-        if (access?.membership_status !== 'member') {
+        if (!ownerAccess && access?.membership_status !== 'member') {
           setMemberOnly(true);
           setCanManage(false);
           setLoading(false);
@@ -74,7 +76,7 @@ export default function ChurchPrayerScreen({ profile, activeChurchId, onBack }: 
         setItems(prays);
         const membership = await getChurchMembershipForChurch(profile.id, church.id);
         if (version !== requestVersionRef.current) return;
-        setCanManage(isVerifiedChurchLeadership(membership?.verified_church_role));
+        setCanManage(ownerAccess || isVerifiedChurchLeadership(membership?.verified_church_role));
       }
     } catch {
       if (version !== requestVersionRef.current) return;

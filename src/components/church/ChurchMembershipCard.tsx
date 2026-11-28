@@ -12,8 +12,9 @@ interface Connection {
   invitation_expires_at: string | null;
 }
 
-export default function ChurchMembershipCard({ membership, onChange }: {
+export default function ChurchMembershipCard({ membership, isAppOwner = false, onChange }: {
   membership: ChurchMembership;
+  isAppOwner?: boolean;
   onChange: () => Promise<void>;
 }) {
   const { language } = useLanguage();
@@ -22,8 +23,8 @@ export default function ChurchMembershipCard({ membership, onChange }: {
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
-  const canInvite = membership.verified_church_role === 'PASTOR' || membership.verified_church_role === 'CHURCH_ADMIN';
-  const isMember = membership.membership_status === 'member';
+  const canInvite = isAppOwner || membership.verified_church_role === 'PASTOR' || membership.verified_church_role === 'CHURCH_ADMIN';
+  const isMember = isAppOwner || membership.membership_status === 'member';
   const load = useCallback(async () => {
     const { data, error: failure } = await supabase.rpc('list_church_membership_connections', { p_church_id: membership.church_id });
     if (failure) throw failure;
@@ -55,7 +56,7 @@ export default function ChurchMembershipCard({ membership, onChange }: {
   return <section className="premium-card p-5 mb-4 text-ivory-100" aria-label={tr('Church membership', 'Membresía de la iglesia')}>
     <div className="flex items-center gap-2 mb-2">
       {isMember ? <UserCheck size={18} /> : <LockKeyhole size={18} />}
-      <h3 className="font-medium">{isMember ? tr('Church member', 'Miembro de la iglesia') : tr('Visitor', 'Visitante')}</h3>
+      <h3 className="font-medium">{isAppOwner ? tr('App Owner · Full church access', 'Propietario de la app · Acceso completo a la iglesia') : isMember ? tr('Church member', 'Miembro de la iglesia') : tr('Visitor', 'Visitante')}</h3>
     </div>
     {!isMember && <>
       <p className="text-sm text-ivory-300 mb-3">{tr('Church prayer, church studies, and small groups are for approved members. Your pastor or church admin can send you an invitation here.', 'La oración, los estudios y los grupos pequeños de la iglesia son para miembros aprobados. Tu pastor o administrador puede enviarte una invitación aquí.')}</p>
