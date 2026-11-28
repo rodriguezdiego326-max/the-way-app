@@ -136,10 +136,11 @@ const listenerBundle=await build({entryPoints:['src/lib/churchLiveListener.ts'],
   b.onResolve({filter:/^(livekit-client|@\/lib\/(translationMeasurement|churchLiveTranslationEngine))$/},()=>({path:'mock',namespace:'test'}));
   b.onLoad({filter:/.*/,namespace:'test'},()=>({contents:'export const {Room,RoomEvent,Track,startTranslationMeasurement,getChurchLiveListenerToken}=globalThis.__measurementListenerTest;'}));
 }}]});
-const {startChurchLiveListenerFromConnection}=await import('data:text/javascript;base64,'+Buffer.from(listenerBundle.outputFiles[0].text).toString('base64'));
+const {startChurchLiveListenerFromConnection,stopLocalChurchTranslation}=await import('data:text/javascript;base64,'+Buffer.from(listenerBundle.outputFiles[0].text).toString('base64'));
 function audioTrack(){
   const audio=document.createElement('audio');let paused=true;
   Object.defineProperty(audio,'paused',{get:()=>paused});Object.defineProperty(audio,'readyState',{get:()=>2});
+  audio.pause=()=>{paused=true;};
   audio.play=async()=>{if(!playbackAllowed)throw Error('autoplay');paused=false;audio.dispatchEvent(new dom.window.Event('playing'));};
   return {kind:'audio',attach:()=>audio,detach:()=>[audio]};
 }
@@ -157,4 +158,18 @@ test('listener telemetry distinguishes failed autoplay, playback, reconnect and 
   room.emit('ParticipantAttributesChanged',{}, {...agent,attributes:{'solapath.translation.status':'error'}});
   assert.equal(states.at(-1),'failed');
   await session.stop();assert.ok(stopped>0);
+});
+
+test('microphone handoff silences and clears local feed audio and rejects late tracks',async()=>{
+  playbackAllowed=true;
+  const session=await startChurchLiveListenerFromConnection({url:'wss://test',token:'test',roomName:'room'},'source',{});
+  const oldRoom=room;
+  const track=audioTrack();const audio=track.attach();audio.srcObject={};
+  oldRoom.emit('TrackSubscribed',track,{}, {isAgent:true,attributes:{}});await tick();
+  assert.equal(audio.paused,false);
+  await stopLocalChurchTranslation();
+  assert.equal(audio.paused,true);assert.equal(audio.muted,true);assert.equal(audio.srcObject,null);assert.equal(audio.isConnected,false);
+  oldRoom.emit('TrackSubscribed',audioTrack(),{}, {isAgent:true,attributes:{}});
+  await session.startAudio();
+  assert.equal(document.querySelectorAll('audio').length,0);assert.equal(audio.paused,true);
 });

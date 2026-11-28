@@ -2984,6 +2984,7 @@ const ES: Record<string, string> = {
   'Your church has not connected a clean sermon feed yet. You can still use the microphone translator below.': 'Tu iglesia aún no ha conectado una señal limpia del sermón. Aún puedes usar el traductor por micrófono a continuación.',
   'Fallback': 'Alternativa',
   'Use the phone microphone when your church does not have a direct feed available.': 'Usa el micrófono del teléfono cuando tu iglesia no tenga disponible una transmisión directa.',
+  'Audio source: device microphone': 'Fuente de audio: micrófono del dispositivo',
   'Use My Microphone': 'Usar mi micrófono',
   'Church Live Feed Setup': 'Configuración de transmisión en vivo de la iglesia',
   'SOLAPATH App Owner access is active for development. Your church membership remains unchanged.': 'El acceso de Propietario de SOLAPATH está activo para desarrollo. Tu membresía de la iglesia permanece sin cambios.',

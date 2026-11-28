@@ -17,6 +17,7 @@ import {
 } from '@/lib/churchLiveTranslationEngine';
 import {
   startChurchLiveListener,
+  stopLocalChurchTranslation,
   type ChurchLiveListenerSession,
   type ChurchLiveListenerState,
 } from '@/lib/churchLiveListener';
@@ -498,7 +499,7 @@ export default function ChurchLiveTranslationScreen({
                 <p className="text-ivory-500 text-xs leading-relaxed mb-4">
                   {t('Use the phone microphone when your church does not have a direct feed available.')}
                 </p>
-                <button type="button" onClick={onOpenMicrophoneTranslator} className="btn-secondary w-full">
+                <button type="button" onClick={() => { listenerGeneration.current++; void stopLocalChurchTranslation().then(onOpenMicrophoneTranslator); }} className="btn-secondary w-full">
                   <Mic size={16} /> {t('Use My Microphone')}
                 </button>
               </div>

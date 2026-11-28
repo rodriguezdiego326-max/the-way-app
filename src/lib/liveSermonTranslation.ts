@@ -1,3 +1,4 @@
+import { stopLocalChurchTranslation } from '@/lib/churchLiveListener';
 import { startTranslationMeasurement } from '@/lib/translationMeasurement';
 import { supabase } from '@/lib/supabase';
 
@@ -88,6 +89,7 @@ export async function startLiveSermonTranslation(
   targetLanguage: LiveTranslationLanguage,
   callbacks: LiveTranslationCallbacks,
 ): Promise<LiveTranslationSession> {
+  await stopLocalChurchTranslation();
   callbacks.onStateChange?.('connecting');
 
   if (

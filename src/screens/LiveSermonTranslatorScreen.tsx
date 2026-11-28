@@ -32,6 +32,7 @@ export default function LiveSermonTranslatorScreen({ onBack }: Props) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const sessionRef = useRef<LiveTranslationSession | null>(null);
+  const generationRef = useRef(0);
   const timerRef = useRef<number | null>(null);
 
   const active = connectionState !== 'closed';
@@ -48,6 +49,7 @@ export default function LiveSermonTranslatorScreen({ onBack }: Props) {
   }
 
   function stopSession() {
+    generationRef.current++;
     clearTimer();
     sessionRef.current?.stop();
     sessionRef.current = null;
@@ -57,6 +59,7 @@ export default function LiveSermonTranslatorScreen({ onBack }: Props) {
 
   useEffect(() => {
     return () => {
+      generationRef.current++;
       clearTimer();
       sessionRef.current?.stop();
       sessionRef.current = null;
@@ -79,19 +82,23 @@ export default function LiveSermonTranslatorScreen({ onBack }: Props) {
     setElapsedSeconds(0);
     setTranslatedAudioEnabled(false);
     setConnectionState('connecting');
+    const generation = ++generationRef.current;
+    const current = () => generation === generationRef.current;
 
     try {
       const session = await startLiveSermonTranslation(sourceCode, targetCode, {
-        onSourceTranscript: setSourceTranscript,
-        onTranslationTranscript: setTranslatedTranscript,
-        onStateChange: (state) => setConnectionState(state),
-        onError: (message) => setError(t(message)),
+        onSourceTranscript: value => { if (current()) setSourceTranscript(value); },
+        onTranslationTranscript: value => { if (current()) setTranslatedTranscript(value); },
+        onStateChange: (state) => { if (current()) setConnectionState(state); },
+        onError: (message) => { if (current()) setError(t(message)); },
       });
+      if (!current()) { session.stop(); return; }
       sessionRef.current = session;
       timerRef.current = window.setInterval(() => {
         setElapsedSeconds((seconds) => seconds + 1);
       }, 1000);
     } catch (cause) {
+      if (!current()) return;
       sessionRef.current = null;
       setConnectionState('closed');
       setError(cause instanceof Error ? t(cause.message) : t('Live translation could not start. Please try again.'));
@@ -137,6 +144,7 @@ export default function LiveSermonTranslatorScreen({ onBack }: Props) {
               <Languages size={21} className="text-gold-300" />
             </div>
             <h2 className="font-serif text-2xl text-ivory-50 mb-2">{t('Translate the sermon as it is preached')}</h2>
+            <p className="text-sm text-ivory-200 mb-2"><Mic size={14} className="inline mr-2" />{t('Audio source: device microphone')}</p>
             <p className="text-ivory-400 text-sm leading-relaxed">
               {t('SOLAPATH streams microphone audio for live translation. This live session is not saved automatically.')}
             </p>

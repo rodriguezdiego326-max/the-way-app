@@ -25,6 +25,14 @@ export interface ChurchLiveListenerSession {
   stop(): Promise<void>;
 }
 
+// Local playback ownership: switching to microphone must silence every church player.
+const localChurchStops = new Set<() => Promise<void>>();
+let localChurchGeneration = 0;
+export async function stopLocalChurchTranslation() {
+  localChurchGeneration++;
+  await Promise.allSettled([...localChurchStops].map(stop => stop()));
+}
+
 type TranscriptTurn = {
   order: number;
   text: string;
@@ -133,6 +141,7 @@ async function startChurchLiveListenerWithConnection(
   room.registerTextStreamHandler('lk.transcription', async (reader, participantInfo) => {
     try {
       const message = await reader.readAll();
+      if (stopped) return;
       const attributes = reader.info.attributes ?? {};
       const segmentId = attributes['lk.segment_id'] || reader.info.id;
       const isTranscription = !!attributes['lk.transcribed_track_id'];
@@ -164,7 +173,7 @@ async function startChurchLiveListenerWithConnection(
     track: RemoteTrack,
     participant: RemoteParticipant,
   ) => {
-    if (!participant.isAgent || track.kind !== Track.Kind.Audio) return;
+    if (stopped || !participant.isAgent || track.kind !== Track.Kind.Audio) return;
 
     const element = track.attach() as HTMLMediaElement;
     element.autoplay = true;
@@ -283,11 +292,35 @@ async function startChurchLiveListenerWithConnection(
     }
   });
 
+  const stop = async () => {
+    if (stopped) return;
+    stopped = true;
+    localChurchStops.delete(stop);
+    measurement.stop();
+    room.unregisterTextStreamHandler('lk.transcription');
+    // Removing a media element alone does not reliably stop playback in WebKit.
+    attachedAudio.forEach(element => {
+      element.muted = true;
+      element.pause();
+      element.srcObject = null;
+      element.remove();
+    });
+    attachedAudio.clear();
+    stalledAudio.clear();
+    await room.disconnect();
+    callbacks.onStateChange?.('closed');
+  };
+  localChurchStops.add(stop);
+
   try {
     await room.connect(connection.url, connection.token, {
       autoSubscribe: false,
     });
 
+    if (stopped) {
+      await room.disconnect();
+      throw new Error('Church listener was stopped.');
+    }
     connected = true;
     updateMeasurement();
     room.remoteParticipants.forEach((participant) => {
@@ -304,32 +337,23 @@ async function startChurchLiveListenerWithConnection(
       callbacks.onNeedsAudioStart?.(true);
     }
   } catch (cause) {
-    measurement.stop();
-    await room.disconnect().catch(() => undefined);
+    await stop().catch(() => undefined);
     callbacks.onStateChange?.('closed');
     throw cause;
   }
 
   return {
     async startAudio() {
+      if (stopped) return;
       await room.startAudio();
+      if (stopped) return;
       for (const element of attachedAudio) {
         await element.play();
       }
       callbacks.onNeedsAudioStart?.(false);
     },
 
-    async stop() {
-      if (stopped) return;
-      stopped = true;
-      measurement.stop();
-      room.unregisterTextStreamHandler('lk.transcription');
-      attachedAudio.forEach((element) => element.remove());
-      attachedAudio.clear();
-      stalledAudio.clear();
-      await room.disconnect();
-      callbacks.onStateChange?.('closed');
-    },
+    stop,
   };
 }
 
@@ -338,7 +362,9 @@ export async function startChurchLiveListener(
   churchId: string,
   callbacks: ChurchLiveListenerCallbacks,
 ): Promise<ChurchLiveListenerSession> {
+  const generation = localChurchGeneration;
   const connection = await getChurchLiveListenerToken(churchId);
+  if (generation !== localChurchGeneration) throw new Error('Church listener was stopped.');
   if (!connection) {
     throw new Error('Could not connect to the church translation feed.');
   }
