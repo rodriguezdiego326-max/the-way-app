@@ -16,7 +16,12 @@ Version 0.3.1. Owner-only diagnostic flow; production checkout and paid entitlem
 - Nine executable receipt-policy/client tests: wrong account, production/bundle/product/ownership rejection, expiration/revocation/upgrade classification, Apple root fingerprint, forged-signature rejection, non-owner/non-iOS gating, canceled/pending outcomes, finish-after-verification and retry behavior.
 - Typecheck, lint (existing warnings), language contract, production web build and Capacitor iOS sync.
 - Deno backend typecheck passed using installed npm dependencies. Deployed endpoint rejected missing authorization at the gateway and anonymous credentials inside the function (401).
-- Native Swift compilation and actual Apple checkout require Codemagic/TestFlight; not verified locally.
+- Codemagic index 220 finished successfully: native Swift compiled, signed IPA version 0.3.1 build 194 passed version/entitlement checks, and upload to Apple succeeded. Actual device checkout remains unverified.
+- GitHub Validate SOLAPATH run 46126978255 passed all steps.
+- Apple upload warning 90725 is a future SDK requirement (April 2027), not an upload blocker.
+- Paid Apps Agreement is currently New / unsigned; account holder action required before purchase testing.
+
+Build: https://codemagic.io/app/6a873baf8b77c8db0eea5054/build/6b0a93e19491bc104972aaaa
 
 ## Device checks after installing 194
 1. Sign in as app owner. Admin Approval Center → Apple subscription testing → Load Apple plans. Confirm four plans and Apple-provided prices; eligible plans show seven days free.

@@ -29,17 +29,18 @@ Verified all four remain Prepare for Submission. Nothing submitted for review.
 ## Remaining before purchase testing or launch
 
 - Configure appropriate sale availability and Spanish display names.
-- Verify Paid Apps agreement, banking, and tax readiness; not inspected this session.
-- Connect native purchase bridge and provider-verified server entitlements using the exact IDs above.
+- Paid Apps Agreement inspected on November 28: status New / unsigned. Free Apps Agreement is Active. Account holder must review and accept the Paid Apps Agreement; banking and tax readiness remain unverified.
+- Owner-only sandbox native purchase bridge and signed-transaction verification implemented in build 194; production server entitlements remain pending. See build194-apple-sandbox.md.
 - Load localized prices and introductory eligibility from StoreKit, not this document.
-- Add checkout, restore purchases and manage subscription UI; connect two-adult Family access and complimentary access precedence.
+- Sandbox-only owner checkout, restore purchases and manage subscription UI added in build 194. Production UI, two-adult Family access and complimentary access precedence remain pending.
 - Apple Family Sharing toggle remains off. SOLAPATH's two-adult Family plan is an app-managed entitlement; do not silently enable six-person Apple Family Sharing.
 - Purchase-options defaults currently show multiseat purchases allowed and App Store/Apple Business/Apple School Manager. Review/configure these before launch; multiseat seat management is not implemented.
 - Add actual purchase-screen review screenshots after implementation, complete metadata, and submit the first subscriptions/group with a new app version as Apple requires.
 - Run sandbox trial, cancellation, renewal, expiry, restore, upgrade/downgrade, revocation, duplicate event and complimentary access checks.
 - Organizational Church billing and its 14-day trial are NOT configured. Founding 50% subscription eligibility is separate from these personal/family products.
-- No new iOS build was created for this configuration-only step.
+- Build 194 (0.3.1), Codemagic index 220, compiled, signed and uploaded successfully from commit 9e9b052e0db2b73a424990cc2676c85b3a9bddd3. Checkout has not yet been tested on a device.
 - No subscription purchases or production charges were initiated.
 
 Review page:
 https://appstoreconnect.apple.com/apps/6803636196/distribution/subscription-groups/22633810
+
